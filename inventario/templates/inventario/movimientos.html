@@ -1,0 +1,89 @@
+{% extends 'inventario/base.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">
+    Movimientos de Inventario
+</h1>
+
+<div class="card p-4 mb-4">
+
+    <h2>Registrar Movimiento</h2>
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button
+            type="submit"
+            class="btn btn-primary"
+        >
+            Guardar
+        </button>
+
+    </form>
+
+</div>
+
+<div class="card p-4">
+
+    <h2>Historial de Movimientos</h2>
+
+    <table class="table table-striped">
+
+        <thead>
+
+            <tr>
+
+                <th>ID</th>
+                <th>Item</th>
+                <th>Usuario</th>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Observación</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for movimiento in movimientos %}
+
+            <tr>
+
+                <td>{{ movimiento.id }}</td>
+
+                <td>
+                    {{ movimiento.item_inventario.codigo }}
+                </td>
+
+                <td>
+                    {{ movimiento.usuario.nombre }}
+                </td>
+
+                <td>
+                    {{ movimiento.tipo_movimiento.nombre }}
+                </td>
+
+                <td>
+                    {{ movimiento.fecha }}
+                </td>
+
+                <td>
+                    {{ movimiento.observacion }}
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'inventario/base.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">
+    Items de Inventario
+</h1>
+
+<div class="card p-4 mb-4">
+
+    <h2>Registrar Item</h2>
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button
+            type="submit"
+            class="btn btn-primary"
+        >
+            Guardar
+        </button>
+
+    </form>
+
+</div>
+
+<div class="card p-4">
+
+    <h2>Lista de Items</h2>
+
+    <table class="table table-striped">
+
+        <thead>
+
+            <tr>
+
+                <th>ID</th>
+                <th>Código</th>
+                <th>Insumo</th>
+                <th>Estado</th>
+                <th>Fecha Registro</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for item in items %}
+
+            <tr>
+
+                <td>{{ item.id }}</td>
+
+                <td>{{ item.codigo }}</td>
+
+                <td>{{ item.insumo.nombre }}</td>
+
+                <td>{{ item.estado.nombre }}</td>
+
+                <td>{{ item.fecha_registro }}</td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,83 @@
+<div class="card p-4">
+
+    <h2>Lista de Insumos</h2>
+
+    <form method="GET" class="mb-4">
+
+        <div class="input-group">
+
+            <input
+                type="text"
+                name="busqueda"
+                class="form-control"
+                placeholder="Buscar insumo..."
+            >
+
+            <button
+                class="btn btn-dark"
+                type="submit"
+            >
+                Buscar
+            </button>
+
+        </div>
+
+    </form>
+
+    <table class="table table-striped">
+
+        <thead>
+
+            <tr>
+
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Marca</th>
+                <th>Acciones</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for insumo in insumos %}
+
+            <tr>
+
+                <td>{{ insumo.id }}</td>
+
+                <td>{{ insumo.nombre }}</td>
+
+                <td>{{ insumo.descripcion }}</td>
+
+                <td>{{ insumo.marca }}</td>
+
+                <td>
+
+                    <a
+                        href="/inventario/editar/{{ insumo.id }}/"
+                        class="btn btn-warning btn-sm"
+                    >
+                        Editar
+                    </a>
+
+                    <a
+                        href="/inventario/eliminar/{{ insumo.id }}/"
+                        class="btn btn-danger btn-sm"
+                    >
+                        Eliminar
+                    </a>
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
