@@ -24,6 +24,14 @@
 
     </form>
 
+    <h4 class="mt-4">Agregar Insumo</h4>
+
+        <form method="POST" class="mb-4">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-success">Guardar</button>
+        </form>
+
     <table class="table table-striped">
 
         <thead>

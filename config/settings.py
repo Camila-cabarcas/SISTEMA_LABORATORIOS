@@ -8,6 +8,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # DEBUG = True es para desarrollo. Si lo pones en False, debes configurar ALLOWED_HOSTS.
 DEBUG = True
 
+SECRET_KEY = 'django-insecure-clave-temporal-para-desarrollo-123456789'
+
 ALLOWED_HOSTS = ['*'] # El asterisco permite cualquier conexión en desarrollo
 # ---------------------------------------------------------
 
@@ -19,6 +21,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'inventario',
+    'prestamos',
+    'reservas',
+    'users',
     # Aquí irían tus apps propias, ej: 'laboratorios',
 ]
 
@@ -32,7 +39,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'sistema_laboratorios.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -50,12 +57,12 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'sistema_laboratorios.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 # Base de datos (Por defecto SQLite)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.backends.sqlite3',
+        'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
