@@ -167,3 +167,22 @@ def editar_item(request, id):
             item.save()  # El signal se dispara aquí
 
             return redirect('/inventario/items/')
+        
+
+@login_required
+def historial_item(request, id):
+
+    item = ItemInventario.objects.get(id=id)
+
+    movimientos = MovimientoInventario.objects.filter(
+        item_inventario=item
+    ).order_by('-fecha')
+
+    return render(
+        request,
+        'inventario/historial_item.html',
+        {
+            'item': item,
+            'movimientos': movimientos
+        }
+    )

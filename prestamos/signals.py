@@ -1,16 +1,16 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Prestamo, PrestamoItem
-from inventario.models import MovimientoInventario, TipoMovimiento
+from inventario.models import MovimientoInventario, TipoMovimiento, EstadoItem
 
 
 @receiver(post_save, sender=Prestamo)
 def registrar_movimiento(sender, instance, created, **kwargs):
 
     mapa_estados = {
-        'ACTIVO': 'Prestado',
-        'DEVUELTO': 'Devuelto',
-        'RETRASADO': 'Prestado',
+        'ACTIVO': ('Prestado', 'Prestado'),
+        'DEVUELTO': ('Devuelto', 'Disponible'),
+        'RETRASADO': ('Prestado', 'Prestado'),
     }
 
     estado_nombre = instance.estado.nombre.upper()
@@ -18,16 +18,22 @@ def registrar_movimiento(sender, instance, created, **kwargs):
     if estado_nombre not in mapa_estados:
         return
 
-    tipo = TipoMovimiento.objects.get(
-        nombre=mapa_estados[estado_nombre]
-    )
+    tipo_nombre, estado_item_nombre = mapa_estados[estado_nombre]
+
+    tipo = TipoMovimiento.objects.get(nombre=tipo_nombre)
+    estado_item = EstadoItem.objects.get(nombre=estado_item_nombre)
 
     items = PrestamoItem.objects.filter(prestamo=instance)
 
     for prestamo_item in items:
 
+        item = prestamo_item.item_inventario
+        item.estado = estado_item
+        item._desde_prestamo = True
+        item.save()
+
         MovimientoInventario.objects.create(
-            item_inventario=prestamo_item.item_inventario,
+            item_inventario=item,
             usuario=instance.responsable,
             tipo_movimiento=tipo,
             observacion=f'Préstamo #{instance.pk} - {instance.estado.nombre}'

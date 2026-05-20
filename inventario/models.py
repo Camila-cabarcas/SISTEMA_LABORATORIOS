@@ -31,11 +31,13 @@ class Insumo(models.Model):
     stock_minimo = models.IntegerField(default=0)
 
     def cantidad_disponible(self):
-        return self.iteminventario_set.filter(
+        return self.items.filter(
             estado__nombre='Disponible'
         ).count()
 
     def stock_minimo_alcanzado(self):
+        if self.stock_minimo == 0:
+            return False
         return self.cantidad_disponible() <= self.stock_minimo
 
     def __str__(self):

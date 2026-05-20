@@ -42,6 +42,7 @@
                 <th>Insumo</th>
                 <th>Estado</th>
                 <th>Fecha Registro</th>
+                <th>Acciones</th>
 
             </tr>
 
@@ -62,6 +63,15 @@
                 <td>{{ item.estado.nombre }}</td>
 
                 <td>{{ item.fecha_registro }}</td>
+
+                <td>
+                    <a
+                        href="/inventario/items/{{ item.id }}/historial/"
+                        class="btn btn-info btn-sm"
+                    >
+                        Historial
+                    </a>
+                </td>
 
             </tr>
 

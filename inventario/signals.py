@@ -9,6 +9,10 @@ def registrar_cambio_estado(sender, instance, created, **kwargs):
     if created:
         return
 
+    # Evita loop cuando el signal de préstamos actualiza el ítem
+    if getattr(instance, '_desde_prestamo', False):
+        return
+
     mapa_estados = {
         'DAÑADO': 'Dañado',
         'MANTENIMIENTO': 'Mantenimiento',

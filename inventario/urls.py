@@ -4,7 +4,8 @@ from .views import (
     eliminar_insumo,
     editar_insumo,
     items_inventario,
-    movimientos_inventario
+    movimientos_inventario,
+    historial_item
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path('editar/<int:id>/', editar_insumo),
     path('items/', items_inventario),
     path('movimientos/', movimientos_inventario),
+    path('items/<int:id>/historial/', historial_item),
 ]
