@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Prestamo, PrestamoItem
 from .forms import PrestamoForm, CambiarEstadoPrestamoForm, PrestamoItemForm
+from .models import Prestamo, PrestamoItem, EstadoPrestamo
 
 
 @login_required
@@ -27,7 +28,9 @@ def crear_prestamo(request):
 
         if form.is_valid():
 
-            prestamo = form.save()
+            prestamo = form.save(commit=False)
+            prestamo.estado = EstadoPrestamo.objects.get(nombre='Activo')
+            prestamo.save()
 
             return redirect('detalle_prestamo', id=prestamo.pk)
 

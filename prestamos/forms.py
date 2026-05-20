@@ -12,7 +12,6 @@ class PrestamoForm(forms.ModelForm):
         fields = [
             'reserva',
             'responsable',
-            'estado',
         ]
 
         widgets = {
@@ -28,14 +27,7 @@ class PrestamoForm(forms.ModelForm):
                     'class': 'form-select'
                 }
             ),
-
-            'estado': forms.Select(
-                attrs={
-                    'class': 'form-select'
-                }
-            ),
         }
-
 
 class CambiarEstadoPrestamoForm(forms.ModelForm):
 
