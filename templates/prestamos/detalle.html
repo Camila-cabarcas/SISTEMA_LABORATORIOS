@@ -1,0 +1,82 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Préstamo #{{ prestamo.id }}</h1>
+
+<div class="card p-4 mb-4">
+
+    <h5>Información del préstamo</h5>
+
+    <p><strong>Reserva:</strong> {{ prestamo.reserva }}</p>
+    <p><strong>Responsable:</strong> {{ prestamo.responsable }}</p>
+    <p><strong>Estado:</strong> {{ prestamo.estado }}</p>
+    <p><strong>Fecha entrega:</strong> {{ prestamo.fecha_entrega }}</p>
+    <p><strong>Fecha devolución:</strong> {{ prestamo.fecha_devolucion|default:"Pendiente" }}</p>
+
+    <a
+        href="/prestamos/{{ prestamo.id }}/estado/"
+        class="btn btn-warning btn-sm"
+    >
+        Cambiar estado
+    </a>
+
+</div>
+
+<div class="card p-4 mb-4">
+
+    <h5>Agregar ítem al préstamo</h5>
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit" class="btn btn-primary">
+            Agregar ítem
+        </button>
+
+    </form>
+
+</div>
+
+<div class="card p-4">
+
+    <h5>Ítems prestados</h5>
+
+    {% if items %}
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Insumo</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.item_inventario.codigo }}</td>
+                <td>{{ item.item_inventario.insumo.nombre }}</td>
+                <td>{{ item.item_inventario.estado.nombre }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+    {% else %}
+    <p class="text-muted">No hay ítems agregados aún.</p>
+    {% endif %}
+
+    <a href="/prestamos/" class="btn btn-secondary mt-3">
+        Volver
+    </a>
+
+</div>
+
+{% endblock %}

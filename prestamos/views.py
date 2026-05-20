@@ -56,11 +56,20 @@ def detalle_prestamo(request, id):
 
         if form.is_valid():
 
-            item = form.save(commit=False)
-            item.prestamo = prestamo
-            item.save()
+            item_inventario = form.cleaned_data['item_inventario']
 
-            return redirect('detalle_prestamo', id=prestamo.pk)
+            # Verifica que el ítem no esté ya en este préstamo
+            if PrestamoItem.objects.filter(
+                prestamo=prestamo,
+                item_inventario=item_inventario
+            ).exists():
+                form.add_error('item_inventario', 'Este ítem ya está en el préstamo.')
+
+            else:
+                item = form.save(commit=False)
+                item.prestamo = prestamo
+                item.save()
+                return redirect('detalle_prestamo', id=prestamo.pk)
 
     else:
 

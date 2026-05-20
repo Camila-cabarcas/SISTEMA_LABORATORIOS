@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base_general.html' %}
 
 {% block contenido %}
 
@@ -32,7 +32,7 @@
                 <td>{{ prestamo.estado }}</td>
                 <td>{{ prestamo.fecha_entrega }}</td>
                 <td>
-                    
+                    <a
                         href="/prestamos/{{ prestamo.id }}/"
                         class="btn btn-info btn-sm"
                     >

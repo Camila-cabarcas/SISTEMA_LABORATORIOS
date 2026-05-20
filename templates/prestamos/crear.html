@@ -1,0 +1,27 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Nuevo Préstamo</h1>
+
+<div class="card p-4">
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit" class="btn btn-primary">
+            Crear Préstamo
+        </button>
+
+        <a href="/prestamos/" class="btn btn-secondary ms-2">
+            Cancelar
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

@@ -1,5 +1,6 @@
 from django import forms
 from .models import Prestamo, PrestamoItem
+from inventario.models import ItemInventario
 
 
 class PrestamoForm(forms.ModelForm):
@@ -68,3 +69,9 @@ class PrestamoItemForm(forms.ModelForm):
                 }
             )
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['item_inventario'].queryset = ItemInventario.objects.filter(
+            estado__nombre='Disponible'
+        )
