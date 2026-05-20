@@ -1,0 +1,25 @@
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+from reservas.models import Reserva, EstadoReserva
+
+
+class Command(BaseCommand):
+
+    help = 'Expira reservas que pasaron su límite de retiro'
+
+    def handle(self, *args, **kwargs):
+
+        estado_expirada = EstadoReserva.objects.get(nombre='Expirada')
+
+        reservas_expiradas = Reserva.objects.filter(
+            estado__nombre__in=['Pendiente', 'Aprobada'],
+            hora_limite_retiro__lt=timezone.now()
+        )
+
+        cantidad = reservas_expiradas.count()
+
+        reservas_expiradas.update(estado=estado_expirada)
+
+        self.stdout.write(
+            f'{cantidad} reservas expiradas.'
+        )

@@ -1,0 +1,53 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Gestionar Reserva #{{ reserva.id }}</h1>
+
+<div class="card p-4">
+
+    <p><strong>Usuario:</strong> {{ reserva.usuario }}</p>
+    <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
+    <p><strong>Límite de retiro:</strong> {{ reserva.hora_limite_retiro }}</p>
+    <p><strong>Fecha devolución:</strong> {{ reserva.fecha_devolucion }}</p>
+    <p><strong>Estado actual:</strong> {{ reserva.estado }}</p>
+
+    <h5 class="mt-4">Insumos solicitados:</h5>
+
+    <ul>
+        {% for insumo in reserva.reservainsumo_set.all %}
+        <li>{{ insumo.insumo.nombre }} — Cantidad: {{ insumo.cantidad }}</li>
+        {% endfor %}
+    </ul>
+
+    <form method="POST" class="mt-4">
+
+        {% csrf_token %}
+
+        <button
+            type="submit"
+            name="accion"
+            value="aprobar"
+            class="btn btn-success me-2"
+        >
+            Aprobar
+        </button>
+
+        <button
+            type="submit"
+            name="accion"
+            value="cancelar"
+            class="btn btn-danger me-2"
+        >
+            Cancelar reserva
+        </button>
+
+        <a href="/reservas/{{ reserva.id }}/" class="btn btn-secondary">
+            Volver
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

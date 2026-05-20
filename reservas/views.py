@@ -98,3 +98,30 @@ def cancelar_reserva(request, id):
             'reserva': reserva
         }
     )
+
+@login_required
+def aprobar_reserva(request, id):
+
+    reserva = get_object_or_404(Reserva, id=id)
+
+    if request.method == 'POST':
+
+        accion = request.POST.get('accion')
+
+        if accion == 'aprobar':
+            reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
+
+        elif accion == 'cancelar':
+            reserva.estado = EstadoReserva.objects.get(nombre='Cancelada')
+
+        reserva.save()
+
+        return redirect('detalle_reserva', id=reserva.pk)
+
+    return render(
+        request,
+        'reservas/aprobar.html',
+        {
+            'reserva': reserva
+        }
+    )

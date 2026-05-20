@@ -1,0 +1,80 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Reserva #{{ reserva.id }}</h1>
+
+<div class="card p-4 mb-4">
+
+    <h5>Información de la reserva</h5>
+
+    <p><strong>Usuario:</strong> {{ reserva.usuario }}</p>
+    <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
+    <p><strong>Límite de retiro:</strong> {{ reserva.hora_limite_retiro }}</p>
+    <p><strong>Fecha devolución:</strong> {{ reserva.fecha_devolucion }}</p>
+    <p><strong>Estado:</strong> {{ reserva.estado }}</p>
+
+    <a
+        href="/reservas/{{ reserva.id }}/aprobar/"
+    class="btn btn-primary btn-sm"
+>
+    Gestionar reserva
+</a>
+
+</div>
+
+<div class="card p-4 mb-4">
+
+    <h5>Agregar insumo a la reserva</h5>
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit" class="btn btn-primary">
+            Agregar insumo
+        </button>
+
+    </form>
+
+</div>
+
+<div class="card p-4">
+
+    <h5>Insumos reservados</h5>
+
+    {% if insumos %}
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>Insumo</th>
+                <th>Cantidad</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for insumo in insumos %}
+            <tr>
+                <td>{{ insumo.insumo.nombre }}</td>
+                <td>{{ insumo.cantidad }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+    {% else %}
+    <p class="text-muted">No hay insumos agregados aún.</p>
+    {% endif %}
+
+    <a href="/reservas/" class="btn btn-secondary mt-3">
+        Volver
+    </a>
+
+</div>
+
+{% endblock %}

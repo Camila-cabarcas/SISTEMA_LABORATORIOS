@@ -1,0 +1,31 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Cancelar Reserva #{{ reserva.id }}</h1>
+
+<div class="card p-4">
+
+    <p>¿Estás segura de que deseas cancelar esta reserva?</p>
+
+    <p><strong>Usuario:</strong> {{ reserva.usuario }}</p>
+    <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
+    <p><strong>Estado actual:</strong> {{ reserva.estado }}</p>
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        <button type="submit" class="btn btn-danger">
+            Sí, cancelar reserva
+        </button>
+
+        <a href="/reservas/{{ reserva.id }}/" class="btn btn-secondary ms-2">
+            No, volver
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}
