@@ -101,13 +101,11 @@ def items_inventario(request):
 
         if form.is_valid():
 
-            movimiento = form.save(commit=False)
+            item = form.save(commit=False)
+            item.created_by = request.user  # Captura quién lo creó
+            item.save()                     # El signal se dispara aquí
 
-            movimiento.usuario = request.user
-
-            movimiento.save()
-
-            return redirect('/inventario/movimientos/')
+            return redirect('/inventario/items/')
 
     else:
 
@@ -133,7 +131,9 @@ def movimientos_inventario(request):
 
         if form.is_valid():
 
-            form.save()
+            movimiento = form.save(commit=False)  # No guardes aún
+            movimiento.usuario = request.user      # Asigna el usuario logueado
+            movimiento.save()                      # Ahora sí guarda
 
             return redirect('/inventario/movimientos/')
 
@@ -141,7 +141,7 @@ def movimientos_inventario(request):
 
         form = MovimientoInventarioForm()
 
-    movimientos = MovimientoInventario.objects.all()
+    movimientos = MovimientoInventario.objects.all().order_by('-fecha')  # Más recientes primero
 
     return render(
         request,
@@ -151,3 +151,20 @@ def movimientos_inventario(request):
             'movimientos': movimientos
         }
     )
+
+@login_required # type: ignore
+def editar_item(request, id):
+
+    item = ItemInventario.objects.get(id=id)
+
+    if request.method == 'POST':
+
+        form = ItemInventarioForm(request.POST, instance=item)
+
+        if form.is_valid():
+
+            item = form.save(commit=False)
+            item.updated_by = request.user  # Quién hizo el cambio
+            item.save()  # El signal se dispara aquí
+
+            return redirect('/inventario/items/')

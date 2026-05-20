@@ -35,7 +35,7 @@ class Prestamo(models.Model):
     )
 
     def __str__(self):
-        return f"Prestamo {self.id}"
+        return f"Prestamo {self.pk}"
 
 
 class PrestamoItem(models.Model):

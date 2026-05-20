@@ -22,11 +22,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'inventario',
-    'prestamos',
+    'inventario.apps.InventarioConfig',
+    'prestamos.apps.PrestamosConfig',
     'reservas',
     'users',
-    # Aquí irían tus apps propias, ej: 'laboratorios',
 ]
 
 MIDDLEWARE = [

@@ -15,29 +15,39 @@ class EstadoItem(models.Model):
 
 class Insumo(models.Model):
     nombre = models.CharField(
-    max_length=100,
-    unique=True
-)
+        max_length=100,
+        unique=True
+    )
 
     descripcion = models.TextField(
-    blank=False
-        )
-    
+        blank=False
+    )
+
     marca = models.CharField(
-    max_length=100,
-    blank=True
-)
+        max_length=100,
+        blank=True
+    )
+
+    stock_minimo = models.IntegerField(default=0)
+
+    def cantidad_disponible(self):
+        return self.iteminventario_set.filter(
+            estado__nombre='Disponible'
+        ).count()
+
+    def stock_minimo_alcanzado(self):
+        return self.cantidad_disponible() <= self.stock_minimo
 
     def __str__(self):
         return self.nombre
-
-
+    
 class ItemInventario(models.Model):
     codigo = models.CharField(max_length=50, unique=True)
 
     insumo = models.ForeignKey(
         Insumo,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='items'  # Agrega esto
     )
 
     estado = models.ForeignKey(
@@ -46,6 +56,13 @@ class ItemInventario(models.Model):
     )
 
     fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    updated_by = models.ForeignKey(
+        'users.Usuario',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
 
     def __str__(self):
         return self.codigo
