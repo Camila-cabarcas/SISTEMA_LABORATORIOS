@@ -21,33 +21,32 @@ def inicio(request):
         form = InsumoForm(request.POST)
 
         if form.is_valid():
-
             form.save()
-
             return redirect('/inventario/')
 
     else:
-
         form = InsumoForm()
 
     busqueda = request.GET.get('busqueda')
 
     if busqueda:
-
-        insumos = Insumo.objects.filter(
-            nombre__icontains=busqueda
-        )
-
+        insumos = Insumo.objects.filter(nombre__icontains=busqueda)
     else:
-
         insumos = Insumo.objects.all()
+
+    # Insumos con stock bajo
+    alertas_stock = [
+        insumo for insumo in Insumo.objects.all()
+        if insumo.stock_minimo_alcanzado()
+    ]
 
     return render(
         request,
         'inventario/inicio.html',
         {
             'insumos': insumos,
-            'form': form
+            'form': form,
+            'alertas_stock': alertas_stock
         }
     )
 
