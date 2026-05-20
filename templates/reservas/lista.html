@@ -1,0 +1,52 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Reservas</h1>
+
+<a href="/reservas/crear/" class="btn btn-primary mb-4">
+    Nueva Reserva
+</a>
+
+<div class="card p-4">
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Usuario</th>
+                <th>Fecha Reserva</th>
+                <th>Límite Retiro</th>
+                <th>Fecha Devolución</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for reserva in reservas %}
+            <tr>
+                <td>{{ reserva.id }}</td>
+                <td>{{ reserva.usuario }}</td>
+                <td>{{ reserva.fecha_reserva }}</td>
+                <td>{{ reserva.hora_limite_retiro }}</td>
+                <td>{{ reserva.fecha_devolucion }}</td>
+                <td>{{ reserva.estado }}</td>
+                <td>
+                    
+                        href="/reservas/{{ reserva.id }}/"
+                        class="btn btn-info btn-sm"
+                    >
+                        Ver detalle
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}
