@@ -83,8 +83,9 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 # STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') # Para producción
 
-LOGIN_URL = '/admin/login/'
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.Usuario'
+
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/inventario/'

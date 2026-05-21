@@ -15,18 +15,29 @@
 <body class="bg-light">
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">Sistema de Laboratorios</a>
-            <div class="navbar-nav">
-                <a class="nav-link" href="/inventario/">Insumos</a>
-                <a class="nav-link" href="/inventario/items/">Items</a>
-                <a class="nav-link" href="/inventario/movimientos/">Movimientos</a>
-                <a class="nav-link" href="/prestamos/">Préstamos</a>
-                <a class="nav-link" href="/reservas/">Reservas</a>
-                <a class="nav-link" href="/usuarios/">Usuarios</a>
-            </div>
+    <div class="container">
+        <a class="navbar-brand" href="/">Sistema de Laboratorios</a>
+        <div class="navbar-nav">
+            <a class="nav-link" href="/inventario/">Insumos</a>
+            <a class="nav-link" href="/inventario/items/">Items</a>
+            <a class="nav-link" href="/inventario/movimientos/">Movimientos</a>
+            <a class="nav-link" href="/prestamos/">Préstamos</a>
+            <a class="nav-link" href="/reservas/">Reservas</a>
+            <a class="nav-link" href="/usuarios/">Usuarios</a>
         </div>
-    </nav>
+        <div class="navbar-nav ms-auto">
+    {% if user.is_authenticated %}
+    <span class="nav-link text-light">{{ user.username }}</span>
+    <form method="POST" action="/logout/">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-link nav-link text-light">
+            Cerrar sesión
+        </button>
+    </form>
+    {% endif %}
+</div>
+</nav>
+    
 
     <div class="container mt-4">
         {% block contenido %}
