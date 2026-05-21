@@ -1,11 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from .models import Prestamo, PrestamoItem
-from .forms import PrestamoForm, CambiarEstadoPrestamoForm, PrestamoItemForm
+from users.decorators import rol_requerido
 from .models import Prestamo, PrestamoItem, EstadoPrestamo
+from .forms import PrestamoForm, CambiarEstadoPrestamoForm, PrestamoItemForm
 
 
-@login_required
+@rol_requerido('Administrador', 'Encargado')
 def lista_prestamos(request):
 
     prestamos = Prestamo.objects.all().order_by('-fecha_entrega')
@@ -19,7 +18,7 @@ def lista_prestamos(request):
     )
 
 
-@login_required
+@rol_requerido('Administrador', 'Encargado')
 def crear_prestamo(request):
 
     if request.method == 'POST':
@@ -47,7 +46,7 @@ def crear_prestamo(request):
     )
 
 
-@login_required
+@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
 def detalle_prestamo(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
@@ -61,7 +60,6 @@ def detalle_prestamo(request, id):
 
             item_inventario = form.cleaned_data['item_inventario']
 
-            # Verifica que el ítem no esté ya en este préstamo
             if PrestamoItem.objects.filter(
                 prestamo=prestamo,
                 item_inventario=item_inventario
@@ -89,7 +87,7 @@ def detalle_prestamo(request, id):
     )
 
 
-@login_required
+@rol_requerido('Administrador', 'Encargado')
 def cambiar_estado_prestamo(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)

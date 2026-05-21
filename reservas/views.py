@@ -1,10 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from users.decorators import rol_requerido
 from .models import Reserva, ReservaInsumo, EstadoReserva
 from .forms import ReservaForm, ReservaInsumoForm
 
 
-@login_required
+@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
 def lista_reservas(request):
 
     reservas = Reserva.objects.all().order_by('-fecha_creacion')
@@ -18,7 +18,7 @@ def lista_reservas(request):
     )
 
 
-@login_required
+@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
 def crear_reserva(request):
 
     if request.method == 'POST':
@@ -46,7 +46,7 @@ def crear_reserva(request):
     )
 
 
-@login_required
+@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
 def detalle_reserva(request, id):
 
     reserva = get_object_or_404(Reserva, id=id)
@@ -79,7 +79,7 @@ def detalle_reserva(request, id):
     )
 
 
-@login_required
+@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
 def cancelar_reserva(request, id):
 
     reserva = get_object_or_404(Reserva, id=id)
@@ -99,7 +99,8 @@ def cancelar_reserva(request, id):
         }
     )
 
-@login_required
+
+@rol_requerido('Administrador', 'Encargado')
 def aprobar_reserva(request, id):
 
     reserva = get_object_or_404(Reserva, id=id)

@@ -94,3 +94,6 @@ def desactivar_usuario(request, id):
             'usuario': usuario
         }
     )
+
+def sin_permiso(request):
+    return render(request, 'users/sin_permiso.html')

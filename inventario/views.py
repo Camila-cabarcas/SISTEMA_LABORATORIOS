@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
+from users.decorators import rol_requerido
 
 from .models import (
     Insumo,
@@ -13,7 +13,8 @@ from .forms import (
     MovimientoInventarioForm
 )
 
-@login_required
+
+@rol_requerido('Administrador')
 def inicio(request):
 
     if request.method == 'POST':
@@ -34,7 +35,6 @@ def inicio(request):
     else:
         insumos = Insumo.objects.all()
 
-    # Insumos con stock bajo
     alertas_stock = [
         insumo for insumo in Insumo.objects.all()
         if insumo.stock_minimo_alcanzado()
@@ -50,37 +50,29 @@ def inicio(request):
         }
     )
 
-            
-@login_required
+
+@rol_requerido('Administrador')
 def eliminar_insumo(request, id):
 
     insumo = Insumo.objects.get(id=id)
-
     insumo.delete()
-
     return redirect('/inventario/')
 
 
-@login_required
+@rol_requerido('Administrador')
 def editar_insumo(request, id):
 
     insumo = Insumo.objects.get(id=id)
 
     if request.method == 'POST':
 
-        form = InsumoForm(
-            request.POST,
-            instance=insumo
-        )
+        form = InsumoForm(request.POST, instance=insumo)
 
         if form.is_valid():
-
             form.save()
-
             return redirect('/inventario/')
 
     else:
-
         form = InsumoForm(instance=insumo)
 
     return render(
@@ -91,7 +83,8 @@ def editar_insumo(request, id):
         }
     )
 
-@login_required
+
+@rol_requerido('Administrador', 'Encargado')
 def items_inventario(request):
 
     if request.method == 'POST':
@@ -101,13 +94,12 @@ def items_inventario(request):
         if form.is_valid():
 
             item = form.save(commit=False)
-            item.created_by = request.user  # Captura quién lo creó
-            item.save()                     # El signal se dispara aquí
+            item.updated_by = request.user
+            item.save()
 
             return redirect('/inventario/items/')
 
     else:
-
         form = ItemInventarioForm()
 
     items = ItemInventario.objects.all()
@@ -121,7 +113,8 @@ def items_inventario(request):
         }
     )
 
-@login_required
+
+@rol_requerido('Administrador', 'Encargado')
 def movimientos_inventario(request):
 
     if request.method == 'POST':
@@ -130,17 +123,16 @@ def movimientos_inventario(request):
 
         if form.is_valid():
 
-            movimiento = form.save(commit=False)  # No guardes aún
-            movimiento.usuario = request.user      # Asigna el usuario logueado
-            movimiento.save()                      # Ahora sí guarda
+            movimiento = form.save(commit=False)
+            movimiento.usuario = request.user
+            movimiento.save()
 
             return redirect('/inventario/movimientos/')
 
     else:
-
         form = MovimientoInventarioForm()
 
-    movimientos = MovimientoInventario.objects.all().order_by('-fecha')  # Más recientes primero
+    movimientos = MovimientoInventario.objects.all().order_by('-fecha')
 
     return render(
         request,
@@ -151,7 +143,8 @@ def movimientos_inventario(request):
         }
     )
 
-@login_required # type: ignore
+
+@rol_requerido('Administrador', 'Encargado')
 def editar_item(request, id):
 
     item = ItemInventario.objects.get(id=id)
@@ -163,13 +156,25 @@ def editar_item(request, id):
         if form.is_valid():
 
             item = form.save(commit=False)
-            item.updated_by = request.user  # Quién hizo el cambio
-            item.save()  # El signal se dispara aquí
+            item.updated_by = request.user
+            item.save()
 
             return redirect('/inventario/items/')
-        
 
-@login_required
+    else:
+        form = ItemInventarioForm(instance=item)
+
+    return render(
+        request,
+        'inventario/editar_item.html',
+        {
+            'form': form,
+            'item': item
+        }
+    )
+
+
+@rol_requerido('Administrador', 'Encargado')
 def historial_item(request, id):
 
     item = ItemInventario.objects.get(id=id)
