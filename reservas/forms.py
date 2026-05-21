@@ -9,18 +9,10 @@ class ReservaForm(forms.ModelForm):
         model = Reserva
 
         fields = [
-            'usuario',
             'fecha_reserva',
         ]
 
         widgets = {
-
-            'usuario': forms.Select(
-                attrs={
-                    'class': 'form-select'
-                }
-            ),
-
             'fecha_reserva': forms.DateTimeInput(
                 attrs={
                     'class': 'form-control',

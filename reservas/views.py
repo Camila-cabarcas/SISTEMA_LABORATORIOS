@@ -28,6 +28,7 @@ def crear_reserva(request):
         if form.is_valid():
 
             reserva = form.save(commit=False)
+            reserva.usuario = request.user  # Asigna automáticamente
             reserva.estado = EstadoReserva.objects.get(nombre='Pendiente')
             reserva.save()
 
