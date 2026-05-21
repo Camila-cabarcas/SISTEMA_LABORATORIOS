@@ -1,0 +1,31 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Desactivar Usuario</h1>
+
+<div class="card p-4">
+
+    <p>¿Estás segura de que deseas desactivar a <strong>{{ usuario.username }}</strong>?</p>
+
+    <p><strong>Nombre:</strong> {{ usuario.first_name }} {{ usuario.last_name }}</p>
+    <p><strong>Correo:</strong> {{ usuario.email }}</p>
+    <p><strong>Rol:</strong> {{ usuario.rol }}</p>
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        <button type="submit" class="btn btn-danger">
+            Sí, desactivar
+        </button>
+
+        <a href="/usuarios/" class="btn btn-secondary ms-2">
+            Cancelar
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

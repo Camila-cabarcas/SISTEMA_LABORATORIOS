@@ -1,0 +1,66 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Usuarios</h1>
+
+<a href="/usuarios/crear/" class="btn btn-primary mb-4">
+    Nuevo Usuario
+</a>
+
+<div class="card p-4">
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Código</th>
+                <th>Programa</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for usuario in usuarios %}
+            <tr>
+                <td>{{ usuario.username }}</td>
+                <td>{{ usuario.first_name }} {{ usuario.last_name }}</td>
+                <td>{{ usuario.email }}</td>
+                <td>{{ usuario.codigo }}</td>
+                <td>{{ usuario.programa }}</td>
+                <td>{{ usuario.rol }}</td>
+                <td>
+                    {% if usuario.is_active %}
+                    <span class="badge bg-success">Activo</span>
+                    {% else %}
+                    <span class="badge bg-danger">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td>
+                    
+                        href="/usuarios/{{ usuario.id }}/editar/"
+                        class="btn btn-warning btn-sm"
+                    >
+                        Editar
+                    </a>
+                    
+                        href="/usuarios/{{ usuario.id }}/desactivar/"
+                        class="btn btn-danger btn-sm"
+                    >
+                        Desactivar
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}
