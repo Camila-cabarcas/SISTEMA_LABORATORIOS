@@ -18,13 +18,25 @@
     <div class="container">
         <a class="navbar-brand" href="/">Sistema de Laboratorios</a>
         <div class="navbar-nav">
-            <a class="nav-link" href="/inventario/">Insumos</a>
-            <a class="nav-link" href="/inventario/items/">Items</a>
-            <a class="nav-link" href="/inventario/movimientos/">Movimientos</a>
-            <a class="nav-link" href="/prestamos/">Préstamos</a>
-            <a class="nav-link" href="/reservas/">Reservas</a>
-            <a class="nav-link" href="/usuarios/">Usuarios</a>
-        </div>
+    {% if user.rol.nombre == 'Administrador' %}
+        <a class="nav-link" href="/inventario/">Insumos</a>
+        <a class="nav-link" href="/inventario/items/">Items</a>
+        <a class="nav-link" href="/inventario/movimientos/">Movimientos</a>
+        <a class="nav-link" href="/prestamos/">Préstamos</a>
+        <a class="nav-link" href="/reservas/">Reservas</a>
+        <a class="nav-link" href="/usuarios/">Usuarios</a>
+    {% elif user.rol.nombre == 'Encargado' %}
+        <a class="nav-link" href="/inventario/items/">Items</a>
+        <a class="nav-link" href="/inventario/movimientos/">Movimientos</a>
+        <a class="nav-link" href="/prestamos/">Préstamos</a>
+        <a class="nav-link" href="/reservas/">Reservas</a>
+    {% elif user.rol.nombre == 'Docente' %}
+        <a class="nav-link" href="/reservas/">Reservas</a>
+        <a class="nav-link" href="/prestamos/">Préstamos</a>
+    {% elif user.rol.nombre == 'Estudiante' %}
+        <a class="nav-link" href="/reservas/">Reservas</a>
+    {% endif %}
+</div>
         <div class="navbar-nav ms-auto">
     {% if user.is_authenticated %}
     <span class="nav-link text-light">{{ user.username }}</span>

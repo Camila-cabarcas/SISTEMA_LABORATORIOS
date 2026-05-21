@@ -1,10 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from users.decorators import rol_requerido
 from .models import Usuario
 from .forms import UsuarioForm, EditarUsuarioForm
 
 
-@login_required
+@rol_requerido('Administrador')
 def lista_usuarios(request):
 
     usuarios = Usuario.objects.all().order_by('username')
@@ -18,7 +18,7 @@ def lista_usuarios(request):
     )
 
 
-@login_required
+@rol_requerido('Administrador')
 def crear_usuario(request):
 
     if request.method == 'POST':
@@ -46,7 +46,7 @@ def crear_usuario(request):
     )
 
 
-@login_required
+@rol_requerido('Administrador')
 def editar_usuario(request, id):
 
     usuario = get_object_or_404(Usuario, id=id)
@@ -75,7 +75,7 @@ def editar_usuario(request, id):
     )
 
 
-@login_required
+@rol_requerido('Administrador')
 def desactivar_usuario(request, id):
 
     usuario = get_object_or_404(Usuario, id=id)
@@ -94,6 +94,7 @@ def desactivar_usuario(request, id):
             'usuario': usuario
         }
     )
+
 
 def sin_permiso(request):
     return render(request, 'users/sin_permiso.html')
