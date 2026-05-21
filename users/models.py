@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
 
 class Rol(models.Model):
@@ -8,18 +9,16 @@ class Rol(models.Model):
         return self.nombre
 
 
-class Usuario(models.Model):
-    nombre = models.CharField(max_length=100)
-    correo = models.EmailField(unique=True)
-    codigo = models.CharField(max_length=50, unique=True)
-    programa = models.CharField(max_length=100)
+class Usuario(AbstractUser):
+    codigo = models.CharField(max_length=50, unique=True, blank=True)
+    programa = models.CharField(max_length=100, blank=True)
 
     rol = models.ForeignKey(
         Rol,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
     )
 
-    estado = models.BooleanField(default=True)
-
     def __str__(self):
-        return self.nombre
+        return self.username
