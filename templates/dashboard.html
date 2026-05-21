@@ -1,0 +1,114 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Dashboard</h1>
+
+{% if rol == 'Administrador' %}
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary p-3 text-center">
+                <h5>Total Ítems</h5>
+                <h2>{{ total_items }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success p-3 text-center">
+                <h5>Disponibles</h5>
+                <h2>{{ items_disponibles }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning p-3 text-center">
+                <h5>Prestados</h5>
+                <h2>{{ items_prestados }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info p-3 text-center">
+                <h5>Préstamos Activos</h5>
+                <h2>{{ prestamos_activos }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-secondary p-3 text-center">
+                <h5>Reservas Pendientes</h5>
+                <h2>{{ reservas_pendientes }}</h2>
+            </div>
+        </div>
+    </div>
+
+    {% if alertas_stock %}
+    <div class="alert alert-warning">
+        <h5>⚠️ Insumos con stock bajo</h5>
+        <ul class="mb-0">
+            {% for insumo in alertas_stock %}
+            <li>
+                <strong>{{ insumo.nombre }}</strong> —
+                Disponible: {{ insumo.cantidad_disponible }} |
+                Mínimo: {{ insumo.stock_minimo }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+{% elif rol == 'Encargado' %}
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-info p-3 text-center">
+                <h5>Préstamos Activos</h5>
+                <h2>{{ prestamos_activos }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning p-3 text-center">
+                <h5>Reservas Pendientes</h5>
+                <h2>{{ reservas_pendientes }}</h2>
+            </div>
+        </div>
+    </div>
+
+{% elif rol == 'Docente' or rol == 'Estudiante' %}
+
+    <h5>Mis últimas reservas</h5>
+
+    {% if mis_reservas %}
+    <div class="card p-4">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Fecha Reserva</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reserva in mis_reservas %}
+                <tr>
+                    <td>{{ reserva.id }}</td>
+                    <td>{{ reserva.fecha_reserva }}</td>
+                    <td>{{ reserva.estado }}</td>
+                    <td>
+                        <a href="/reservas/{{ reserva.id }}/" class="btn btn-info btn-sm">
+                            Ver detalle
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No tienes reservas aún. <a href="/reservas/crear/">Crear una reserva</a></p>
+    {% endif %}
+
+{% endif %}
+
+{% endblock %}
