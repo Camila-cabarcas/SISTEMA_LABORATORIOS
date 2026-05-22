@@ -5,7 +5,6 @@ from .models import (
     MovimientoInventario
 )
 
-
 class InsumoForm(forms.ModelForm):
 
     class Meta:
