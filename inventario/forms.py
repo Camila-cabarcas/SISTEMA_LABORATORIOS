@@ -44,7 +44,8 @@ class ItemInventarioForm(forms.ModelForm):
         fields = [
             'codigo',
             'insumo',
-            'estado'
+            'estado',
+            'laboratorio'
         ]
 
         widgets = {
@@ -63,6 +64,12 @@ class ItemInventarioForm(forms.ModelForm):
             ),
 
             'estado': forms.Select(
+                attrs={
+                    'class': 'form-select'
+                }
+            ),
+
+            'laboratorio': forms.Select(
                 attrs={
                     'class': 'form-select'
                 }
