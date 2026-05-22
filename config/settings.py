@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'prestamos.apps.PrestamosConfig',
     'reservas',
     'users',
+    'laboratorio',
 ]
 
 MIDDLEWARE = [

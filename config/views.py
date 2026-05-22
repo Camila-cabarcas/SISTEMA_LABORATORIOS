@@ -35,3 +35,4 @@ def dashboard(request):
     context['rol'] = rol
 
     return render(request, 'dashboard.html', context)
+
