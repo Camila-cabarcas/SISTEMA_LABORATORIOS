@@ -14,7 +14,8 @@ class InsumoForm(forms.ModelForm):
 
         fields = [
             'nombre',
-            'descripcion'
+            'descripcion',
+            'estado'
         ]
 
         widgets = {
@@ -30,6 +31,12 @@ class InsumoForm(forms.ModelForm):
                 attrs={
                     'class': 'form-control',
                     'placeholder': 'Descripción'
+                }
+            ),
+
+            'estado': forms.Select(
+                attrs={
+                    'class': 'form-select'
                 }
             )
         }

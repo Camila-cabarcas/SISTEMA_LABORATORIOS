@@ -11,6 +11,12 @@ class EstadoItem(models.Model):
 
     def __str__(self):
         return self.nombre
+    
+class EstadoInsumo(models.Model):
+    nombre = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.nombre
 
 
 class Insumo(models.Model):
@@ -30,6 +36,13 @@ class Insumo(models.Model):
 
     stock_minimo = models.IntegerField(default=0)
 
+    estado = models.ForeignKey(
+        EstadoInsumo,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
     def cantidad_disponible(self):
         return self.items.filter(
             estado__nombre='Disponible'
@@ -42,6 +55,7 @@ class Insumo(models.Model):
 
     def __str__(self):
         return self.nombre
+
     
 class ItemInventario(models.Model):
     codigo = models.CharField(max_length=50, unique=True)
