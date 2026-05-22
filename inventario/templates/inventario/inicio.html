@@ -73,43 +73,27 @@
         <tbody>
 
             {% for insumo in insumos %}
+<tr {% if insumo.stock_minimo > 0 and insumo.cantidad_disponible_count <= insumo.stock_minimo %}class="table-warning"{% endif %}>
 
-            <tr {% if insumo.stock_minimo_alcanzado %}class="table-warning"{% endif %}>
+    <td>{{ insumo.id }}</td>
+    <td>{{ insumo.nombre }}</td>
+    <td>{{ insumo.descripcion }}</td>
+    <td>{{ insumo.marca }}</td>
 
-                <td>{{ insumo.id }}</td>
+    <!-- ✅ Muestra el nombre del EstadoInsumo, ej: "Activo" -->
+    <td>{{ insumo.estado }}</td>
 
-                <td>{{ insumo.nombre }}</td>
+    <!-- ✅ Usa la anotación del queryset -->
+    <td>{{ insumo.cantidad_disponible_count }}</td>
 
-                <td>{{ insumo.descripcion }}</td>
+    <td>{{ insumo.stock_minimo }}</td>
 
-                <td>{{ insumo.marca }}</td>
-
-                <td>{{ insumo.cantidad_disponible }}</td>
-
-                <td>{{ insumo.stock_minimo }}</td>
-
-                <td>{{ insumo.estado }}</td>
-
-                <td>
-                    <a
-                    
-                        href="/inventario/editar/{{ insumo.id }}/"
-                        class="btn btn-warning btn-sm"
-                    >
-                        Editar
-                    </a>
-
-                    <a
-                        href="/inventario/eliminar/{{ insumo.id }}/"
-                        class="btn btn-danger btn-sm"
-                    >
-                        Eliminar
-                    </a>
-                </td>
-
-            </tr>
-
-            {% endfor %}
+    <td>
+        <a href="/inventario/editar/{{ insumo.id }}/" class="btn btn-warning btn-sm">Editar</a>
+        <a href="/inventario/eliminar/{{ insumo.id }}/" class="btn btn-danger btn-sm">Eliminar</a>
+    </td>
+</tr>
+{% endfor %}
 
         </tbody>
 

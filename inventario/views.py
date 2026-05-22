@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.db.models import Count, Q
 from users.decorators import rol_requerido
 
 from .models import (
@@ -30,15 +31,22 @@ def inicio(request):
 
     busqueda = request.GET.get('busqueda')
 
+    insumos = Insumo.objects.select_related('estado').annotate(
+        cantidad_disponible_count=Count(
+            'items',
+            filter=Q(items__estado__nombre='Disponible')
+        )
+    )
+
     if busqueda:
         insumos = Insumo.objects.filter(nombre__icontains=busqueda)
-    else:
-        insumos = Insumo.objects.all()
-
+    
     alertas_stock = [
-        insumo for insumo in Insumo.objects.all()
-        if insumo.stock_minimo_alcanzado()
+        insumo for insumo in insumos
+        if insumo.stock_minimo > 0 and
+        insumo.cantidad_disponible_count <= insumo.stock_minimo
     ]
+    
 
     return render(
         request,
