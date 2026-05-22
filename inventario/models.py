@@ -49,12 +49,19 @@ class ItemInventario(models.Model):
     insumo = models.ForeignKey(
         Insumo,
         on_delete=models.CASCADE,
-        related_name='items'  # Agrega esto
+        related_name='items'
     )
 
     estado = models.ForeignKey(
         EstadoItem,
         on_delete=models.CASCADE
+    )
+
+    laboratorio = models.ForeignKey(
+        'laboratorio.Laboratorio',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
     )
 
     fecha_registro = models.DateTimeField(auto_now_add=True)

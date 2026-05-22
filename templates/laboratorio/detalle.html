@@ -1,0 +1,62 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">{{ laboratorio.nombre }}</h1>
+
+<div class="card p-4 mb-4">
+
+    <h5>Información del laboratorio</h5>
+
+    <p><strong>Ubicación:</strong> {{ laboratorio.ubicacion }}</p>
+    <p><strong>Encargado:</strong> {{ laboratorio.encargado }}</p>
+    <p><strong>Programa:</strong> {{ laboratorio.programa }}</p>
+
+    
+        href="/laboratorio/{{ laboratorio.id }}/editar/"
+        class="btn btn-warning btn-sm"
+    >
+        Editar
+    </a>
+
+</div>
+
+<div class="card p-4">
+
+    <h5>Ítems en este laboratorio</h5>
+
+    {% if items %}
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Insumo</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.codigo }}</td>
+                <td>{{ item.insumo.nombre }}</td>
+                <td>{{ item.estado.nombre }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+    {% else %}
+    <p class="text-muted">No hay ítems asignados a este laboratorio.</p>
+    {% endif %}
+
+    <a href="/laboratorio/" class="btn btn-secondary mt-3">
+        Volver
+    </a>
+
+</div>
+
+{% endblock %}
