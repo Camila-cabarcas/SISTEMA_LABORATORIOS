@@ -1,0 +1,60 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Reservas del Laboratorio: {{ laboratorio.nombre }}</h1>
+
+<a href="/laboratorio/{{ laboratorio.id }}/" class="btn btn-secondary mb-4">
+    Volver a Detalle
+</a>
+
+<div class="card p-4">
+
+    {% if reservas %}
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>ID Reserva</th>
+                <th>Usuario</th>
+                <th>Fecha Reserva</th>
+                <th>Estado</th>
+                <th>Hora Límite Retiro</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for reserva in reservas %}
+            <tr>
+                <td>#{{ reserva.id }}</td>
+                <td>{{ reserva.usuario.username }}</td>
+                <td>{{ reserva.fecha_reserva|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <span class="badge bg-info">
+                        {{ reserva.estado.nombre }}
+                    </span>
+                </td>
+                <td>{{ reserva.hora_limite_retiro|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <a
+                        href="/reservas/{{ reserva.id }}/detalle/"
+                        class="btn btn-info btn-sm"
+                    >
+                        Ver
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+    {% else %}
+    <p class="text-muted">No hay reservas activas para items de este laboratorio.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

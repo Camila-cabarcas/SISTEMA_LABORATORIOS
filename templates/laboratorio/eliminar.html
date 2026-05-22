@@ -1,0 +1,29 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Eliminar Laboratorio</h1>
+
+<div class="card p-4 border-danger">
+
+    <div class="alert alert-warning" role="alert">
+        <strong>⚠️ Advertencia:</strong> Esta acción no se puede deshacer.
+    </div>
+
+    <p><strong>Laboratorio:</strong> {{ laboratorio.nombre }}</p>
+    <p><strong>Ubicación:</strong> {{ laboratorio.ubicacion }}</p>
+    <p><strong>Encargado:</strong> {{ laboratorio.encargado }}</p>
+
+    <form method="POST" class="mt-4">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+            Confirmar Eliminación
+        </button>
+        <a href="/laboratorio/" class="btn btn-secondary">
+            Cancelar
+        </a>
+    </form>
+
+</div>
+
+{% endblock %}

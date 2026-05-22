@@ -1,0 +1,66 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Préstamos del Laboratorio: {{ laboratorio.nombre }}</h1>
+
+<a href="/laboratorio/{{ laboratorio.id }}/" class="btn btn-secondary mb-4">
+    Volver a Detalle
+</a>
+
+<div class="card p-4">
+
+    {% if prestamos %}
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>ID Préstamo</th>
+                <th>Responsable</th>
+                <th>Fecha Entrega</th>
+                <th>Estado</th>
+                <th>Fecha Devolución</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for prestamo in prestamos %}
+            <tr>
+                <td>#{{ prestamo.id }}</td>
+                <td>{{ prestamo.responsable.username }}</td>
+                <td>{{ prestamo.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <span class="badge bg-info">
+                        {{ prestamo.estado.nombre }}
+                    </span>
+                </td>
+                <td>
+                    {% if prestamo.fecha_devolucion %}
+                        {{ prestamo.fecha_devolucion|date:"d/m/Y H:i" }}
+                    {% else %}
+                        <span class="text-muted">Pendiente</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a
+                        href="/prestamos/{{ prestamo.id }}/detalle/"
+                        class="btn btn-info btn-sm"
+                    >
+                        Ver
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+    {% else %}
+    <p class="text-muted">No hay préstamos activos para items de este laboratorio.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}
