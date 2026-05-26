@@ -7,7 +7,16 @@ from .forms import ReservaForm, ReservaInsumoForm
 @rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
 def lista_reservas(request):
 
-    reservas = Reserva.objects.all().order_by('-fecha_creacion')
+    rol = request.user.rol.nombre if request.user.rol else None
+
+    # Admin y Encargado ven todas las reservas
+    if rol in ['Administrador', 'Encargado']:
+        reservas = Reserva.objects.all().order_by('-fecha_creacion')
+    else:
+        # Docente y Estudiante solo ven las suyas
+        reservas = Reserva.objects.filter(
+            usuario=request.user
+        ).order_by('-fecha_creacion')
 
     return render(
         request,
