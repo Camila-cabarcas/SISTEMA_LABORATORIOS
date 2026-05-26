@@ -1,0 +1,59 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Reservas disponibles para préstamo</h1>
+
+<div class="card p-4">
+
+    {% if reservas %}
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Usuario</th>
+                <th>Fecha Reserva</th>
+                <th>Insumos</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for reserva in reservas %}
+            <tr>
+                <td>{{ reserva.id }}</td>
+                <td>{{ reserva.usuario }}</td>
+                <td>{{ reserva.fecha_reserva }}</td>
+                <td>
+                    {% for insumo in reserva.reservainsumo_set.all %}
+                        {{ insumo.insumo.nombre }} ({{ insumo.cantidad }})
+                        {% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td>
+                    <a 
+                        href="/prestamos/crear/{{ reserva.id }}/"
+                        class="btn btn-success btn-sm"
+                    >
+                        Crear préstamo
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+    {% else %}
+    <p class="text-muted">No hay reservas aprobadas disponibles para préstamo.</p>
+    {% endif %}
+
+    <a href="/prestamos/" class="btn btn-secondary mt-3">
+        Volver
+    </a>
+
+</div>
+
+{% endblock %}

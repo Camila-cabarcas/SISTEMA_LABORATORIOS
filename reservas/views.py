@@ -136,3 +136,19 @@ def aprobar_reserva(request, id):
             'reserva': reserva
         }
     )
+
+@rol_requerido('Administrador', 'Encargado')
+def reservas_para_prestamo(request):
+
+    reservas = Reserva.objects.filter(
+        estado__nombre='Aprobada',
+        prestamo__isnull=True
+    ).order_by('-fecha_creacion')
+
+    return render(
+        request,
+        'reservas/para_prestamo.html',
+        {
+            'reservas': reservas
+        }
+    )
