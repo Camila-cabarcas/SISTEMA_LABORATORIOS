@@ -107,6 +107,8 @@ def detalle_prestamo(request, id):
 @rol_requerido('Administrador', 'Encargado')
 def cambiar_estado_prestamo(request, id):
 
+    from datetime import datetime
+
     prestamo = get_object_or_404(Prestamo, id=id)
 
     if request.method == 'POST':
@@ -115,7 +117,13 @@ def cambiar_estado_prestamo(request, id):
 
         if form.is_valid():
 
-            form.save()
+            prestamo = form.save(commit=False)
+
+            # Si se devuelve, registra la fecha real
+            if prestamo.estado.nombre == 'Devuelto':
+                prestamo.fecha_devolucion = datetime.now()
+
+            prestamo.save()
 
             return redirect('detalle_prestamo', id=prestamo.pk)
 
