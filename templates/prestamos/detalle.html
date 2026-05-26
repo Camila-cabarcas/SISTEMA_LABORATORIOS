@@ -15,11 +15,31 @@
     <p><strong>Fecha devolución esperada:</strong> {{ prestamo.reserva.fecha_devolucion }}</p>
     <p><strong>Fecha devolución real:</strong> {{ prestamo.fecha_devolucion|default:"Pendiente" }}</p>
 
-    {% if prestamo.estado.nombre == 'Retrasado' %}
-    <div class="alert alert-danger mt-2">
-        ⚠️ Devolución retrasada
-    </div>
-    {% endif %}
+    {% if prestamo.estado.nombre == 'Activo' or prestamo.estado.nombre == 'Retrasado' %}
+<div class="card p-4 mb-4">
+
+    <h5>Agregar ítem al préstamo</h5>
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">
+            Agregar ítem
+        </button>
+    </form>
+
+</div>
+
+{% if items %}
+<div class="card p-4 mb-4">
+    <h5>¿Ya agregaste todos los ítems?</h5>
+    <a href="/prestamos/" class="btn btn-success">
+        Finalizar y volver a préstamos
+    </a>
+</div>
+{% endif %}
+
+{% endif %}
 
     {% if prestamo.fecha_devolucion and prestamo.fecha_devolucion > prestamo.reserva.fecha_devolucion %}
     <div class="alert alert-warning mt-2">

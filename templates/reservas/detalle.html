@@ -9,18 +9,24 @@
     <h5>Información de la reserva</h5>
 
     <p><strong>Usuario:</strong> {{ reserva.usuario }}</p>
-    <p><strong>Fecha creación:</strong> {{ reserva.fecha_creacion }}</p>
     <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
     <p><strong>Límite de retiro:</strong> {{ reserva.hora_limite_retiro }}</p>
     <p><strong>Fecha devolución:</strong> {{ reserva.fecha_devolucion }}</p>
     <p><strong>Estado:</strong> {{ reserva.estado }}</p>
 
-    <a
-        href="/reservas/{{ reserva.id }}/aprobar/"
-    class="btn btn-primary btn-sm"
->
-    Gestionar reserva
-</a>
+    {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Encargado' %}
+    {% if reserva.estado.nombre == 'Pendiente' %}
+    <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/">
+        {% csrf_token %}
+        <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2">
+            Aprobar
+        </button>
+        <button type="submit" name="accion" value="cancelar" class="btn btn-danger">
+            Cancelar reserva
+        </button>
+    </form>
+    {% endif %}
+    {% endif %}
 
 </div>
 
