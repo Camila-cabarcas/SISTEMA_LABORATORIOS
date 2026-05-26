@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from django.utils import timezone
+from datetime import datetime
 from reservas.models import Reserva, EstadoReserva
 
 
@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
         reservas_expiradas = Reserva.objects.filter(
             estado__nombre__in=['Pendiente', 'Aprobada'],
-            hora_limite_retiro__lt=timezone.now()
+            hora_limite_retiro__lt=datetime.now()
         )
 
         cantidad = reservas_expiradas.count()
