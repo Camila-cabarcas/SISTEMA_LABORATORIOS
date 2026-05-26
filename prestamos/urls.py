@@ -11,4 +11,5 @@ urlpatterns = [
     path('crear/', crear_prestamo, name='crear_prestamo'),
     path('<int:id>/', detalle_prestamo, name='detalle_prestamo'),
     path('<int:id>/estado/', cambiar_estado_prestamo, name='cambiar_estado_prestamo'),
+    path('crear/<int:reserva_id>/', crear_prestamo, name='crear_prestamo'),
 ]

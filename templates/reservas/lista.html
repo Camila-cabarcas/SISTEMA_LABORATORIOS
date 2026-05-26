@@ -42,6 +42,14 @@
                     >
                         Ver detalle
                     </a>
+                    {% if reserva.estado.nombre == 'Aprobada' %}
+                    <a
+                        href="/prestamos/crear/{{ reserva.id }}/"
+                        class="btn btn-success btn-sm"
+                    >
+                        Crear préstamo
+                    </a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

@@ -19,7 +19,22 @@ def lista_prestamos(request):
 
 
 @rol_requerido('Administrador', 'Encargado')
-def crear_prestamo(request):
+def crear_prestamo(request, reserva_id):
+
+    from reservas.models import Reserva
+    from datetime import datetime
+
+    reserva = get_object_or_404(Reserva, id=reserva_id)
+
+    # Verifica que ya llegó la hora de la reserva
+    if datetime.now() < reserva.fecha_reserva:
+        return render(
+            request,
+            'prestamos/no_disponible.html',
+            {
+                'reserva': reserva
+            }
+        )
 
     if request.method == 'POST':
 
@@ -28,6 +43,7 @@ def crear_prestamo(request):
         if form.is_valid():
 
             prestamo = form.save(commit=False)
+            prestamo.reserva = reserva
             prestamo.estado = EstadoPrestamo.objects.get(nombre='Activo')
             prestamo.save()
 
@@ -41,7 +57,8 @@ def crear_prestamo(request):
         request,
         'prestamos/crear.html',
         {
-            'form': form
+            'form': form,
+            'reserva': reserva
         }
     )
 

@@ -4,6 +4,18 @@
 
 <h1 class="mb-4">Nuevo Préstamo</h1>
 
+<div class="card p-4 mb-4">
+    <h5>Reserva #{{ reserva.id }}</h5>
+    <p><strong>Usuario:</strong> {{ reserva.usuario }}</p>
+    <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
+    <p><strong>Insumos solicitados:</strong></p>
+    <ul>
+        {% for insumo in reserva.reservainsumo_set.all %}
+        <li>{{ insumo.insumo.nombre }} — Cantidad: {{ insumo.cantidad }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
 <div class="card p-4">
 
     <form method="POST">
@@ -16,7 +28,7 @@
             Crear Préstamo
         </button>
 
-        <a href="/prestamos/" class="btn btn-secondary ms-2">
+        <a href="/reservas/" class="btn btn-secondary ms-2">
             Cancelar
         </a>
 

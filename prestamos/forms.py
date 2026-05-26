@@ -10,18 +10,10 @@ class PrestamoForm(forms.ModelForm):
         model = Prestamo
 
         fields = [
-            'reserva',
             'responsable',
         ]
 
         widgets = {
-
-            'reserva': forms.Select(
-                attrs={
-                    'class': 'form-select'
-                }
-            ),
-
             'responsable': forms.Select(
                 attrs={
                     'class': 'form-select'
