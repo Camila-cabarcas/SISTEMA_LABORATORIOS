@@ -1,0 +1,104 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Disponibilidad - {{ laboratorio.nombre }}</h1>
+
+{% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Encargado' or user.rol.nombre == 'Docente' %}
+<div class="card p-4 mb-4">
+    <h5>Agregar evento</h5>
+    <div class="row">
+        <div class="col-md-4">
+            <input type="text" id="titulo" class="form-control mb-2" placeholder="Título del evento">
+        </div>
+        <div class="col-md-3">
+            <input type="datetime-local" id="inicio" class="form-control mb-2">
+        </div>
+        <div class="col-md-3">
+            <input type="datetime-local" id="fin" class="form-control mb-2">
+        </div>
+        <div class="col-md-2">
+            <select id="bloqueado" class="form-select mb-2">
+                <option value="true">Bloqueado</option>
+                <option value="false">Disponible</option>
+            </select>
+        </div>
+    </div>
+    <button class="btn btn-primary" onclick="crearEvento()">Agregar</button>
+</div>
+{% endif %}
+
+<div class="card p-4">
+    <div id="calendario"></div>
+</div>
+
+<a href="/laboratorio/" class="btn btn-secondary mt-3">Volver</a>
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+<script>
+const labId = parseInt("{{ laboratorio.id }}");
+const rol = "{{ user.rol.nombre }}";
+const puedeEditar = ['Administrador', 'Encargado', 'Docente'].includes(rol);
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    const calendarEl = document.getElementById('calendario');
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'es',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'timeGridWeek,timeGridDay'
+        },
+        slotMinTime: '06:00:00',
+        slotMaxTime: '22:00:00',
+        events: `/laboratorio/${labId}/eventos/`,
+        eventClick: function(info) {
+            if (!puedeEditar) return;
+            if (confirm('¿Eliminar este evento?')) {
+                fetch(`/laboratorio/eventos/${info.event.id}/eliminar/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                }).then(() => calendar.refetchEvents());
+            }
+        }
+    });
+
+    calendar.render();
+    window.calendar = calendar;
+});
+
+function crearEvento() {
+    const titulo = document.getElementById('titulo').value;
+    const inicio = document.getElementById('inicio').value;
+    const fin = document.getElementById('fin').value;
+    const bloqueado = document.getElementById('bloqueado').value;
+
+    if (!titulo || !inicio || !fin) {
+        alert('Por favor completa todos los campos.');
+        return;
+    }
+
+    fetch(`/laboratorio/${labId}/eventos/crear/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `titulo=${titulo}&inicio=${inicio}&fin=${fin}&bloqueado=${bloqueado}`
+    }).then(() => {
+        window.calendar.refetchEvents();
+        document.getElementById('titulo').value = '';
+        document.getElementById('inicio').value = '';
+        document.getElementById('fin').value = '';
+    });
+}
+</script>
+
+{% endblock %}

@@ -2,11 +2,15 @@ from django.urls import path
 from .views import (
     lista_laboratorios,
     crear_laboratorio,
-    editar_laboratorio,
     detalle_laboratorio,
+    editar_laboratorio,
     eliminar_laboratorio,
     reservas_laboratorio,
-    prestamos_laboratorio
+    prestamos_laboratorio,
+    disponibilidad_laboratorio,
+    eventos_laboratorio,
+    crear_evento,
+    eliminar_evento
 )
 
 urlpatterns = [
@@ -17,4 +21,8 @@ urlpatterns = [
     path('<int:id>/eliminar/', eliminar_laboratorio, name='eliminar_laboratorio'),
     path('<int:id>/reservas/', reservas_laboratorio, name='reservas_laboratorio'),
     path('<int:id>/prestamos/', prestamos_laboratorio, name='prestamos_laboratorio'),
+    path('<int:id>/disponibilidad/', disponibilidad_laboratorio, name='disponibilidad_laboratorio'),
+    path('<int:id>/eventos/', eventos_laboratorio, name='eventos_laboratorio'),
+    path('<int:id>/eventos/crear/', crear_evento, name='crear_evento'),
+    path('eventos/<int:id>/eliminar/', eliminar_evento, name='eliminar_evento'),
 ]

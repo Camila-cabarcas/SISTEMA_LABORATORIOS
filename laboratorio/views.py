@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from users.decorators import rol_requerido
-from .models import Laboratorio
+from .models import Laboratorio, EventoLaboratorio
 from .forms import LaboratorioForm
 from inventario.models import ItemInventario
 from reservas.models import ReservaInsumo
@@ -155,3 +156,75 @@ def prestamos_laboratorio(request, id):
             'prestamos': list(prestamos)
         }
     )
+
+
+@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+def disponibilidad_laboratorio(request, id):
+
+    laboratorio = get_object_or_404(Laboratorio, id=id)
+
+    return render(
+        request,
+        'laboratorio/disponibilidad.html',
+        {
+            'laboratorio': laboratorio
+        }
+    )
+
+
+@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+def eventos_laboratorio(request, id):
+
+    laboratorio = get_object_or_404(Laboratorio, id=id)
+    eventos = EventoLaboratorio.objects.filter(laboratorio=laboratorio)
+
+    data = []
+    for evento in eventos:
+        data.append({
+            'id': evento.id,
+            'title': evento.titulo,
+            'start': evento.inicio.strftime('%Y-%m-%dT%H:%M:%S'),
+            'end': evento.fin.strftime('%Y-%m-%dT%H:%M:%S'),
+            'color': '#dc3545' if evento.bloqueado else '#28a745',
+            'bloqueado': evento.bloqueado,
+        })
+
+    return JsonResponse(data, safe=False)
+
+
+@rol_requerido('Administrador', 'Encargado', 'Docente')
+def crear_evento(request, id):
+
+    laboratorio = get_object_or_404(Laboratorio, id=id)
+
+    if request.method == 'POST':
+
+        titulo = request.POST.get('titulo')
+        inicio = request.POST.get('inicio')
+        fin = request.POST.get('fin')
+        bloqueado = request.POST.get('bloqueado') == 'true'
+
+        EventoLaboratorio.objects.create(
+            laboratorio=laboratorio,
+            titulo=titulo,
+            inicio=inicio,
+            fin=fin,
+            bloqueado=bloqueado,
+            creado_por=request.user
+        )
+
+        return JsonResponse({'status': 'ok'})
+
+    return JsonResponse({'status': 'error'}, status=400)
+
+
+@rol_requerido('Administrador', 'Encargado', 'Docente')
+def eliminar_evento(request, id):
+
+    evento = get_object_or_404(EventoLaboratorio, id=id)
+
+    if request.method == 'POST':
+        evento.delete()
+        return JsonResponse({'status': 'ok'})
+
+    return JsonResponse({'status': 'error'}, status=400)

@@ -2,6 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from users.decorators import rol_requerido
 from .models import Reserva, ReservaInsumo, EstadoReserva
 from .forms import ReservaForm, ReservaInsumoForm
+from datetime import datetime
+from laboratorio.models import HorarioLaboratorio
+from django.http import JsonResponse
+from datetime import datetime, timedelta
 
 
 @rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
@@ -36,12 +40,39 @@ def crear_reserva(request):
 
         if form.is_valid():
 
-            reserva = form.save(commit=False)
-            reserva.usuario = request.user  # Asigna automáticamente
-            reserva.estado = EstadoReserva.objects.get(nombre='Pendiente')
-            reserva.save()
+            fecha_reserva = form.cleaned_data['fecha_reserva']
 
-            return redirect('detalle_reserva', id=reserva.pk)
+            # Obtener el día de la semana en español
+            dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+            dia = dias[fecha_reserva.weekday()]
+            hora = fecha_reserva.time()
+
+            # Verificar si hay horario disponible
+            horario_disponible = HorarioLaboratorio.objects.filter(
+                dia=dia,
+                hora_inicio__lte=hora,
+                hora_fin__gte=hora,
+                bloqueado=False
+            ).exists()
+
+            horario_bloqueado = HorarioLaboratorio.objects.filter(
+                dia=dia,
+                hora_inicio__lte=hora,
+                hora_fin__gte=hora,
+                bloqueado=True
+            ).exists()
+
+            if not horario_disponible or horario_bloqueado:
+                form.add_error(
+                    'fecha_reserva',
+                    'No hay disponibilidad en el laboratorio para ese horario.'
+                )
+            else:
+                reserva = form.save(commit=False)
+                reserva.usuario = request.user
+                reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
+                reserva.save()
+                return redirect('detalle_reserva', id=reserva.pk)
 
     else:
 
@@ -152,3 +183,41 @@ def reservas_para_prestamo(request):
             'reservas': reservas
         }
     )
+
+@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+def horarios_disponibles(request):
+
+    # Generar slots para las próximas 4 semanas
+    slots = []
+    hoy = datetime.now()
+
+    dias_semana = {
+        'lunes': 0, 'martes': 1, 'miercoles': 2,
+        'jueves': 3, 'viernes': 4, 'sabado': 5
+    }
+
+    horarios = HorarioLaboratorio.objects.all()
+
+    for semana in range(4):
+        for horario in horarios:
+            dia_num = dias_semana.get(horario.dia)
+            if dia_num is None:
+                continue
+
+            # Calcular la fecha de ese día en esta semana
+            dias_hasta = (dia_num - hoy.weekday()) % 7
+            fecha = hoy + timedelta(days=dias_hasta + semana * 7)
+
+            inicio = datetime.combine(fecha.date(), horario.hora_inicio)
+            fin = datetime.combine(fecha.date(), horario.hora_fin)
+
+            slots.append({
+                'title': 'Bloqueado' if horario.bloqueado else 'Disponible',
+                'start': inicio.strftime('%Y-%m-%dT%H:%M:%S'),
+                'end': fin.strftime('%Y-%m-%dT%H:%M:%S'),
+                'color': '#dc3545' if horario.bloqueado else '#28a745',
+                'bloqueado': horario.bloqueado,
+                'motivo': horario.motivo_bloqueo if horario.bloqueado else ''
+            })
+
+    return JsonResponse(slots, safe=False)
