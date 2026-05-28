@@ -4,9 +4,15 @@
 
 <h1 class="mb-4">Préstamos</h1>
 
-<a href="/reservas/para-prestamo/" class="btn btn-primary mb-4">
-    Nuevo Préstamo
-</a>
+<div class="d-flex justify-content-between mb-4">
+    <a href="/reservas/para-prestamo/" class="btn btn-primary">Nuevo Préstamo</a>
+    <div class="d-flex gap-2">
+        <a href="?" class="btn btn-dark btn-sm">Todos</a>
+        <a href="?estado=Activo" class="btn btn-success btn-sm">Activos</a>
+        <a href="?estado=Retrasado" class="btn btn-warning btn-sm">Retrasados</a>
+        <a href="?estado=Devuelto" class="btn btn-secondary btn-sm">Devueltos</a>
+    </div>
+</div>
 
 <div class="card p-4">
 
@@ -19,20 +25,39 @@
                 <th>Responsable</th>
                 <th>Estado</th>
                 <th>Fecha Entrega</th>
+                <th>Fecha Devolución</th>
+                <th>Retraso</th>
                 <th>Acciones</th>
             </tr>
         </thead>
 
         <tbody>
             {% for prestamo in prestamos %}
-            <tr>
+            <tr class="
+                {% if prestamo.estado.nombre == 'Activo' %}table-success
+                {% elif prestamo.estado.nombre == 'Retrasado' %}table-warning
+                {% elif prestamo.estado.nombre == 'Devuelto' %}table-secondary
+                {% endif %}
+            ">
                 <td>{{ prestamo.id }}</td>
                 <td>{{ prestamo.reserva }}</td>
                 <td>{{ prestamo.responsable }}</td>
                 <td>{{ prestamo.estado }}</td>
                 <td>{{ prestamo.fecha_entrega }}</td>
+                <td>{{ prestamo.fecha_devolucion|default:"Pendiente" }}</td>
                 <td>
-                    <a
+                    {% if prestamo.estado.nombre == 'Devuelto' %}
+                        {% if prestamo.fecha_devolucion > prestamo.reserva.fecha_devolucion %}
+                            <span class="badge bg-danger">Con retraso</span>
+                        {% else %}
+                            <span class="badge bg-success">A tiempo</span>
+                        {% endif %}
+                    {% else %}
+                        ---
+                    {% endif %}
+                </td>
+                <td>
+                    
                         href="/prestamos/{{ prestamo.id }}/"
                         class="btn btn-info btn-sm"
                     >

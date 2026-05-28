@@ -4,9 +4,16 @@
 
 <h1 class="mb-4">Reservas</h1>
 
-<a href="/reservas/crear/" class="btn btn-primary mb-4">
-    Nueva Reserva
-</a>
+<div class="d-flex justify-content-between mb-4">
+    <a href="/reservas/crear/" class="btn btn-primary">Nueva Reserva</a>
+    <div class="d-flex gap-2">
+        <a href="?" class="btn btn-dark btn-sm">Todas</a>
+        <a href="?estado=Aprobada" class="btn btn-success btn-sm">Aprobadas</a>
+        <a href="?estado=Pendiente" class="btn btn-warning btn-sm">Pendientes</a>
+        <a href="?estado=Cancelada" class="btn btn-secondary btn-sm">Canceladas</a>
+        <a href="?estado=Expirada" class="btn btn-danger btn-sm">Expiradas</a>
+    </div>
+</div>
 
 <div class="card p-4">
 
@@ -26,7 +33,13 @@
 
         <tbody>
             {% for reserva in reservas %}
-            <tr>
+            <tr class="
+                {% if reserva.estado.nombre == 'Aprobada' %}table-success
+                {% elif reserva.estado.nombre == 'Pendiente' %}table-warning
+                {% elif reserva.estado.nombre == 'Cancelada' %}table-secondary
+                {% elif reserva.estado.nombre == 'Expirada' %}table-danger
+                {% endif %}
+            ">
                 <td>{{ reserva.id }}</td>
                 <td>{{ reserva.usuario }}</td>
                 <td>{{ reserva.fecha_reserva }}</td>

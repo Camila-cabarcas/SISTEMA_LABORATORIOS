@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 def lista_reservas(request):
 
     rol = request.user.rol.nombre if request.user.rol else None
+    estado_filtro = request.GET.get('estado')
 
     if rol in ['Administrador', 'Encargado']:
         reservas = Reserva.objects.all().order_by('-fecha_creacion')
@@ -19,6 +20,9 @@ def lista_reservas(request):
         reservas = Reserva.objects.filter(
             usuario=request.user
         ).order_by('-fecha_creacion')
+
+    if estado_filtro:
+        reservas = reservas.filter(estado__nombre=estado_filtro)
 
     return render(
         request,

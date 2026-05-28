@@ -7,7 +7,11 @@ from .forms import PrestamoForm, CambiarEstadoPrestamoForm, PrestamoItemForm
 @rol_requerido('Administrador', 'Encargado')
 def lista_prestamos(request):
 
+    estado_filtro = request.GET.get('estado')
     prestamos = Prestamo.objects.all().order_by('-fecha_entrega')
+
+    if estado_filtro:
+        prestamos = prestamos.filter(estado__nombre=estado_filtro)
 
     return render(
         request,
@@ -139,3 +143,21 @@ def cambiar_estado_prestamo(request, id):
             'form': form
         }
     )
+
+@rol_requerido('Administrador', 'Encargado')
+def marcar_devuelto(request, id):
+
+    from datetime import datetime
+
+    prestamo = get_object_or_404(Prestamo, id=id)
+
+    if request.method == 'POST':
+
+        estado_devuelto = EstadoPrestamo.objects.get(nombre='Devuelto')
+        prestamo.estado = estado_devuelto
+        prestamo.fecha_devolucion = datetime.now()
+        prestamo.save()
+
+        return redirect('detalle_prestamo', id=prestamo.pk)
+
+    return redirect('detalle_prestamo', id=prestamo.pk)
