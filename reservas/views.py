@@ -13,11 +13,9 @@ def lista_reservas(request):
 
     rol = request.user.rol.nombre if request.user.rol else None
 
-    # Admin y Encargado ven todas las reservas
     if rol in ['Administrador', 'Encargado']:
         reservas = Reserva.objects.all().order_by('-fecha_creacion')
     else:
-        # Docente y Estudiante solo ven las suyas
         reservas = Reserva.objects.filter(
             usuario=request.user
         ).order_by('-fecha_creacion')
@@ -26,7 +24,8 @@ def lista_reservas(request):
         request,
         'reservas/lista.html',
         {
-            'reservas': reservas
+            'reservas': reservas,
+            'now': datetime.now()
         }
     )
 
@@ -70,7 +69,11 @@ def crear_reserva(request):
             else:
                 reserva = form.save(commit=False)
                 reserva.usuario = request.user
-                reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
+                rol = request.user.rol.nombre if request.user.rol else None
+                if rol in ['Administrador', 'Encargado']:
+                    reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
+                else:
+                    reserva.estado = EstadoReserva.objects.get(nombre='Pendiente')
                 reserva.save()
                 return redirect('detalle_reserva', id=reserva.pk)
 
