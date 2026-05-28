@@ -8,12 +8,6 @@
     <h5>Reserva #{{ reserva.id }}</h5>
     <p><strong>Usuario:</strong> {{ reserva.usuario }}</p>
     <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
-    <p><strong>Insumos solicitados:</strong></p>
-    <ul>
-        {% for insumo in reserva.reservainsumo_set.all %}
-        <li>{{ insumo.insumo.nombre }} — Cantidad: {{ insumo.cantidad }}</li>
-        {% endfor %}
-    </ul>
 </div>
 
 <div class="card p-4">
@@ -22,7 +16,25 @@
 
         {% csrf_token %}
 
-        {{ form.as_p }}
+        <h5 class="mb-3">Selecciona los ítems a entregar</h5>
+
+        {% for ri, items in items_por_insumo.items %}
+        <div class="mb-4">
+            <label class="form-label">
+                <strong>{{ ri.insumo.nombre }}</strong> — Cantidad solicitada: {{ ri.cantidad }}
+            </label>
+            {% if items %}
+            <select name="items" class="form-select">
+                <option value="">-- Seleccionar ítem --</option>
+                {% for item in items %}
+                <option value="{{ item.id }}">{{ item.codigo }}</option>
+                {% endfor %}
+            </select>
+            {% else %}
+            <p class="text-danger">No hay ítems disponibles para este insumo.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
 
         <button type="submit" class="btn btn-primary">
             Crear Préstamo

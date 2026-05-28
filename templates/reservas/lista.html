@@ -15,6 +15,19 @@
     </div>
 </div>
 
+<form method="GET" class="mb-4">
+    <div class="input-group" style="max-width: 300px;">
+        <input
+            type="date"
+            name="fecha"
+            class="form-control"
+            value="{{ fecha_filtro }}"
+        >
+        <button class="btn btn-dark" type="submit">Buscar</button>
+        <a href="?" class="btn btn-secondary">Limpiar</a>
+    </div>
+</form>
+
 <div class="card p-4">
 
     <table class="table table-striped">

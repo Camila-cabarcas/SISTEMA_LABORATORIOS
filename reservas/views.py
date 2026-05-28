@@ -13,23 +13,28 @@ def lista_reservas(request):
 
     rol = request.user.rol.nombre if request.user.rol else None
     estado_filtro = request.GET.get('estado')
+    fecha_filtro = request.GET.get('fecha')
 
     if rol in ['Administrador', 'Encargado']:
-        reservas = Reserva.objects.all().order_by('-fecha_creacion')
+        reservas = Reserva.objects.all().order_by('-fecha_reserva')
     else:
         reservas = Reserva.objects.filter(
             usuario=request.user
-        ).order_by('-fecha_creacion')
+        ).order_by('-fecha_reserva')
 
     if estado_filtro:
         reservas = reservas.filter(estado__nombre=estado_filtro)
+
+    if fecha_filtro:
+        reservas = reservas.filter(fecha_reserva__date=fecha_filtro)
 
     return render(
         request,
         'reservas/lista.html',
         {
             'reservas': reservas,
-            'now': datetime.now()
+            'now': datetime.now(),
+            'fecha_filtro': fecha_filtro
         }
     )
 
@@ -178,9 +183,15 @@ def aprobar_reserva(request, id):
 @rol_requerido('Administrador', 'Encargado')
 def reservas_para_prestamo(request):
 
+    from datetime import datetime
+
+    ahora = datetime.now()
+
     reservas = Reserva.objects.filter(
         estado__nombre='Aprobada',
-        prestamo__isnull=True
+        prestamo__isnull=True,
+        hora_limite_retiro__gt=ahora,
+        fecha_reserva__lte=ahora
     ).order_by('-fecha_creacion')
 
     return render(

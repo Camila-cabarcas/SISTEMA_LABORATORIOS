@@ -25,44 +25,62 @@ def lista_prestamos(request):
 @rol_requerido('Administrador', 'Encargado')
 def crear_prestamo(request, reserva_id):
 
-    from reservas.models import Reserva
+    from reservas.models import Reserva, ReservaInsumo
+    from inventario.models import ItemInventario, EstadoItem
     from datetime import datetime
 
     reserva = get_object_or_404(Reserva, id=reserva_id)
 
-    # Verifica que ya llegó la hora de la reserva
     if datetime.now() < reserva.fecha_reserva:
         return render(
             request,
             'prestamos/no_disponible.html',
-            {
-                'reserva': reserva
-            }
+            {'reserva': reserva, 'mensaje': 'antes'}
         )
+
+    if datetime.now() > reserva.hora_limite_retiro:
+        return render(
+            request,
+            'prestamos/no_disponible.html',
+            {'reserva': reserva, 'mensaje': 'expirada'}
+        )
+
+    # Obtener ítems disponibles por insumo de la reserva
+    insumos_reserva = ReservaInsumo.objects.filter(reserva=reserva)
+    items_por_insumo = {}
+
+    for ri in insumos_reserva:
+        items_disponibles = ItemInventario.objects.filter(
+            insumo=ri.insumo,
+            estado__nombre='Disponible'
+        )
+        items_por_insumo[ri] = items_disponibles
 
     if request.method == 'POST':
 
-        form = PrestamoForm(request.POST)
+        prestamo = Prestamo.objects.create(
+            reserva=reserva,
+            responsable=request.user,
+            estado=EstadoPrestamo.objects.get(nombre='Activo')
+        )
 
-        if form.is_valid():
+        # Guardar los ítems seleccionados
+        items_seleccionados = request.POST.getlist('items')
+        for item_id in items_seleccionados:
+            item = ItemInventario.objects.get(id=item_id)
+            PrestamoItem.objects.create(
+                prestamo=prestamo,
+                item_inventario=item
+            )
 
-            prestamo = form.save(commit=False)
-            prestamo.reserva = reserva
-            prestamo.estado = EstadoPrestamo.objects.get(nombre='Activo')
-            prestamo.save()
-
-            return redirect('detalle_prestamo', id=prestamo.pk)
-
-    else:
-
-        form = PrestamoForm()
+        return redirect('detalle_prestamo', id=prestamo.pk)
 
     return render(
         request,
         'prestamos/crear.html',
         {
-            'form': form,
-            'reserva': reserva
+            'reserva': reserva,
+            'items_por_insumo': items_por_insumo
         }
     )
 

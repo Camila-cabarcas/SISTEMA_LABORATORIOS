@@ -3,13 +3,26 @@
 {% block contenido %}
 
 <div class="text-center mt-5">
+
+    {% if mensaje == 'antes' %}
     <h1>⏰ Reserva no disponible aún</h1>
     <p class="text-muted">
         La reserva está programada para 
         <strong>{{ reserva.fecha_reserva }}</strong>.
         No se puede crear el préstamo antes de esa hora.
     </p>
-    <a href="/reservas/" class="btn btn-primary">Volver a reservas</a>
+
+    {% elif mensaje == 'expirada' %}
+    <h1>❌ Límite de retiro expirado</h1>
+    <p class="text-muted">
+        El límite de retiro era 
+        <strong>{{ reserva.hora_limite_retiro }}</strong>.
+        El usuario no reclamó los insumos a tiempo.
+    </p>
+    {% endif %}
+
+    <a href="/prestamos/" class="btn btn-primary">Volver a préstamos</a>
+
 </div>
 
 {% endblock %}
