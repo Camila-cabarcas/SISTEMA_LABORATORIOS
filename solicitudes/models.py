@@ -4,6 +4,7 @@ from datetime import timedelta
 from users.models import Usuario
 from laboratorio.models import Laboratorio, Modulo, HorarioLaboratorio
 from inventario.models import Insumo
+from reservas.models import Reserva
 
 
 class Curso(models.Model):
@@ -67,6 +68,14 @@ class SolicitudReserva(models.Model):
         Modulo,
         blank=True,
         related_name='solicitudes'
+    )
+
+    reserva = models.ForeignKey(
+        Reserva,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='solicitud'
     )
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -173,6 +182,45 @@ class SolicitudReserva(models.Model):
                 )
 
             self.modulos_asignados.set(modulos_disponibles)
+
+    def crear_reserva(self):
+        """Crear una Reserva a partir de esta SolicitudReserva"""
+        from datetime import datetime
+        from reservas.models import EstadoReserva, ReservaInsumo
+
+        # No crear si ya existe reserva
+        if self.reserva:
+            return self.reserva
+
+        # Obtener estado "Pendiente"
+        estado_pendiente = EstadoReserva.objects.filter(nombre='Pendiente').first()
+        if not estado_pendiente:
+            raise ValueError('No existe estado "Pendiente" en EstadoReserva')
+
+        # Calcular fecha_reserva como datetime (combinando fecha y hora_inicio)
+        # Usar datetime naive porque USE_TZ=False
+        fecha_base = datetime.combine(self.fecha_reserva.date(), self.hora_inicio or datetime.min.time())
+
+        # Crear Reserva (el método save() calcula automáticamente hora_limite_retiro y fecha_devolucion)
+        reserva = Reserva.objects.create(
+            usuario=self.usuario,
+            fecha_reserva=fecha_base,
+            estado=estado_pendiente
+        )
+
+        # Crear ReservaInsumo para cada insumo
+        for solicitud_insumo in self.insumos.all():
+            ReservaInsumo.objects.create(
+                reserva=reserva,
+                insumo=solicitud_insumo.insumo,
+                cantidad=solicitud_insumo.cantidad
+            )
+
+        # Guardar referencia a la reserva
+        self.reserva = reserva
+        self.save(update_fields=['reserva'])
+
+        return reserva
 
     def __str__(self):
         if self.tipo_solicitante == 'profesor':

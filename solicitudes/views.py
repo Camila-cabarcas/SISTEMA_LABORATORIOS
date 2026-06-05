@@ -14,7 +14,11 @@ def solicitud_estudiante(request):
 
         form = EstudianteSolicitudForm(request.user, request.POST)
         if form.is_valid():
-            form.save()
+            solicitud = form.save()
+            try:
+                solicitud.crear_reserva()
+            except Exception as e:
+                print(f"Error creando reserva: {e}")
             return redirect('lista_solicitudes')
     else:
         user = request.user if request.user.is_authenticated else None
@@ -31,7 +35,11 @@ def solicitud_profesor(request):
     if request.method == 'POST':
         form = ProfesorSolicitudForm(request.POST)
         if form.is_valid():
-            form.save()
+            solicitud = form.save()
+            try:
+                solicitud.crear_reserva()
+            except Exception as e:
+                print(f"Error creando reserva: {e}")
             return redirect('lista_solicitudes')
     else:
         form = ProfesorSolicitudForm()
