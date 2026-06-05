@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.core.exceptions import ValidationError
 from users.decorators import rol_requerido
 from users.models import Usuario
 from inventario.models import Insumo
@@ -36,12 +37,16 @@ def solicitud_profesor(request):
     if request.method == 'POST':
         form = ProfesorSolicitudForm(request.POST)
         if form.is_valid():
-            solicitud = form.save()
             try:
-                solicitud.crear_reserva()
-            except Exception as e:
-                print(f"Error creando reserva: {e}")
-            return redirect('lista_solicitudes')
+                solicitud = form.save()
+                try:
+                    solicitud.crear_reserva()
+                except Exception as e:
+                    print(f"Error creando reserva: {e}")
+                return redirect('lista_solicitudes')
+            except ValidationError as e:
+                # Mostrar error de módulos insuficientes u otros errores de validación
+                form.add_error(None, e.message if hasattr(e, 'message') else str(e))
     else:
         form = ProfesorSolicitudForm()
 

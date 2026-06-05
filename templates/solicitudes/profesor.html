@@ -4,6 +4,16 @@
 
 <h1 class="mb-4">Solicitud de Reserva - Profesor</h1>
 
+{% if form.non_field_errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Error:</strong>
+        {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+
 <div class="card p-4">
 
     <form method="POST" id="profesor-form">
