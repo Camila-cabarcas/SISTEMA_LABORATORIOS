@@ -68,6 +68,8 @@ def api_insumos(request):
 
 
 def buscar_insumos(request):
+    from inventario.models import ItemInventario, EstadoItem
+
     q = request.GET.get('q', '').strip()
 
     if q:
@@ -75,12 +77,28 @@ def buscar_insumos(request):
     else:
         insumos = Insumo.objects.all()
 
-    results = [
-        {
+    results = []
+    for i in insumos:
+        # Calcular cantidad disponible como ItemInventario con estado Disponible
+        estado_disponible = EstadoItem.objects.filter(nombre='Disponible').first()
+        cantidad_disponible = 0
+        if estado_disponible:
+            cantidad_disponible = ItemInventario.objects.filter(
+                insumo=i,
+                estado=estado_disponible
+            ).count()
+
+        # Mostrar en el text según disponibilidad
+        if cantidad_disponible > 0:
+            text = i.nombre
+        else:
+            text = f"{i.nombre} (No disponible)"
+
+        results.append({
             'id': i.id,
-            'text': f"{i.nombre} ({i.cantidad_disponible()} disponibles)"
-        }
-        for i in insumos
-    ]
+            'text': text,
+            'cantidad_disponible': cantidad_disponible,
+            'disabled': cantidad_disponible == 0
+        })
 
     return JsonResponse({'results': results})

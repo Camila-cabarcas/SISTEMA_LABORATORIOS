@@ -256,10 +256,18 @@ function renderDropdown(insumos) {
         btn.type = 'button';
         btn.className = 'list-group-item list-group-item-action';
         btn.textContent = insumo.text;
-        btn.onclick = (e) => {
-            e.preventDefault();
-            seleccionarInsumo(insumo);
-        };
+
+        if (insumo.disabled) {
+            btn.style.pointerEvents = 'none';
+            btn.style.color = '#999';
+            btn.style.backgroundColor = '#f5f5f5';
+        } else {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                seleccionarInsumo(insumo);
+            };
+        }
+
         dropdownDiv.appendChild(btn);
     });
 }
