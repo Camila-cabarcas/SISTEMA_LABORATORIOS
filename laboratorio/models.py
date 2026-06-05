@@ -77,3 +77,21 @@ class EventoLaboratorio(models.Model):
 
     def __str__(self):
         return f"{self.titulo} - {self.inicio}"
+
+
+class Modulo(models.Model):
+
+    nombre = models.CharField(max_length=100)
+
+    capacidad = models.PositiveIntegerField()
+
+    disponible = models.BooleanField(default=True)
+
+    laboratorio = models.ForeignKey(
+        Laboratorio,
+        on_delete=models.CASCADE,
+        related_name='modulos'
+    )
+
+    def __str__(self):
+        return f"{self.nombre} ({self.laboratorio.nombre})"
