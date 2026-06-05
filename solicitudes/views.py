@@ -5,24 +5,26 @@ from .models import SolicitudReserva
 from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm
 
 
-@login_required
 def solicitud_estudiante(request):
     if request.method == 'POST':
+        if not request.user.is_authenticated:
+            return redirect('login')
+
         form = EstudianteSolicitudForm(request.user, request.POST)
         if form.is_valid():
             form.save()
             return redirect('lista_solicitudes')
     else:
-        form = EstudianteSolicitudForm(request.user)
+        user = request.user if request.user.is_authenticated else None
+        form = EstudianteSolicitudForm(user)
 
     return render(
         request,
         'solicitudes/estudiante.html',
-        {'form': form}
+        {'form': form, 'is_anonymous': not request.user.is_authenticated}
     )
 
 
-@rol_requerido('Administrador', 'Docente')
 def solicitud_profesor(request):
     if request.method == 'POST':
         form = ProfesorSolicitudForm(request.POST)
