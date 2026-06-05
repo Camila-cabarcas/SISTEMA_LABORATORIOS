@@ -9,22 +9,67 @@
     <form method="POST">
         {% csrf_token %}
 
-        <div class="mb-3">
-            <label for="id_laboratorio" class="form-label">Laboratorio</label>
-            {{ form.laboratorio }}
-            {% if form.laboratorio.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.laboratorio.errors }}
-                </div>
-            {% endif %}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_laboratorio" class="form-label">Laboratorio *</label>
+                {{ form.laboratorio }}
+                {% if form.laboratorio.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.laboratorio.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="id_fecha_reserva" class="form-label">Fecha *</label>
+                {{ form.fecha_reserva }}
+                {% if form.fecha_reserva.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.fecha_reserva.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_hora_inicio" class="form-label">Hora Inicio *</label>
+                {{ form.hora_inicio }}
+                {% if form.hora_inicio.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.hora_inicio.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="id_hora_fin" class="form-label">Hora Fin (máx. 4 horas) *</label>
+                {{ form.hora_fin }}
+                {% if form.hora_fin.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.hora_fin.errors }}
+                    </div>
+                {% endif %}
+            </div>
         </div>
 
         <div class="mb-3">
-            <label for="id_fecha_reserva" class="form-label">Fecha y Hora</label>
-            {{ form.fecha_reserva }}
-            {% if form.fecha_reserva.errors %}
+            <div class="form-check">
+                {{ form.necesita_modulo }}
+                <label class="form-check-label" for="id_necesita_modulo">
+                    Necesita módulo/puesto
+                </label>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Insumos requeridos</label>
+            <div class="border p-3" style="max-height: 250px; overflow-y: auto;">
+                {{ form.insumos }}
+            </div>
+            {% if form.insumos.errors %}
                 <div class="invalid-feedback d-block">
-                    {{ form.fecha_reserva.errors }}
+                    {{ form.insumos.errors }}
                 </div>
             {% endif %}
         </div>
@@ -38,6 +83,14 @@
                 </div>
             {% endif %}
         </div>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
 
         <button type="submit" class="btn btn-primary">
             Enviar Solicitud

@@ -25,9 +25,11 @@
                 <th>Tipo</th>
                 <th>Solicitante</th>
                 <th>Laboratorio</th>
-                <th>Fecha Reserva</th>
-                <th>Módulos Asignados</th>
-                <th>Fecha Creación</th>
+                <th>Fecha</th>
+                <th>Horario</th>
+                <th>Insumos</th>
+                <th>Módulos</th>
+                <th>Creado</th>
             </tr>
         </thead>
 
@@ -37,7 +39,7 @@
                 <td>#{{ solicitud.id }}</td>
                 <td>
                     <span class="badge {% if solicitud.tipo_solicitante == 'estudiante' %}bg-info{% else %}bg-success{% endif %}">
-                        {{ solicitud.get_tipo_solicitante_display }}
+                        {{ solicitud.get_tipo_solicitante_display|truncatewords:1 }}
                     </span>
                 </td>
                 <td>
@@ -47,16 +49,34 @@
                         {{ solicitud.nombre }}
                     {% endif %}
                 </td>
-                <td>{{ solicitud.laboratorio.nombre }}</td>
-                <td>{{ solicitud.fecha_reserva|date:"d/m/Y H:i" }}</td>
+                <td>{{ solicitud.laboratorio.nombre|truncatewords:2 }}</td>
+                <td>{{ solicitud.fecha_reserva|date:"d/m/Y" }}</td>
                 <td>
-                    {% if solicitud.modulos_asignados.all %}
-                        {{ solicitud.modulos_asignados.count }} módulo(s)
+                    {% if solicitud.hora_inicio and solicitud.hora_fin %}
+                        {{ solicitud.hora_inicio|time:"H:i" }} - {{ solicitud.hora_fin|time:"H:i" }}
                     {% else %}
                         <span class="text-muted">-</span>
                     {% endif %}
                 </td>
-                <td>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                <td>
+                    {% if solicitud.insumos.all %}
+                        <small>{{ solicitud.insumos.count }} insumo(s)</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if solicitud.modulos_asignados.all %}
+                        <small>{{ solicitud.modulos_asignados.count }}</small>
+                    {% else %}
+                        {% if solicitud.necesita_modulo %}
+                            <span class="text-warning">Sin asignar</span>
+                        {% else %}
+                            <span class="text-muted">No requiere</span>
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td><small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small></td>
             </tr>
             {% endfor %}
         </tbody>
