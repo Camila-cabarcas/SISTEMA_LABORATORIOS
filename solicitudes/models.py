@@ -68,21 +68,20 @@ class SolicitudReserva(models.Model):
             if not self.nombre or not self.cedula:
                 raise ValidationError('Nombre y cédula son requeridos para profesores.')
 
-            try:
-                usuario = Usuario.objects.get(
-                    first_name__icontains=self.nombre,
-                    rol__nombre='Docente'
-                )
-                self.usuario = usuario
-            except Usuario.DoesNotExist:
+            from django.db.models import Q
+            partes_nombre = self.nombre.split()
+            query = Q()
+            for parte in partes_nombre:
+                query |= Q(first_name__icontains=parte) | Q(last_name__icontains=parte)
+
+            usuarios = Usuario.objects.filter(query, rol__nombre='Docente')
+
+            if not usuarios.exists():
                 raise ValidationError(
                     f'No se encontró un profesor registrado con el nombre "{self.nombre}".'
                 )
-            except Usuario.MultipleObjectsReturned:
-                raise ValidationError(
-                    f'Múltiples usuarios encontrados con nombre "{self.nombre}". '
-                    'Por favor, sea más específico.'
-                )
+
+            self.usuario = usuarios.first()
 
     def asignar_modulos_automaticamente(self):
         if self.tipo_solicitante == 'profesor' and self.curso:

@@ -75,11 +75,8 @@ class ProfesorSolicitudForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance.tipo_solicitante = 'profesor'
-
-    def clean(self):
-        cleaned_data = super().clean()
-        self.instance.clean()
-        return cleaned_data
+        self.fields['nombre'].required = True
+        self.fields['cedula'].required = True
 
     def save(self, commit=True):
         instance = super().save(commit=False)
