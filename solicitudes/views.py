@@ -65,3 +65,22 @@ def api_insumos(request):
         for i in insumos
     ]
     return JsonResponse(data, safe=False)
+
+
+def buscar_insumos(request):
+    q = request.GET.get('q', '').strip()
+
+    if q:
+        insumos = Insumo.objects.filter(nombre__icontains=q)
+    else:
+        insumos = Insumo.objects.all()
+
+    results = [
+        {
+            'id': i.id,
+            'text': f"{i.nombre} ({i.cantidad_disponible()} disponibles)"
+        }
+        for i in insumos
+    ]
+
+    return JsonResponse({'results': results})

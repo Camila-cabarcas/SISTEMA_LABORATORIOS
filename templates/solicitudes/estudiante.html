@@ -2,6 +2,8 @@
 
 {% block contenido %}
 
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+
 <h1 class="mb-4">Solicitud de Reserva - Estudiante</h1>
 
 <div class="card p-4">
@@ -104,28 +106,24 @@
         <hr>
         <h5 class="mb-3">Insumos Requeridos</h5>
 
-        <div class="mb-3">
-            <label for="insumo_search" class="form-label">Buscar Insumo</label>
-            <input
-                type="text"
-                id="insumo_search"
-                class="form-control"
-                placeholder="Escribe el nombre del insumo..."
-                autocomplete="off"
-            >
-            <div id="insumo_dropdown" class="list-group mt-2" style="position: absolute; width: 100%; z-index: 1000; max-height: 200px; overflow-y: auto; display: none;">
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label for="insumo_select" class="form-label">Buscar Insumo</label>
+                <select id="insumo_select" class="form-control" style="width: 100%;">
+                    <option></option>
+                </select>
             </div>
-        </div>
 
-        <div class="mb-3">
-            <label for="insumo_cantidad" class="form-label">Cantidad</label>
-            <input
-                type="number"
-                id="insumo_cantidad"
-                class="form-control"
-                min="1"
-                value="1"
-            >
+            <div class="col-md-4 mb-3">
+                <label for="insumo_cantidad" class="form-label">Cantidad</label>
+                <input
+                    type="number"
+                    id="insumo_cantidad"
+                    class="form-control"
+                    min="1"
+                    value="1"
+                >
+            </div>
         </div>
 
         <button type="button" id="agregar_insumo_btn" class="btn btn-sm btn-success mb-3">
@@ -171,81 +169,63 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
 let insumosSeleccionados = {};
-let todosInsumos = [];
 
-// Cargar todos los insumos desde Django
-document.addEventListener('DOMContentLoaded', function() {
-    fetch('/solicitudes/api/insumos/')
-        .then(r => r.json())
-        .then(data => {
-            todosInsumos = data;
-        });
-});
-
-// Buscar insumos mientras se escribe
-document.getElementById('insumo_search').addEventListener('input', function(e) {
-    const valor = e.target.value.toLowerCase();
-    const dropdown = document.getElementById('insumo_dropdown');
-
-    if (!valor) {
-        dropdown.style.display = 'none';
-        return;
-    }
-
-    const filtrados = todosInsumos.filter(i =>
-        i.nombre.toLowerCase().includes(valor)
-    );
-
-    dropdown.innerHTML = '';
-    filtrados.slice(0, 10).forEach(insumo => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'list-group-item list-group-item-action';
-        item.textContent = insumo.nombre + ' (' + insumo.cantidad_disponible + ' disponibles)';
-        item.onclick = (e) => {
-            e.preventDefault();
-            seleccionarInsumo(insumo);
-        };
-        dropdown.appendChild(item);
+$(document).ready(function() {
+    // Inicializar Select2
+    $('#insumo_select').select2({
+        placeholder: 'Selecciona un insumo',
+        minimumInputLength: 0,
+        ajax: {
+            url: '/solicitudes/buscar-insumos/',
+            dataType: 'json',
+            data: function(params) {
+                return {
+                    q: params.term
+                };
+            },
+            processResults: function(data) {
+                return {
+                    results: data.results
+                };
+            }
+        },
+        allowClear: true
     });
 
-    dropdown.style.display = filtrados.length ? 'block' : 'none';
+    // Trigger busqueda inicial (mostrar todos)
+    $('#insumo_select').on('select2:opening', function(e) {
+        $(this).data('select2').$dropdown.find('.select2-search__field').val('').trigger('keyup');
+    });
 });
 
-function seleccionarInsumo(insumo) {
-    document.getElementById('insumo_search').value = insumo.nombre;
-    document.getElementById('insumo_dropdown').style.display = 'none';
-    document.getElementById('insumo_search').dataset.insumoId = insumo.id;
-}
-
 document.getElementById('agregar_insumo_btn').addEventListener('click', function() {
-    const searchInput = document.getElementById('insumo_search');
-    const insumoId = searchInput.dataset.insumoId;
+    const select = document.getElementById('insumo_select');
+    const insumoId = select.value;
+    const insumoText = select.options[select.selectedIndex]?.text || '';
     const cantidad = parseInt(document.getElementById('insumo_cantidad').value) || 1;
 
     if (!insumoId) {
-        alert('Selecciona un insumo de la lista');
+        alert('Selecciona un insumo');
         return;
     }
-
-    const insumo = todosInsumos.find(i => i.id == insumoId);
-    if (!insumo) return;
 
     if (insumosSeleccionados[insumoId]) {
         insumosSeleccionados[insumoId].cantidad += cantidad;
     } else {
         insumosSeleccionados[insumoId] = {
             id: insumoId,
-            nombre: insumo.nombre,
+            nombre: insumoText.split('(')[0].trim(),
             cantidad: cantidad
         };
     }
 
     actualizarListaInsumos();
-    searchInput.value = '';
-    delete searchInput.dataset.insumoId;
+    $('#insumo_select').val(null).trigger('change');
     document.getElementById('insumo_cantidad').value = '1';
 });
 
