@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'reservas',
     'users',
     'laboratorio',
+    'solicitudes',
 ]
 
 MIDDLEWARE = [

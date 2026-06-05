@@ -1,0 +1,53 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Solicitud de Reserva - Estudiante</h1>
+
+<div class="card p-4">
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label for="id_laboratorio" class="form-label">Laboratorio</label>
+            {{ form.laboratorio }}
+            {% if form.laboratorio.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.laboratorio.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_fecha_reserva" class="form-label">Fecha y Hora</label>
+            {{ form.fecha_reserva }}
+            {% if form.fecha_reserva.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.fecha_reserva.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_observaciones" class="form-label">Observaciones</label>
+            {{ form.observaciones }}
+            {% if form.observaciones.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.observaciones.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            Enviar Solicitud
+        </button>
+        <a href="/solicitudes/" class="btn btn-secondary">
+            Cancelar
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

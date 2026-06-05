@@ -1,0 +1,93 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Solicitud de Reserva - Profesor</h1>
+
+<div class="card p-4">
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_nombre" class="form-label">Nombre Completo</label>
+                {{ form.nombre }}
+                {% if form.nombre.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.nombre.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="id_cedula" class="form-label">Cédula</label>
+                {{ form.cedula }}
+                {% if form.cedula.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.cedula.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="id_curso" class="form-label">Curso</label>
+            {{ form.curso }}
+            {% if form.curso.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.curso.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_laboratorio" class="form-label">Laboratorio</label>
+            {{ form.laboratorio }}
+            {% if form.laboratorio.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.laboratorio.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_fecha_reserva" class="form-label">Fecha y Hora</label>
+            {{ form.fecha_reserva }}
+            {% if form.fecha_reserva.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.fecha_reserva.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_observaciones" class="form-label">Observaciones</label>
+            {{ form.observaciones }}
+            {% if form.observaciones.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.observaciones.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary">
+            Enviar Solicitud
+        </button>
+        <a href="/solicitudes/" class="btn btn-secondary">
+            Cancelar
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

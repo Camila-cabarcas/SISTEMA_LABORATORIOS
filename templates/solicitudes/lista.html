@@ -1,0 +1,72 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Solicitudes de Reserva</h1>
+
+<div class="mb-4">
+    <a href="/solicitudes/estudiante/" class="btn btn-primary">
+        Nueva Solicitud - Estudiante
+    </a>
+    <a href="/solicitudes/profesor/" class="btn btn-success">
+        Nueva Solicitud - Profesor
+    </a>
+</div>
+
+<div class="card p-4">
+
+    {% if solicitudes %}
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tipo</th>
+                <th>Solicitante</th>
+                <th>Laboratorio</th>
+                <th>Fecha Reserva</th>
+                <th>Módulos Asignados</th>
+                <th>Fecha Creación</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for solicitud in solicitudes %}
+            <tr>
+                <td>#{{ solicitud.id }}</td>
+                <td>
+                    <span class="badge {% if solicitud.tipo_solicitante == 'estudiante' %}bg-info{% else %}bg-success{% endif %}">
+                        {{ solicitud.get_tipo_solicitante_display }}
+                    </span>
+                </td>
+                <td>
+                    {% if solicitud.tipo_solicitante == 'estudiante' %}
+                        {{ solicitud.usuario.username }}
+                    {% else %}
+                        {{ solicitud.nombre }}
+                    {% endif %}
+                </td>
+                <td>{{ solicitud.laboratorio.nombre }}</td>
+                <td>{{ solicitud.fecha_reserva|date:"d/m/Y H:i" }}</td>
+                <td>
+                    {% if solicitud.modulos_asignados.all %}
+                        {{ solicitud.modulos_asignados.count }} módulo(s)
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+    {% else %}
+    <p class="text-muted">No hay solicitudes registradas.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}
