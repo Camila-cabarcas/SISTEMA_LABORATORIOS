@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from users.decorators import rol_requerido
+from inventario.models import Insumo
 from .models import SolicitudReserva
 from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm
 
@@ -50,3 +52,16 @@ def lista_solicitudes(request):
         'solicitudes/lista.html',
         {'solicitudes': solicitudes}
     )
+
+
+def api_insumos(request):
+    insumos = Insumo.objects.all()
+    data = [
+        {
+            'id': i.id,
+            'nombre': i.nombre,
+            'cantidad_disponible': i.cantidad_disponible()
+        }
+        for i in insumos
+    ]
+    return JsonResponse(data, safe=False)

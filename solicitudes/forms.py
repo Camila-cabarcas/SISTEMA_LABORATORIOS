@@ -4,17 +4,37 @@ from inventario.models import Insumo
 
 
 class EstudianteSolicitudForm(forms.ModelForm):
-    insumos = forms.ModelMultipleChoiceField(
-        queryset=Insumo.objects.all(),
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-        label='Insumos requeridos'
+    insumos_ids = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=False
+    )
+    insumos_cantidades = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=False
     )
 
     class Meta:
         model = SolicitudReserva
-        fields = ['laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin', 'necesita_modulo', 'observaciones']
+        fields = ['nombre', 'cedula', 'programa', 'laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin', 'necesita_modulo', 'observaciones']
         widgets = {
+            'nombre': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Nombre completo'
+                }
+            ),
+            'cedula': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Número de identificación'
+                }
+            ),
+            'programa': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Carrera/Programa'
+                }
+            ),
             'laboratorio': forms.Select(attrs={'class': 'form-select'}),
             'fecha_reserva': forms.DateInput(
                 attrs={
@@ -48,9 +68,13 @@ class EstudianteSolicitudForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.user = user
         self.instance.tipo_solicitante = 'estudiante'
-        self.instance.usuario = user
+        if user and user.is_authenticated:
+            self.instance.usuario = user
 
         # Hacer campos requeridos
+        self.fields['nombre'].required = True
+        self.fields['cedula'].required = True
+        self.fields['programa'].required = True
         self.fields['laboratorio'].required = True
         self.fields['fecha_reserva'].required = True
         self.fields['hora_inicio'].required = True
@@ -58,7 +82,8 @@ class EstudianteSolicitudForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        instance.usuario = self.user
+        if self.user and self.user.is_authenticated:
+            instance.usuario = self.user
         instance.tipo_solicitante = 'estudiante'
         instance.clean()
 
@@ -69,14 +94,30 @@ class EstudianteSolicitudForm(forms.ModelForm):
         return instance
 
     def _guardar_insumos(self, instance):
-        insumos = self.cleaned_data.get('insumos', [])
-        SolicitudInsumo.objects.filter(solicitud=instance).delete()
-        for insumo in insumos:
-            SolicitudInsumo.objects.create(
-                solicitud=instance,
-                insumo=insumo,
-                cantidad=1
-            )
+        ids_str = self.cleaned_data.get('insumos_ids', '')
+        cantidades_str = self.cleaned_data.get('insumos_cantidades', '')
+
+        if not ids_str:
+            return
+
+        try:
+            ids = [int(id) for id in ids_str.split(',') if id]
+            cantidades = [int(cant) for cant in cantidades_str.split(',') if cant]
+
+            SolicitudInsumo.objects.filter(solicitud=instance).delete()
+
+            for insumo_id, cantidad in zip(ids, cantidades):
+                try:
+                    insumo = Insumo.objects.get(id=insumo_id)
+                    SolicitudInsumo.objects.create(
+                        solicitud=instance,
+                        insumo=insumo,
+                        cantidad=cantidad
+                    )
+                except Insumo.DoesNotExist:
+                    pass
+        except (ValueError, AttributeError):
+            pass
 
 
 class ProfesorSolicitudForm(forms.ModelForm):

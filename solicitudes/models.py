@@ -41,6 +41,7 @@ class SolicitudReserva(models.Model):
 
     nombre = models.CharField(max_length=200, blank=True)
     cedula = models.CharField(max_length=50, blank=True)
+    programa = models.CharField(max_length=200, blank=True)
 
     curso = models.ForeignKey(
         Curso,
@@ -99,8 +100,10 @@ class SolicitudReserva(models.Model):
                 if self.hora_fin <= self.hora_inicio:
                     errors['hora_fin'] = 'La hora de fin debe ser posterior a la hora de inicio.'
 
-                # Validar máximo 4 horas
+                # Validar duración
                 duracion = self._calcular_duracion()
+                if duracion < timedelta(hours=2):
+                    errors['hora_fin'] = 'El préstamo debe ser mínimo 2 horas.'
                 if duracion > timedelta(hours=4):
                     errors['hora_fin'] = 'El préstamo no puede exceder 4 horas.'
 

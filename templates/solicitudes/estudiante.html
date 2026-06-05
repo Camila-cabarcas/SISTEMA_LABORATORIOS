@@ -6,8 +6,45 @@
 
 <div class="card p-4">
 
-    <form method="POST">
+    <form method="POST" id="solicitud-form">
         {% csrf_token %}
+
+        <h5 class="mb-3">Información Personal</h5>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_nombre" class="form-label">Nombre Completo *</label>
+                {{ form.nombre }}
+                {% if form.nombre.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.nombre.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="id_cedula" class="form-label">Cédula/ID *</label>
+                {{ form.cedula }}
+                {% if form.cedula.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.cedula.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="id_programa" class="form-label">Programa/Carrera *</label>
+            {{ form.programa }}
+            {% if form.programa.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.programa.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <hr>
+        <h5 class="mb-3">Información de Reserva</h5>
 
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -35,6 +72,7 @@
             <div class="col-md-6 mb-3">
                 <label for="id_hora_inicio" class="form-label">Hora Inicio *</label>
                 {{ form.hora_inicio }}
+                <small class="text-muted d-block mt-1">Mínimo 2 horas</small>
                 {% if form.hora_inicio.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.hora_inicio.errors }}
@@ -45,6 +83,7 @@
             <div class="col-md-6 mb-3">
                 <label for="id_hora_fin" class="form-label">Hora Fin (máx. 4 horas) *</label>
                 {{ form.hora_fin }}
+                <small class="text-muted d-block mt-1">Máximo 4 horas</small>
                 {% if form.hora_fin.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.hora_fin.errors }}
@@ -57,23 +96,52 @@
             <div class="form-check">
                 {{ form.necesita_modulo }}
                 <label class="form-check-label" for="id_necesita_modulo">
-                    Necesita módulo/puesto
+                    Necesita módulo/puesto en el laboratorio
                 </label>
             </div>
         </div>
 
+        <hr>
+        <h5 class="mb-3">Insumos Requeridos</h5>
+
         <div class="mb-3">
-            <label class="form-label">Insumos requeridos</label>
-            <div class="border p-3" style="max-height: 250px; overflow-y: auto;">
-                {{ form.insumos }}
+            <label for="insumo_search" class="form-label">Buscar Insumo</label>
+            <input
+                type="text"
+                id="insumo_search"
+                class="form-control"
+                placeholder="Escribe el nombre del insumo..."
+                autocomplete="off"
+            >
+            <div id="insumo_dropdown" class="list-group mt-2" style="position: absolute; width: 100%; z-index: 1000; max-height: 200px; overflow-y: auto; display: none;">
             </div>
-            {% if form.insumos.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.insumos.errors }}
-                </div>
-            {% endif %}
         </div>
 
+        <div class="mb-3">
+            <label for="insumo_cantidad" class="form-label">Cantidad</label>
+            <input
+                type="number"
+                id="insumo_cantidad"
+                class="form-control"
+                min="1"
+                value="1"
+            >
+        </div>
+
+        <button type="button" id="agregar_insumo_btn" class="btn btn-sm btn-success mb-3">
+            + Agregar Insumo
+        </button>
+
+        <div id="insumos_lista" class="mb-3" style="display: none;">
+            <h6>Insumos Seleccionados:</h6>
+            <div class="list-group" id="insumos_items">
+            </div>
+        </div>
+
+        {{ form.insumos_ids }}
+        {{ form.insumos_cantidades }}
+
+        <hr>
         <div class="mb-3">
             <label for="id_observaciones" class="form-label">Observaciones</label>
             {{ form.observaciones }}
@@ -102,5 +170,119 @@
     </form>
 
 </div>
+
+<script>
+let insumosSeleccionados = {};
+let todosInsumos = [];
+
+// Cargar todos los insumos desde Django
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/solicitudes/api/insumos/')
+        .then(r => r.json())
+        .then(data => {
+            todosInsumos = data;
+        });
+});
+
+// Buscar insumos mientras se escribe
+document.getElementById('insumo_search').addEventListener('input', function(e) {
+    const valor = e.target.value.toLowerCase();
+    const dropdown = document.getElementById('insumo_dropdown');
+
+    if (!valor) {
+        dropdown.style.display = 'none';
+        return;
+    }
+
+    const filtrados = todosInsumos.filter(i =>
+        i.nombre.toLowerCase().includes(valor)
+    );
+
+    dropdown.innerHTML = '';
+    filtrados.slice(0, 10).forEach(insumo => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'list-group-item list-group-item-action';
+        item.textContent = insumo.nombre + ' (' + insumo.cantidad_disponible + ' disponibles)';
+        item.onclick = (e) => {
+            e.preventDefault();
+            seleccionarInsumo(insumo);
+        };
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = filtrados.length ? 'block' : 'none';
+});
+
+function seleccionarInsumo(insumo) {
+    document.getElementById('insumo_search').value = insumo.nombre;
+    document.getElementById('insumo_dropdown').style.display = 'none';
+    document.getElementById('insumo_search').dataset.insumoId = insumo.id;
+}
+
+document.getElementById('agregar_insumo_btn').addEventListener('click', function() {
+    const searchInput = document.getElementById('insumo_search');
+    const insumoId = searchInput.dataset.insumoId;
+    const cantidad = parseInt(document.getElementById('insumo_cantidad').value) || 1;
+
+    if (!insumoId) {
+        alert('Selecciona un insumo de la lista');
+        return;
+    }
+
+    const insumo = todosInsumos.find(i => i.id == insumoId);
+    if (!insumo) return;
+
+    if (insumosSeleccionados[insumoId]) {
+        insumosSeleccionados[insumoId].cantidad += cantidad;
+    } else {
+        insumosSeleccionados[insumoId] = {
+            id: insumoId,
+            nombre: insumo.nombre,
+            cantidad: cantidad
+        };
+    }
+
+    actualizarListaInsumos();
+    searchInput.value = '';
+    delete searchInput.dataset.insumoId;
+    document.getElementById('insumo_cantidad').value = '1';
+});
+
+function eliminarInsumo(insumoId) {
+    delete insumosSeleccionados[insumoId];
+    actualizarListaInsumos();
+}
+
+function actualizarListaInsumos() {
+    const lista = document.getElementById('insumos_items');
+    const listContainer = document.getElementById('insumos_lista');
+
+    lista.innerHTML = '';
+    const ids = [];
+    const cantidades = [];
+
+    Object.values(insumosSeleccionados).forEach(insumo => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = `
+            <div>
+                <strong>${insumo.nombre}</strong>
+                <span class="badge bg-primary">${insumo.cantidad}</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="eliminarInsumo(${insumo.id})">
+                Eliminar
+            </button>
+        `;
+        lista.appendChild(item);
+        ids.push(insumo.id);
+        cantidades.push(insumo.cantidad);
+    });
+
+    document.getElementById('id_insumos_ids').value = ids.join(',');
+    document.getElementById('id_insumos_cantidades').value = cantidades.join(',');
+    listContainer.style.display = Object.keys(insumosSeleccionados).length ? 'block' : 'none';
+}
+</script>
 
 {% endblock %}
