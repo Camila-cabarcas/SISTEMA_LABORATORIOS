@@ -6,7 +6,7 @@
 
 <div class="card p-4">
 
-    <form method="POST">
+    <form method="POST" id="profesor-form">
         {% csrf_token %}
 
         <h5 class="mb-3">Información del Profesor</h5>
@@ -24,7 +24,17 @@
 
             <div class="col-md-6 mb-3">
                 <label for="id_cedula" class="form-label">Cédula *</label>
-                {{ form.cedula }}
+                <input
+                    type="text"
+                    name="cedula"
+                    id="id_cedula"
+                    class="form-control"
+                    placeholder="Número de identificación"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    maxlength="20"
+                >
+                <div id="cedula_error" class="invalid-feedback d-none"></div>
                 {% if form.cedula.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.cedula.errors }}
@@ -37,6 +47,7 @@
             <div class="col-md-6 mb-3">
                 <label for="id_curso" class="form-label">Curso *</label>
                 {{ form.curso }}
+                <small id="curso_cargando" class="text-muted d-none">Cargando cursos...</small>
                 {% if form.curso.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.curso.errors }}
@@ -74,6 +85,7 @@
             <div class="col-md-6 mb-3">
                 <label for="id_hora_inicio" class="form-label">Hora Inicio *</label>
                 {{ form.hora_inicio }}
+                <small class="text-muted d-block mt-1">Mínimo 2 horas</small>
                 {% if form.hora_inicio.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.hora_inicio.errors }}
@@ -82,8 +94,10 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="id_hora_fin" class="form-label">Hora Fin (máx. 4 horas) *</label>
+                <label for="id_hora_fin" class="form-label">Hora Fin *</label>
                 {{ form.hora_fin }}
+                <small class="text-muted d-block mt-1">Máximo 8 horas</small>
+                <div id="error_duracion_prof" class="invalid-feedback d-none"></div>
                 {% if form.hora_fin.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.hora_fin.errors }}
@@ -104,16 +118,46 @@
         <hr>
         <h5 class="mb-3">Insumos Requeridos</h5>
 
-        <div class="mb-3">
-            <div class="border p-3" style="max-height: 250px; overflow-y: auto;">
-                {{ form.insumos }}
-            </div>
-            {% if form.insumos.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.insumos.errors }}
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label for="insumo_buscar_prof" class="form-label">Buscar Insumo</label>
+                <div style="position: relative;">
+                    <input
+                        type="text"
+                        id="insumo_buscar_prof"
+                        class="form-control"
+                        placeholder="Escribe para buscar o haz clic para ver todos..."
+                        autocomplete="off"
+                    >
+                    <div id="insumo_dropdown_prof" class="list-group mt-2" style="position: absolute; width: 100%; z-index: 1000; max-height: 250px; overflow-y: auto; display: none; top: 100%;">
+                    </div>
                 </div>
-            {% endif %}
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label for="insumo_cantidad_prof" class="form-label">Cantidad</label>
+                <input
+                    type="number"
+                    id="insumo_cantidad_prof"
+                    class="form-control"
+                    min="1"
+                    value="1"
+                >
+            </div>
         </div>
+
+        <button type="button" id="agregar_insumo_btn_prof" class="btn btn-sm btn-success mb-3">
+            + Agregar Insumo
+        </button>
+
+        <div id="insumos_lista_prof" class="mb-3" style="display: none;">
+            <h6>Insumos Seleccionados:</h6>
+            <div class="list-group" id="insumos_items_prof">
+            </div>
+        </div>
+
+        <input type="hidden" name="insumos_ids" id="id_insumos_ids_prof" value="">
+        <input type="hidden" name="insumos_cantidades" id="id_insumos_cantidades_prof" value="">
 
         <div class="mb-3">
             <label for="id_observaciones" class="form-label">Observaciones</label>
@@ -143,5 +187,252 @@
     </form>
 
 </div>
+
+<script>
+let insumosSeleccionadosProf = {};
+
+// Validación de cédula (solo números)
+document.getElementById('id_cedula').addEventListener('input', function(e) {
+    const valor = e.target.value;
+    const soloNumeros = valor.replace(/[^0-9]/g, '');
+
+    if (valor !== soloNumeros) {
+        e.target.value = soloNumeros;
+        const errorDiv = document.getElementById('cedula_error');
+        errorDiv.textContent = 'Solo números permitidos';
+        errorDiv.classList.remove('d-none');
+        e.target.classList.add('is-invalid');
+    } else {
+        const errorDiv = document.getElementById('cedula_error');
+        errorDiv.classList.add('d-none');
+        e.target.classList.remove('is-invalid');
+    }
+
+    // Cargar cursos cuando se cambien nombre o cédula
+    cargarCursosPorProfesor();
+});
+
+document.getElementById('id_nombre').addEventListener('change', cargarCursosPorProfesor);
+
+function cargarCursosPorProfesor() {
+    const nombre = document.getElementById('id_nombre').value;
+    const cedula = document.getElementById('id_cedula').value;
+
+    if (!nombre || !cedula) {
+        return;
+    }
+
+    const cargando = document.getElementById('curso_cargando');
+    const cursoSelect = document.getElementById('id_curso');
+
+    cargando.classList.remove('d-none');
+
+    fetch(`/solicitudes/cursos-profesor/?nombre=${encodeURIComponent(nombre)}&cedula=${encodeURIComponent(cedula)}`)
+        .then(r => r.json())
+        .then(data => {
+            cargando.classList.add('d-none');
+
+            if (data.error) {
+                cursoSelect.innerHTML = '<option value="">-- Error: ' + data.error + ' --</option>';
+                return;
+            }
+
+            cursoSelect.innerHTML = '<option value="">-- Selecciona un curso --</option>';
+            data.cursos.forEach(curso => {
+                const option = document.createElement('option');
+                option.value = curso.id;
+                option.textContent = curso.nombre + ' (' + curso.codigo + ')';
+                cursoSelect.appendChild(option);
+            });
+        })
+        .catch(err => {
+            cargando.classList.add('d-none');
+            cursoSelect.innerHTML = '<option value="">-- Error cargando cursos --</option>';
+            console.error(err);
+        });
+}
+
+// Buscador de insumos (igual que en estudiante)
+const buscarInputProf = document.getElementById('insumo_buscar_prof');
+const dropdownDivProf = document.getElementById('insumo_dropdown_prof');
+let insumosCacheProf = null;
+
+buscarInputProf.addEventListener('click', mostrarInsumosProf);
+buscarInputProf.addEventListener('input', buscarInsumosProf);
+document.addEventListener('click', function(e) {
+    if (e.target !== buscarInputProf && e.target.parentElement !== dropdownDivProf) {
+        dropdownDivProf.style.display = 'none';
+    }
+});
+
+function mostrarInsumosProf() {
+    if (!insumosCacheProf) {
+        fetch('/solicitudes/buscar-insumos/?q=')
+            .then(r => r.json())
+            .then(data => {
+                insumosCacheProf = data.results;
+                renderDropdownProf(insumosCacheProf);
+                dropdownDivProf.style.display = 'block';
+            });
+    } else {
+        renderDropdownProf(insumosCacheProf);
+        dropdownDivProf.style.display = 'block';
+    }
+}
+
+function buscarInsumosProf(e) {
+    const query = e.target.value;
+    if (query === '') {
+        mostrarInsumosProf();
+        return;
+    }
+
+    fetch(`/solicitudes/buscar-insumos/?q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(data => {
+            renderDropdownProf(data.results);
+            dropdownDivProf.style.display = 'block';
+        });
+}
+
+function renderDropdownProf(insumos) {
+    dropdownDivProf.innerHTML = '';
+    insumos.forEach(insumo => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'list-group-item list-group-item-action';
+        btn.textContent = insumo.text;
+
+        if (insumo.disabled) {
+            btn.style.pointerEvents = 'none';
+            btn.style.color = '#999';
+            btn.style.backgroundColor = '#f5f5f5';
+        } else {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                seleccionarInsumoProf(insumo);
+            };
+        }
+
+        dropdownDivProf.appendChild(btn);
+    });
+}
+
+function seleccionarInsumoProf(insumo) {
+    document.getElementById('insumo_buscar_prof').value = insumo.text;
+    dropdownDivProf.style.display = 'none';
+    document.getElementById('insumo_buscar_prof').dataset.insumoId = insumo.id;
+}
+
+document.getElementById('agregar_insumo_btn_prof').addEventListener('click', function() {
+    const buscar = document.getElementById('insumo_buscar_prof');
+    const insumoId = buscar.dataset.insumoId;
+    const cantidad = parseInt(document.getElementById('insumo_cantidad_prof').value) || 1;
+
+    if (!insumoId) {
+        alert('Selecciona un insumo de la lista');
+        return;
+    }
+
+    const texto = buscar.value;
+
+    if (insumosSeleccionadosProf[insumoId]) {
+        insumosSeleccionadosProf[insumoId].cantidad += cantidad;
+    } else {
+        insumosSeleccionadosProf[insumoId] = {
+            id: insumoId,
+            nombre: texto.split('(')[0].trim(),
+            cantidad: cantidad
+        };
+    }
+
+    actualizarListaInsumosProf();
+    buscar.value = '';
+    delete buscar.dataset.insumoId;
+    document.getElementById('insumo_cantidad_prof').value = '1';
+});
+
+function eliminarInsumoProf(insumoId) {
+    delete insumosSeleccionadosProf[insumoId];
+    actualizarListaInsumosProf();
+}
+
+function actualizarListaInsumosProf() {
+    const lista = document.getElementById('insumos_items_prof');
+    const listContainer = document.getElementById('insumos_lista_prof');
+
+    lista.innerHTML = '';
+    const ids = [];
+    const cantidades = [];
+
+    Object.values(insumosSeleccionadosProf).forEach(insumo => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = `
+            <div>
+                <strong>${insumo.nombre}</strong>
+                <span class="badge bg-primary">${insumo.cantidad}</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="eliminarInsumoProf(${insumo.id})">
+                Eliminar
+            </button>
+        `;
+        lista.appendChild(item);
+        ids.push(insumo.id);
+        cantidades.push(insumo.cantidad);
+    });
+
+    document.getElementById('id_insumos_ids_prof').value = ids.join(',');
+    document.getElementById('id_insumos_cantidades_prof').value = cantidades.join(',');
+    listContainer.style.display = Object.keys(insumosSeleccionadosProf).length ? 'block' : 'none';
+}
+
+// Validación de horas para profesor (máximo 8 horas)
+const horaInicioProf = document.getElementById('id_hora_inicio');
+const horaFinProf = document.getElementById('id_hora_fin');
+const errorDuracionProf = document.getElementById('error_duracion_prof');
+
+horaInicioProf.addEventListener('change', function() {
+    if (!horaInicioProf.value) return;
+
+    const inicio = new Date(`2000-01-01T${horaInicioProf.value}`);
+    const max = new Date(inicio.getTime() + 8 * 60 * 60 * 1000);
+    const maxHora = String(max.getHours()).padStart(2, '0');
+    const maxMin = String(max.getMinutes()).padStart(2, '0');
+
+    horaFinProf.max = `${maxHora}:${maxMin}`;
+
+    if (horaFinProf.value) {
+        validarDuracionProf();
+    }
+});
+
+horaFinProf.addEventListener('change', validarDuracionProf);
+
+function validarDuracionProf() {
+    if (!horaInicioProf.value || !horaFinProf.value) {
+        errorDuracionProf.classList.add('d-none');
+        horaFinProf.classList.remove('is-invalid');
+        return;
+    }
+
+    const inicio = new Date(`2000-01-01T${horaInicioProf.value}`);
+    const fin = new Date(`2000-01-01T${horaFinProf.value}`);
+    const duracionMinutos = (fin - inicio) / (1000 * 60);
+
+    if (duracionMinutos < 120) {
+        horaFinProf.classList.add('is-invalid');
+        errorDuracionProf.textContent = 'Mínimo 2 horas de diferencia';
+        errorDuracionProf.classList.remove('d-none');
+    } else if (duracionMinutos > 480) {
+        horaFinProf.classList.add('is-invalid');
+        errorDuracionProf.textContent = 'Máximo 8 horas de diferencia';
+        errorDuracionProf.classList.remove('d-none');
+    } else {
+        horaFinProf.classList.remove('is-invalid');
+        errorDuracionProf.classList.add('d-none');
+    }
+}
+</script>
 
 {% endblock %}

@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.db.models import Q
 from users.decorators import rol_requerido
+from users.models import Usuario
 from inventario.models import Insumo
-from .models import SolicitudReserva
+from .models import SolicitudReserva, Curso
 from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm
 
 
@@ -49,6 +51,49 @@ def solicitud_profesor(request):
         'solicitudes/profesor.html',
         {'form': form}
     )
+
+
+def cursos_profesor(request):
+    """Retorna los cursos de un profesor basado en nombre y cédula"""
+    nombre = request.GET.get('nombre', '').strip()
+    cedula = request.GET.get('cedula', '').strip()
+
+    if not nombre or not cedula:
+        return JsonResponse({'error': 'Nombre y cédula requeridos', 'cursos': []})
+
+    # Buscar usuario que sea docente
+    partes_nombre = nombre.split()
+    query = Q()
+    for parte in partes_nombre:
+        query |= Q(first_name__icontains=parte) | Q(last_name__icontains=parte)
+
+    usuarios = Usuario.objects.filter(query, rol__nombre='Docente')
+
+    if not usuarios.exists():
+        return JsonResponse({'error': f'No se encontró profesor con nombre "{nombre}"', 'cursos': []})
+
+    usuario = usuarios.first()
+
+    # Obtener cursos del profesor
+    cursos = Curso.objects.filter(profesor=usuario)
+
+    cursos_data = [
+        {
+            'id': c.id,
+            'nombre': c.nombre,
+            'codigo': c.codigo
+        }
+        for c in cursos
+    ]
+
+    profesor_nombre = usuario.get_full_name() if usuario else nombre
+    if not profesor_nombre:
+        profesor_nombre = usuario.username if usuario else nombre
+
+    return JsonResponse({
+        'cursos': cursos_data,
+        'profesor': profesor_nombre
+    })
 
 
 @login_required

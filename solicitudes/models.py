@@ -112,8 +112,11 @@ class SolicitudReserva(models.Model):
             duracion = self._calcular_duracion()
             if duracion < timedelta(hours=2):
                 errors['hora_fin'] = 'El préstamo debe ser mínimo 2 horas.'
-            if duracion > timedelta(hours=4):
-                errors['hora_fin'] = 'El préstamo no puede exceder 4 horas.'
+
+            # Máximo 8 horas para profesores, 4 para estudiantes
+            max_horas = 8 if self.tipo_solicitante == 'profesor' else 4
+            if duracion > timedelta(hours=max_horas):
+                errors['hora_fin'] = f'El préstamo no puede exceder {max_horas} horas.'
 
             # Validar dentro del horario del laboratorio
             if self.laboratorio and self.fecha_reserva:

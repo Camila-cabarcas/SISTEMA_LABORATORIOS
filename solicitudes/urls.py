@@ -4,7 +4,8 @@ from .views import (
     solicitud_profesor,
     lista_solicitudes,
     api_insumos,
-    buscar_insumos
+    buscar_insumos,
+    cursos_profesor
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path('', lista_solicitudes, name='lista_solicitudes'),
     path('api/insumos/', api_insumos, name='api_insumos'),
     path('buscar-insumos/', buscar_insumos, name='buscar_insumos'),
+    path('cursos-profesor/', cursos_profesor, name='cursos_profesor'),
 ]
