@@ -188,6 +188,47 @@
 <script>
 let insumosSeleccionados = {};
 
+// Validación de fecha (solo lunes-viernes)
+const fechaInput = document.getElementById('id_fecha_reserva');
+
+function validarFecha() {
+    const fechaValue = fechaInput.value;
+    if (!fechaValue) return;
+
+    const fecha = new Date(fechaValue);
+    const diaSemana = fecha.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+
+    // Permitir solo lunes-viernes (1-5)
+    if (diaSemana === 0 || diaSemana === 6) {
+        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        const errorDiv = document.getElementById('fecha_error');
+        if (!errorDiv) {
+            const div = document.createElement('div');
+            div.id = 'fecha_error';
+            div.className = 'invalid-feedback d-block';
+            div.textContent = `El laboratorio solo está disponible de lunes a viernes. ${diasSemana[diaSemana]} no está disponible.`;
+            fechaInput.parentNode.appendChild(div);
+        } else {
+            errorDiv.textContent = `El laboratorio solo está disponible de lunes a viernes. ${diasSemana[diaSemana]} no está disponible.`;
+        }
+        fechaInput.classList.add('is-invalid');
+        fechaInput.value = ''; // Limpiar el valor
+    } else {
+        const errorDiv = document.getElementById('fecha_error');
+        if (errorDiv) errorDiv.remove();
+        fechaInput.classList.remove('is-invalid');
+    }
+}
+
+if (fechaInput) {
+    fechaInput.addEventListener('change', validarFecha);
+    // Establecer min/max para el input type=date
+    const hoy = new Date();
+    const mañana = new Date(hoy);
+    mañana.setDate(mañana.getDate() + 1);
+    fechaInput.min = mañana.toISOString().split('T')[0];
+}
+
 // Validación de cédula (solo números)
 document.getElementById('id_cedula').addEventListener('input', function(e) {
     const valor = e.target.value;
