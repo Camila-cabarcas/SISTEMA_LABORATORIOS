@@ -2,8 +2,6 @@
 
 {% block contenido %}
 
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-
 <h1 class="mb-4">Solicitud de Reserva - Estudiante</h1>
 
 <div class="card p-4">
@@ -26,7 +24,17 @@
 
             <div class="col-md-6 mb-3">
                 <label for="id_cedula" class="form-label">Cédula/ID *</label>
-                {{ form.cedula }}
+                <input
+                    type="text"
+                    name="cedula"
+                    id="id_cedula"
+                    class="form-control"
+                    placeholder="Número de identificación"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    maxlength="20"
+                >
+                <div id="cedula_error" class="invalid-feedback d-none"></div>
                 {% if form.cedula.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.cedula.errors }}
@@ -83,9 +91,9 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="id_hora_fin" class="form-label">Hora Fin (máx. 4 horas) *</label>
+                <label for="id_hora_fin" class="form-label">Hora Fin *</label>
                 {{ form.hora_fin }}
-                <small class="text-muted d-block mt-1">Máximo 4 horas</small>
+                <div id="error_duracion" class="invalid-feedback d-none"></div>
                 {% if form.hora_fin.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.hora_fin.errors }}
@@ -108,10 +116,18 @@
 
         <div class="row">
             <div class="col-md-8 mb-3">
-                <label for="insumo_select" class="form-label">Buscar Insumo</label>
-                <select id="insumo_select" class="form-control" style="width: 100%;">
-                    <option></option>
-                </select>
+                <label for="insumo_buscar" class="form-label">Buscar Insumo</label>
+                <div style="position: relative;">
+                    <input
+                        type="text"
+                        id="insumo_buscar"
+                        class="form-control"
+                        placeholder="Escribe para buscar o haz clic para ver todos..."
+                        autocomplete="off"
+                    >
+                    <div id="insumo_dropdown" class="list-group mt-2" style="position: absolute; width: 100%; z-index: 1000; max-height: 250px; overflow-y: auto; display: none; top: 100%;">
+                    </div>
+                </div>
             </div>
 
             <div class="col-md-4 mb-3">
@@ -169,66 +185,161 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
 let insumosSeleccionados = {};
 
-// Esperar a que jQuery y Select2 estén listos
-jQuery(document).ready(function($) {
-    // Inicializar Select2
-    $('#insumo_select').select2({
-        placeholder: 'Selecciona un insumo',
-        minimumInputLength: 0,
-        ajax: {
-            url: '/solicitudes/buscar-insumos/',
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    q: params.term || ''
-                };
-            },
-            processResults: function(data) {
-                return {
-                    results: data.results
-                };
-            },
-            cache: true
-        },
-        allowClear: true,
-        width: '100%'
-    });
+// Validación de cédula (solo números)
+document.getElementById('id_cedula').addEventListener('input', function(e) {
+    const valor = e.target.value;
+    const soloNumeros = valor.replace(/[^0-9]/g, '');
 
-    // Cargar todos los insumos al abrir
-    $('#insumo_select').on('select2:opening', function() {
-        const $search = $(this).data('select2').$dropdown.find('.select2-search__field');
-        $search.val('');
-        $search.trigger('input');
-    });
-
-    // Validación de hora_fin basada en hora_inicio
-    const horaInicio = document.getElementById('id_hora_inicio');
-    const horaFin = document.getElementById('id_hora_fin');
-
-    if (horaInicio) {
-        horaInicio.addEventListener('change', function() {
-            actualizarMaximoHoraFin();
-        });
-    }
-
-    if (horaFin) {
-        horaFin.addEventListener('change', function() {
-            validarDuracion();
-        });
+    if (valor !== soloNumeros) {
+        e.target.value = soloNumeros;
+        const errorDiv = document.getElementById('cedula_error');
+        errorDiv.textContent = 'Solo números permitidos';
+        errorDiv.classList.remove('d-none');
+        e.target.classList.add('is-invalid');
+    } else {
+        const errorDiv = document.getElementById('cedula_error');
+        errorDiv.classList.add('d-none');
+        e.target.classList.remove('is-invalid');
     }
 });
 
-function actualizarMaximoHoraFin() {
-    const horaInicio = document.getElementById('id_hora_inicio');
-    const horaFin = document.getElementById('id_hora_fin');
+// Buscador de insumos sin librerías externas
+const buscarInput = document.getElementById('insumo_buscar');
+const dropdownDiv = document.getElementById('insumo_dropdown');
+let insumosCache = null;
 
+buscarInput.addEventListener('click', mostrarInsumos);
+buscarInput.addEventListener('input', buscarInsumos);
+document.addEventListener('click', function(e) {
+    if (e.target !== buscarInput && e.target.parentElement !== dropdownDiv) {
+        dropdownDiv.style.display = 'none';
+    }
+});
+
+function mostrarInsumos() {
+    if (!insumosCache) {
+        fetch('/solicitudes/buscar-insumos/?q=')
+            .then(r => r.json())
+            .then(data => {
+                insumosCache = data.results;
+                renderDropdown(insumosCache);
+                dropdownDiv.style.display = 'block';
+            });
+    } else {
+        renderDropdown(insumosCache);
+        dropdownDiv.style.display = 'block';
+    }
+}
+
+function buscarInsumos(e) {
+    const query = e.target.value;
+    if (query === '') {
+        mostrarInsumos();
+        return;
+    }
+
+    fetch(`/solicitudes/buscar-insumos/?q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(data => {
+            renderDropdown(data.results);
+            dropdownDiv.style.display = 'block';
+        });
+}
+
+function renderDropdown(insumos) {
+    dropdownDiv.innerHTML = '';
+    insumos.forEach(insumo => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'list-group-item list-group-item-action';
+        btn.textContent = insumo.text;
+        btn.onclick = (e) => {
+            e.preventDefault();
+            seleccionarInsumo(insumo);
+        };
+        dropdownDiv.appendChild(btn);
+    });
+}
+
+function seleccionarInsumo(insumo) {
+    document.getElementById('insumo_buscar').value = insumo.text;
+    dropdownDiv.style.display = 'none';
+    document.getElementById('insumo_buscar').dataset.insumoId = insumo.id;
+}
+
+// Botón agregar insumo
+document.getElementById('agregar_insumo_btn').addEventListener('click', function() {
+    const buscar = document.getElementById('insumo_buscar');
+    const insumoId = buscar.dataset.insumoId;
+    const cantidad = parseInt(document.getElementById('insumo_cantidad').value) || 1;
+
+    if (!insumoId) {
+        alert('Selecciona un insumo de la lista');
+        return;
+    }
+
+    const texto = buscar.value;
+
+    if (insumosSeleccionados[insumoId]) {
+        insumosSeleccionados[insumoId].cantidad += cantidad;
+    } else {
+        insumosSeleccionados[insumoId] = {
+            id: insumoId,
+            nombre: texto.split('(')[0].trim(),
+            cantidad: cantidad
+        };
+    }
+
+    actualizarListaInsumos();
+    buscar.value = '';
+    delete buscar.dataset.insumoId;
+    document.getElementById('insumo_cantidad').value = '1';
+});
+
+function eliminarInsumo(insumoId) {
+    delete insumosSeleccionados[insumoId];
+    actualizarListaInsumos();
+}
+
+function actualizarListaInsumos() {
+    const lista = document.getElementById('insumos_items');
+    const listContainer = document.getElementById('insumos_lista');
+
+    lista.innerHTML = '';
+    const ids = [];
+    const cantidades = [];
+
+    Object.values(insumosSeleccionados).forEach(insumo => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = `
+            <div>
+                <strong>${insumo.nombre}</strong>
+                <span class="badge bg-primary">${insumo.cantidad}</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="eliminarInsumo(${insumo.id})">
+                Eliminar
+            </button>
+        `;
+        lista.appendChild(item);
+        ids.push(insumo.id);
+        cantidades.push(insumo.cantidad);
+    });
+
+    document.getElementById('id_insumos_ids').value = ids.join(',');
+    document.getElementById('id_insumos_cantidades').value = cantidades.join(',');
+    listContainer.style.display = Object.keys(insumosSeleccionados).length ? 'block' : 'none';
+}
+
+// Validación de hora_fin basada en hora_inicio
+const horaInicio = document.getElementById('id_hora_inicio');
+const horaFin = document.getElementById('id_hora_fin');
+const errorDuracion = document.getElementById('error_duracion');
+
+horaInicio.addEventListener('change', function() {
     if (!horaInicio.value) return;
 
     const inicio = new Date(`2000-01-01T${horaInicio.value}`);
@@ -241,43 +352,35 @@ function actualizarMaximoHoraFin() {
     if (horaFin.value) {
         validarDuracion();
     }
-}
+});
+
+horaFin.addEventListener('change', validarDuracion);
 
 function validarDuracion() {
-    const horaInicio = document.getElementById('id_hora_inicio');
-    const horaFin = document.getElementById('id_hora_fin');
-    const error = document.getElementById('error_duracion');
-
-    if (!horaInicio.value || !horaFin.value) return;
+    if (!horaInicio.value || !horaFin.value) {
+        errorDuracion.classList.add('d-none');
+        horaFin.classList.remove('is-invalid');
+        return;
+    }
 
     const inicio = new Date(`2000-01-01T${horaInicio.value}`);
     const fin = new Date(`2000-01-01T${horaFin.value}`);
-
     const duracionMinutos = (fin - inicio) / (1000 * 60);
 
     if (duracionMinutos < 120) {
         horaFin.classList.add('is-invalid');
-        if (!error) {
-            const div = document.createElement('div');
-            div.id = 'error_duracion';
-            div.className = 'invalid-feedback d-block';
-            div.textContent = 'Mínimo 2 horas de diferencia';
-            horaFin.parentNode.appendChild(div);
-        }
+        errorDuracion.textContent = 'Mínimo 2 horas de diferencia';
+        errorDuracion.classList.remove('d-none');
     } else if (duracionMinutos > 240) {
         horaFin.classList.add('is-invalid');
-        if (!error) {
-            const div = document.createElement('div');
-            div.id = 'error_duracion';
-            div.className = 'invalid-feedback d-block';
-            div.textContent = 'Máximo 4 horas de diferencia';
-            horaFin.parentNode.appendChild(div);
-        }
+        errorDuracion.textContent = 'Máximo 4 horas de diferencia';
+        errorDuracion.classList.remove('d-none');
     } else {
         horaFin.classList.remove('is-invalid');
-        if (error) error.remove();
+        errorDuracion.classList.add('d-none');
     }
 }
+</script>
 
 document.getElementById('agregar_insumo_btn').addEventListener('click', function() {
     const select = document.getElementById('insumo_select');
