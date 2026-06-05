@@ -94,28 +94,27 @@ class SolicitudReserva(models.Model):
                     self.usuario = usuarios.first()
 
         # Validación de horario
-        if hasattr(self, 'hora_inicio') and hasattr(self, 'hora_fin'):
-            if self.hora_inicio and self.hora_fin:
-                # Validar que hora_fin > hora_inicio
-                if self.hora_fin <= self.hora_inicio:
-                    errors['hora_fin'] = 'La hora de fin debe ser posterior a la hora de inicio.'
+        if self.hora_inicio is not None and self.hora_fin is not None:
+            # Validar que hora_fin > hora_inicio
+            if self.hora_fin <= self.hora_inicio:
+                errors['hora_fin'] = 'La hora de fin debe ser posterior a la hora de inicio.'
 
-                # Validar duración
-                duracion = self._calcular_duracion()
-                if duracion < timedelta(hours=2):
-                    errors['hora_fin'] = 'El préstamo debe ser mínimo 2 horas.'
-                if duracion > timedelta(hours=4):
-                    errors['hora_fin'] = 'El préstamo no puede exceder 4 horas.'
+            # Validar duración
+            duracion = self._calcular_duracion()
+            if duracion < timedelta(hours=2):
+                errors['hora_fin'] = 'El préstamo debe ser mínimo 2 horas.'
+            if duracion > timedelta(hours=4):
+                errors['hora_fin'] = 'El préstamo no puede exceder 4 horas.'
 
-                # Validar dentro del horario del laboratorio
-                if self.laboratorio and self.fecha_reserva:
-                    self._validar_horario_laboratorio(errors)
+            # Validar dentro del horario del laboratorio
+            if self.laboratorio and self.fecha_reserva:
+                self._validar_horario_laboratorio(errors)
 
         if errors:
             raise ValidationError(errors)
 
     def _calcular_duracion(self):
-        if self.hora_inicio and self.hora_fin:
+        if self.hora_inicio is not None and self.hora_fin is not None:
             from datetime import datetime
             inicio = datetime.combine(self.fecha_reserva.date(), self.hora_inicio)
             fin = datetime.combine(self.fecha_reserva.date(), self.hora_fin)
