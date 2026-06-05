@@ -86,21 +86,18 @@ class EstudianteSolicitudForm(forms.ModelForm):
         if user and user.is_authenticated:
             self.instance.usuario = user
 
-        # Hacer campos requeridos
-        self.fields['nombre'].required = True
-        self.fields['cedula'].required = True
-        self.fields['programa'].required = True
-        self.fields['laboratorio'].required = True
-        self.fields['fecha_reserva'].required = True
-        self.fields['hora_inicio'].required = True
-        self.fields['hora_fin'].required = True
+        # Hacer campos requeridos de forma segura
+        campos_requeridos = ['nombre', 'cedula', 'programa', 'laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin']
+        for campo in campos_requeridos:
+            if campo in self.fields:
+                self.fields[campo].required = True
 
     def clean(self):
-        cleaned_data = super().clean()
+        cleaned_data = super().clean() or {}
 
         # Validar que cédula sea solo números
         cedula = cleaned_data.get('cedula', '')
-        if cedula and not cedula.isdigit():
+        if cedula and not str(cedula).isdigit():
             raise ValidationError({'cedula': 'La cédula debe contener solo números.'})
 
         return cleaned_data
@@ -119,15 +116,16 @@ class EstudianteSolicitudForm(forms.ModelForm):
         return instance
 
     def _guardar_insumos(self, instance):
-        ids_str = self.cleaned_data.get('insumos_ids', '')
-        cantidades_str = self.cleaned_data.get('insumos_cantidades', '')
+        cleaned_data = self.cleaned_data or {}
+        ids_str = cleaned_data.get('insumos_ids', '')
+        cantidades_str = cleaned_data.get('insumos_cantidades', '')
 
         if not ids_str:
             return
 
         try:
-            ids = [int(id) for id in ids_str.split(',') if id]
-            cantidades = [int(cant) for cant in cantidades_str.split(',') if cant]
+            ids = [int(id_num) for id_num in str(ids_str).split(',') if id_num]
+            cantidades = [int(cant) for cant in str(cantidades_str).split(',') if cant]
 
             SolicitudInsumo.objects.filter(solicitud=instance).delete()
 
@@ -202,13 +200,11 @@ class ProfesorSolicitudForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance.tipo_solicitante = 'profesor'
-        self.fields['nombre'].required = True
-        self.fields['cedula'].required = True
-        self.fields['curso'].required = True
-        self.fields['laboratorio'].required = True
-        self.fields['fecha_reserva'].required = True
-        self.fields['hora_inicio'].required = True
-        self.fields['hora_fin'].required = True
+        
+        campos_requeridos = ['nombre', 'cedula', 'curso', 'laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin']
+        for campo in campos_requeridos:
+            if campo in self.fields:
+                self.fields[campo].required = True
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -223,7 +219,8 @@ class ProfesorSolicitudForm(forms.ModelForm):
         return instance
 
     def _guardar_insumos(self, instance):
-        insumos = self.cleaned_data.get('insumos', [])
+        cleaned_data = self.cleaned_data or {}
+        insumos = cleaned_data.get('insumos', [])
         SolicitudInsumo.objects.filter(solicitud=instance).delete()
         for insumo in insumos:
             SolicitudInsumo.objects.create(

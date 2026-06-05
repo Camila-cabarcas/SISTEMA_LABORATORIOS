@@ -93,7 +93,7 @@ class SolicitudReserva(models.Model):
                 partes_nombre = self.nombre.split()
                 query = Q()
                 for parte in partes_nombre:
-                    query |= Q(first_name__icontains=parte) | Q(last_name__icontains=parte)
+                    query |= Q(first_name__icontains=partes_nombre) | Q(last_name__icontains=parte)
 
                 usuarios = Usuario.objects.filter(query, rol__nombre='Docente')
 
@@ -160,11 +160,14 @@ class SolicitudReserva(models.Model):
             return
 
         horario = horarios.first()
-        if self.hora_inicio < horario.hora_inicio or self.hora_fin > horario.hora_fin:
-            errors['hora_inicio'] = (
-                f'Las horas deben estar dentro del horario disponible: '
-                f'{horario.hora_inicio.strftime("%H:%M")} - {horario.hora_fin.strftime("%H:%M")}'
-            )
+        
+        # Validación defensiva para asegurar que las variables existan antes del formateo
+        if self.hora_inicio and self.hora_fin and horario:
+            if self.hora_inicio < horario.hora_inicio or self.hora_fin > horario.hora_fin:
+                errors['hora_inicio'] = (
+                    f'Las horas deben estar dentro del horario disponible: '
+                    f'{horario.hora_inicio.strftime("%H:%M")} - {horario.hora_fin.strftime("%H:%M")}'
+                )
 
     def asignar_modulos_automaticamente(self):
         if self.tipo_solicitante == 'profesor' and self.curso:
@@ -172,7 +175,7 @@ class SolicitudReserva(models.Model):
 
             modulos_disponibles = Modulo.objects.filter(
                 laboratorio=self.laboratorio,
-                disponible=True
+                disponibles=True
             )[:cantidad_necesaria]
 
             if modulos_disponibles.count() < cantidad_necesaria:
@@ -198,10 +201,9 @@ class SolicitudReserva(models.Model):
             raise ValueError('No existe estado "Pendiente" en EstadoReserva')
 
         # Calcular fecha_reserva como datetime (combinando fecha y hora_inicio)
-        # Usar datetime naive porque USE_TZ=False
         fecha_base = datetime.combine(self.fecha_reserva.date(), self.hora_inicio or datetime.min.time())
 
-        # Crear Reserva (el método save() calcula automáticamente hora_limite_retiro y fecha_devolucion)
+        # Crear Reserva
         reserva = Reserva.objects.create(
             usuario=self.usuario,
             fecha_reserva=fecha_base,
@@ -225,7 +227,11 @@ class SolicitudReserva(models.Model):
     def __str__(self):
         if self.tipo_solicitante == 'profesor':
             return f"Solicitud Profesor - {self.nombre} ({self.curso})"
-        return f"Solicitud Estudiante - {self.usuario.username}"
+        
+        # Evita errores si el usuario llega a ser nulo (null=True en el modelo)
+        if self.usuario:
+            return f"Solicitud Estudiante - {self.usuario.username}"
+        return f"Solicitud Estudiante Anónimo - ID {self.id}"
 
 
 class SolicitudInsumo(models.Model):
