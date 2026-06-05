@@ -48,6 +48,7 @@
                 <label for="id_curso" class="form-label">Curso *</label>
                 {{ form.curso }}
                 <small id="curso_cargando" class="text-muted d-none">Cargando cursos...</small>
+                <small id="curso_sin_profesor" class="text-warning d-none">Ingresa el nombre del profesor para cargar sus cursos</small>
                 {% if form.curso.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.curso.errors }}
@@ -218,14 +219,22 @@ function cargarCursosPorProfesor() {
     const nombre = document.getElementById('id_nombre').value;
     const cedula = document.getElementById('id_cedula').value;
 
+    const cargando = document.getElementById('curso_cargando');
+    const sinProfesor = document.getElementById('curso_sin_profesor');
+    const cursoSelect = document.getElementById('id_curso');
+
+    // Si no hay nombre, deshabilitar y mostrar mensaje
     if (!nombre || !cedula) {
+        cursoSelect.disabled = true;
+        cursoSelect.innerHTML = '<option value="">-- Selecciona un curso --</option>';
+        cargando.classList.add('d-none');
+        sinProfesor.classList.remove('d-none');
         return;
     }
 
-    const cargando = document.getElementById('curso_cargando');
-    const cursoSelect = document.getElementById('id_curso');
-
+    // Mostrar que se está cargando
     cargando.classList.remove('d-none');
+    sinProfesor.classList.add('d-none');
 
     fetch(`/solicitudes/cursos-profesor/?nombre=${encodeURIComponent(nombre)}&cedula=${encodeURIComponent(cedula)}`)
         .then(r => r.json())
@@ -233,21 +242,46 @@ function cargarCursosPorProfesor() {
             cargando.classList.add('d-none');
 
             if (data.error) {
-                cursoSelect.innerHTML = '<option value="">-- Error: ' + data.error + ' --</option>';
+                // Error: deshabilitar y mostrar mensaje
+                cursoSelect.disabled = true;
+                cursoSelect.innerHTML = '<option value="">-- Profesor no encontrado --</option>';
+                sinProfesor.textContent = data.error;
+                sinProfesor.classList.remove('d-none');
+                sinProfesor.className = 'text-danger d-block';
                 return;
             }
 
+            // Éxito: habilitar select y mostrar cursos
+            cursoSelect.disabled = false;
             cursoSelect.innerHTML = '<option value="">-- Selecciona un curso --</option>';
-            data.cursos.forEach(curso => {
+
+            if (data.cursos && data.cursos.length > 0) {
+                data.cursos.forEach(curso => {
+                    const option = document.createElement('option');
+                    option.value = curso.id;
+                    option.textContent = curso.nombre + ' (' + curso.codigo + ')';
+                    cursoSelect.appendChild(option);
+                });
+                sinProfesor.classList.add('d-none');
+            } else {
+                // Profesor encontrado pero sin cursos
                 const option = document.createElement('option');
-                option.value = curso.id;
-                option.textContent = curso.nombre + ' (' + curso.codigo + ')';
+                option.value = '';
+                option.textContent = '-- Este profesor no tiene cursos registrados --';
+                option.disabled = true;
                 cursoSelect.appendChild(option);
-            });
+                sinProfesor.textContent = 'El profesor no tiene cursos registrados';
+                sinProfesor.classList.remove('d-none');
+                sinProfesor.className = 'text-info d-block';
+            }
         })
         .catch(err => {
             cargando.classList.add('d-none');
+            cursoSelect.disabled = true;
             cursoSelect.innerHTML = '<option value="">-- Error cargando cursos --</option>';
+            sinProfesor.textContent = 'Error al cargar los cursos. Intenta de nuevo.';
+            sinProfesor.classList.remove('d-none');
+            sinProfesor.className = 'text-danger d-block';
             console.error(err);
         });
 }
