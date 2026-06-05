@@ -92,6 +92,10 @@ def cursos_profesor(request):
     usuario = None
     if cedula:
         # Buscar por código (cédula) entre los usuarios encontrados
+        print(f"DEBUG: Buscando cédula '{cedula}'")
+        for u in usuarios:
+            print(f"DEBUG: Comparando con usuario {u.username}: código='{u.codigo}' (tipo: {type(u.codigo).__name__})")
+
         usuario = next((u for u in usuarios if u.codigo == cedula), None)
 
         if not usuario:
@@ -99,11 +103,14 @@ def cursos_profesor(request):
             nombres_encontrados = ', '.join([
                 u.get_full_name() or u.username for u in usuarios[:3]
             ])
+            print(f"DEBUG: NO SE ENCONTRÓ coincidencia de cédula")
             return JsonResponse({
                 'error': f'La cédula "{cedula}" no coincide con ningún docente. '
                          f'Docentes encontrados con nombre "{nombre}": {nombres_encontrados}',
                 'cursos': []
             })
+        else:
+            print(f"DEBUG: ENCONTRADO usuario {usuario.username} con cédula {usuario.codigo}")
     else:
         # Si no hay cédula, tomar el primer usuario encontrado
         usuario = usuarios[0]

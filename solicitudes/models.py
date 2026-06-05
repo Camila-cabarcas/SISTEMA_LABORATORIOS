@@ -93,7 +93,8 @@ class SolicitudReserva(models.Model):
                 partes_nombre = self.nombre.split()
                 query = Q()
                 for parte in partes_nombre:
-                    query |= Q(first_name__icontains=partes_nombre) | Q(last_name__icontains=parte)
+                    # Buscar en first_name, last_name y username
+                    query |= Q(first_name__icontains=parte) | Q(last_name__icontains=parte) | Q(username__icontains=parte)
 
                 usuarios = Usuario.objects.filter(query, rol__nombre='Docente')
 
@@ -178,7 +179,7 @@ class SolicitudReserva(models.Model):
 
             modulos_disponibles = Modulo.objects.filter(
                 laboratorio=self.laboratorio,
-                disponibles=True
+                disponible=True
             )[:cantidad_necesaria]
 
             if modulos_disponibles.count() < cantidad_necesaria:
