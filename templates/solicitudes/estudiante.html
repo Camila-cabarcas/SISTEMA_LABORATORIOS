@@ -169,13 +169,14 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
 let insumosSeleccionados = {};
 
-$(document).ready(function() {
+// Esperar a que jQuery y Select2 estén listos
+jQuery(document).ready(function($) {
     // Inicializar Select2
     $('#insumo_select').select2({
         placeholder: 'Selecciona un insumo',
@@ -183,25 +184,100 @@ $(document).ready(function() {
         ajax: {
             url: '/solicitudes/buscar-insumos/',
             dataType: 'json',
+            delay: 250,
             data: function(params) {
                 return {
-                    q: params.term
+                    q: params.term || ''
                 };
             },
             processResults: function(data) {
                 return {
                     results: data.results
                 };
-            }
+            },
+            cache: true
         },
-        allowClear: true
+        allowClear: true,
+        width: '100%'
     });
 
-    // Trigger busqueda inicial (mostrar todos)
-    $('#insumo_select').on('select2:opening', function(e) {
-        $(this).data('select2').$dropdown.find('.select2-search__field').val('').trigger('keyup');
+    // Cargar todos los insumos al abrir
+    $('#insumo_select').on('select2:opening', function() {
+        const $search = $(this).data('select2').$dropdown.find('.select2-search__field');
+        $search.val('');
+        $search.trigger('input');
     });
+
+    // Validación de hora_fin basada en hora_inicio
+    const horaInicio = document.getElementById('id_hora_inicio');
+    const horaFin = document.getElementById('id_hora_fin');
+
+    if (horaInicio) {
+        horaInicio.addEventListener('change', function() {
+            actualizarMaximoHoraFin();
+        });
+    }
+
+    if (horaFin) {
+        horaFin.addEventListener('change', function() {
+            validarDuracion();
+        });
+    }
 });
+
+function actualizarMaximoHoraFin() {
+    const horaInicio = document.getElementById('id_hora_inicio');
+    const horaFin = document.getElementById('id_hora_fin');
+
+    if (!horaInicio.value) return;
+
+    const inicio = new Date(`2000-01-01T${horaInicio.value}`);
+    const max = new Date(inicio.getTime() + 4 * 60 * 60 * 1000);
+    const maxHora = String(max.getHours()).padStart(2, '0');
+    const maxMin = String(max.getMinutes()).padStart(2, '0');
+
+    horaFin.max = `${maxHora}:${maxMin}`;
+
+    if (horaFin.value) {
+        validarDuracion();
+    }
+}
+
+function validarDuracion() {
+    const horaInicio = document.getElementById('id_hora_inicio');
+    const horaFin = document.getElementById('id_hora_fin');
+    const error = document.getElementById('error_duracion');
+
+    if (!horaInicio.value || !horaFin.value) return;
+
+    const inicio = new Date(`2000-01-01T${horaInicio.value}`);
+    const fin = new Date(`2000-01-01T${horaFin.value}`);
+
+    const duracionMinutos = (fin - inicio) / (1000 * 60);
+
+    if (duracionMinutos < 120) {
+        horaFin.classList.add('is-invalid');
+        if (!error) {
+            const div = document.createElement('div');
+            div.id = 'error_duracion';
+            div.className = 'invalid-feedback d-block';
+            div.textContent = 'Mínimo 2 horas de diferencia';
+            horaFin.parentNode.appendChild(div);
+        }
+    } else if (duracionMinutos > 240) {
+        horaFin.classList.add('is-invalid');
+        if (!error) {
+            const div = document.createElement('div');
+            div.id = 'error_duracion';
+            div.className = 'invalid-feedback d-block';
+            div.textContent = 'Máximo 4 horas de diferencia';
+            horaFin.parentNode.appendChild(div);
+        }
+    } else {
+        horaFin.classList.remove('is-invalid');
+        if (error) error.remove();
+    }
+}
 
 document.getElementById('agregar_insumo_btn').addEventListener('click', function() {
     const select = document.getElementById('insumo_select');

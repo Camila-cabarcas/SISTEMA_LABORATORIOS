@@ -1,9 +1,29 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from .models import SolicitudReserva, Curso, SolicitudInsumo
 from inventario.models import Insumo
 
+CARRERAS_INGENIERIA = [
+    ('', '--- Selecciona una carrera ---'),
+    ('Ingeniería de Sistemas', 'Ingeniería de Sistemas'),
+    ('Ingeniería Civil', 'Ingeniería Civil'),
+    ('Ingeniería Eléctrica', 'Ingeniería Eléctrica'),
+    ('Ingeniería Mecánica', 'Ingeniería Mecánica'),
+    ('Ingeniería Industrial', 'Ingeniería Industrial'),
+    ('Ingeniería de Software', 'Ingeniería de Software'),
+    ('Ingeniería Química', 'Ingeniería Química'),
+    ('Ingeniería Electrónica', 'Ingeniería Electrónica'),
+    ('Ingeniería Ambiental', 'Ingeniería Ambiental'),
+    ('Ingeniería de Telecomunicaciones', 'Ingeniería de Telecomunicaciones'),
+]
+
 
 class EstudianteSolicitudForm(forms.ModelForm):
+    programa = forms.ChoiceField(
+        choices=CARRERAS_INGENIERIA,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
     insumos_ids = forms.CharField(
         widget=forms.HiddenInput(),
         required=False
@@ -26,13 +46,8 @@ class EstudianteSolicitudForm(forms.ModelForm):
             'cedula': forms.TextInput(
                 attrs={
                     'class': 'form-control',
-                    'placeholder': 'Número de identificación'
-                }
-            ),
-            'programa': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Carrera/Programa'
+                    'placeholder': 'Número de identificación',
+                    'type': 'number'
                 }
             ),
             'laboratorio': forms.Select(attrs={'class': 'form-select'}),
@@ -79,6 +94,16 @@ class EstudianteSolicitudForm(forms.ModelForm):
         self.fields['fecha_reserva'].required = True
         self.fields['hora_inicio'].required = True
         self.fields['hora_fin'].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        # Validar que cédula sea solo números
+        cedula = cleaned_data.get('cedula', '')
+        if cedula and not cedula.isdigit():
+            raise ValidationError({'cedula': 'La cédula debe contener solo números.'})
+
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
