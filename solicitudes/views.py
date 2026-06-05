@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.db.models import Q
 from users.decorators import rol_requerido
 from users.models import Usuario
 from inventario.models import Insumo
@@ -54,28 +53,69 @@ def solicitud_profesor(request):
 
 
 def cursos_profesor(request):
-    """Retorna los cursos de un profesor basado en nombre y cédula"""
+    """Retorna los cursos de un profesor basado en nombre y código (cédula)"""
     nombre = request.GET.get('nombre', '').strip()
     cedula = request.GET.get('cedula', '').strip()
 
-    if not nombre or not cedula:
-        return JsonResponse({'error': 'Nombre y cédula requeridos', 'cursos': []})
+    if not nombre:
+        return JsonResponse({
+            'error': 'Por favor ingresa el nombre del profesor',
+            'cursos': []
+        })
 
-    # Buscar usuario que sea docente
-    partes_nombre = nombre.split()
-    query = Q()
-    for parte in partes_nombre:
-        query |= Q(first_name__icontains=parte) | Q(last_name__icontains=parte)
+    # Buscar usuario que sea docente - búsqueda parcial e case-insensitive
+    # Busca en first_name, last_name, username y full_name combinado
+    docentes = Usuario.objects.filter(rol__nombre='Docente')
 
-    usuarios = Usuario.objects.filter(query, rol__nombre='Docente')
+    usuarios = []
+    for usuario in docentes:
+        # Buscar si el nombre ingresado coincide con:
+        # - first_name
+        # - last_name
+        # - username
+        # - nombre completo (first_name + last_name)
+        nombre_lower = nombre.lower()
+        if (nombre_lower in usuario.first_name.lower() or
+            nombre_lower in usuario.last_name.lower() or
+            nombre_lower in usuario.username.lower() or
+            nombre_lower in usuario.get_full_name().lower()):
+            usuarios.append(usuario)
 
-    if not usuarios.exists():
-        return JsonResponse({'error': f'No se encontró profesor con nombre "{nombre}"', 'cursos': []})
+    if not usuarios:
+        return JsonResponse({
+            'error': f'No se encontró ningún docente con nombre "{nombre}". '
+                     'Verifica que el nombre sea correcto.',
+            'cursos': []
+        })
 
-    usuario = usuarios.first()
+    # Si se proporciona cédula, validar que coincida
+    usuario = None
+    if cedula:
+        # Buscar por código (cédula) entre los usuarios encontrados
+        usuario = next((u for u in usuarios if u.codigo == cedula), None)
+
+        if not usuario:
+            # Si la cédula no coincide, dar error específico
+            nombres_encontrados = ', '.join([
+                u.get_full_name() or u.username for u in usuarios[:3]
+            ])
+            return JsonResponse({
+                'error': f'La cédula "{cedula}" no coincide con ningún docente. '
+                         f'Docentes encontrados con nombre "{nombre}": {nombres_encontrados}',
+                'cursos': []
+            })
+    else:
+        # Si no hay cédula, tomar el primer usuario encontrado
+        usuario = usuarios[0]
+
+    if not usuario:
+        return JsonResponse({
+            'error': 'No se pudo identificar al profesor',
+            'cursos': []
+        })
 
     # Obtener cursos del profesor
-    cursos = Curso.objects.filter(profesor=usuario)
+    cursos = Curso.objects.filter(profesor=usuario).order_by('codigo')
 
     cursos_data = [
         {
@@ -86,13 +126,12 @@ def cursos_profesor(request):
         for c in cursos
     ]
 
-    profesor_nombre = usuario.get_full_name() if usuario else nombre
-    if not profesor_nombre:
-        profesor_nombre = usuario.username if usuario else nombre
+    profesor_nombre = usuario.get_full_name() or usuario.username
 
     return JsonResponse({
         'cursos': cursos_data,
-        'profesor': profesor_nombre
+        'profesor': profesor_nombre,
+        'total': len(cursos_data)
     })
 
 
