@@ -391,13 +391,6 @@ const errorDuracion = document.getElementById('error_duracion');
 horaInicio.addEventListener('change', function() {
     if (!horaInicio.value) return;
 
-    const inicio = new Date(`2000-01-01T${horaInicio.value}`);
-    const max = new Date(inicio.getTime() + 4 * 60 * 60 * 1000);
-    const maxHora = String(max.getHours()).padStart(2, '0');
-    const maxMin = String(max.getMinutes()).padStart(2, '0');
-
-    horaFin.max = `${maxHora}:${maxMin}`;
-
     if (horaFin.value) {
         validarDuracion();
     }
