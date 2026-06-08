@@ -2,32 +2,65 @@
 
 {% block contenido %}
 
-<h1 class="mb-4">Reserva #{{ reserva.id }}</h1>
+{% with solicitante=reserva.solicitud.all.0 %}
+
+<h1 class="mb-4">
+    Reserva —
+    {% if solicitante %}
+        {{ solicitante.nombre }}
+    {% elif reserva.usuario %}
+        {{ reserva.usuario }}
+    {% else %}
+        Sin usuario
+    {% endif %}
+    | {{ reserva.fecha_reserva|date:"j M Y H:i" }}
+</h1>
 
 <div class="card p-4 mb-4">
-
     <h5>Información de la reserva</h5>
-
-    <p><strong>Usuario:</strong> {{ reserva.usuario }}</p>
-    <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
-    <p><strong>Límite de retiro:</strong> {{ reserva.hora_limite_retiro }}</p>
-    <p><strong>Fecha devolución:</strong> {{ reserva.fecha_devolucion }}</p>
-    <p><strong>Estado:</strong> {{ reserva.estado }}</p>
+    <div class="row">
+        <div class="col-md-6">
+            <p><strong>Solicitante:</strong>
+                {% if solicitante %}
+                    {{ solicitante.nombre }}
+                {% elif reserva.usuario %}
+                    {{ reserva.usuario }}
+                {% else %}
+                    Sin usuario
+                {% endif %}
+            </p>
+            {% if solicitante and reserva.usuario and solicitante.nombre != reserva.usuario.get_full_name %}
+            <p><strong>Gestionada por:</strong> {{ reserva.usuario }}</p>
+            {% endif %}
+            <p><strong>Laboratorio:</strong>
+                {% if solicitante %}{{ solicitante.laboratorio }}{% else %}No especificado{% endif %}
+            </p>
+            <p><strong>Módulo:</strong>
+                {% if solicitante %}
+                    {% if solicitante.necesita_modulo %}Sí requiere{% else %}No requiere{% endif %}
+                {% else %}No especificado{% endif %}
+            </p>
+        </div>
+        <div class="col-md-6">
+            <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
+            <p><strong>Límite de retiro:</strong> {{ reserva.hora_limite_retiro }}</p>
+            <p><strong>Fecha devolución:</strong> {{ reserva.fecha_devolucion }}</p>
+            <p><strong>Estado:</strong> {{ reserva.estado }}</p>
+            {% if solicitante and solicitante.observaciones %}
+            <p><strong>Observaciones:</strong> {{ solicitante.observaciones }}</p>
+            {% endif %}
+        </div>
+    </div>
 
     {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Encargado' %}
     {% if reserva.estado.nombre == 'Pendiente' %}
     <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/">
         {% csrf_token %}
-        <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2">
-            Aprobar
-        </button>
-        <button type="submit" name="accion" value="cancelar" class="btn btn-danger">
-            Cancelar reserva
-        </button>
+        <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2">Aprobar</button>
+        <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
     </form>
     {% endif %}
     {% endif %}
-
 </div>
 
 <div class="card p-4 mb-4">
@@ -35,15 +68,11 @@
     <h5>Agregar insumo a la reserva</h5>
 
     <form method="POST">
-
         {% csrf_token %}
-
         {{ form.as_p }}
-
         <button type="submit" class="btn btn-primary">
-            Agregar insumo
+            Guardar insumo
         </button>
-
     </form>
 
 </div>
@@ -60,6 +89,9 @@
             <tr>
                 <th>Insumo</th>
                 <th>Cantidad</th>
+                {% if reserva.estado.nombre != 'Expirada' and reserva.estado.nombre != 'Cancelada' %}
+                <th>Acciones</th>
+                {% endif %}
             </tr>
         </thead>
 
@@ -68,6 +100,17 @@
             <tr>
                 <td>{{ insumo.insumo.nombre }}</td>
                 <td>{{ insumo.cantidad }}</td>
+                {% if reserva.estado.nombre != 'Expirada' and reserva.estado.nombre != 'Cancelada' %}
+                <td>
+                    <form method="POST"
+                        action="/reservas/{{ reserva.id }}/insumo/{{ insumo.id }}/eliminar/"
+                        data-nombre="{{ insumo.insumo.nombre }}"
+                        class="form-eliminar-insumo">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                    </form>
+                </td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>
@@ -83,5 +126,26 @@
     </a>
 
 </div>
+
+{% endwith %}
+
+<script>
+document.querySelectorAll('.form-eliminar-insumo').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const totalActual = document.querySelectorAll('.form-eliminar-insumo').length;
+        const nombre = form.dataset.nombre;
+        let mensaje;
+        if (totalActual === 1) {
+            mensaje = '¿Estás segura de eliminar "' + nombre + '"?\n\n⚠️ Este es el último insumo. Si lo eliminas, la reserva será CANCELADA automáticamente.';
+        } else {
+            mensaje = '¿Eliminar "' + nombre + '" de la reserva?';
+        }
+        if (confirm(mensaje)) {
+            form.submit();
+        }
+    });
+});
+</script>
 
 {% endblock %}

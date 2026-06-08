@@ -29,58 +29,63 @@
 </form>
 
 <div class="card p-4">
+    <div class="table-responsive">
+        <table class="table table-striped">
 
-    <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Solicitante</th>
+                    <th>Fecha Reserva</th>
+                    <th>Límite Retiro</th>
+                    <th>Fecha Devolución</th>
+                    <th>Estado</th>
+                    <th>Ver detalle</th>
+                    <th>Préstamo</th>
+                </tr>
+            </thead>
 
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Usuario</th>
-                <th>Fecha Reserva</th>
-                <th>Límite Retiro</th>
-                <th>Fecha Devolución</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for reserva in reservas %}
-            <tr class="
-                {% if reserva.estado.nombre == 'Aprobada' %}table-success
-                {% elif reserva.estado.nombre == 'Pendiente' %}table-warning
-                {% elif reserva.estado.nombre == 'Cancelada' %}table-secondary
-                {% elif reserva.estado.nombre == 'Expirada' %}table-danger
-                {% endif %}
-            ">
-                <td>{{ reserva.id }}</td>
-                <td>{{ reserva.usuario }}</td>
-                <td>{{ reserva.fecha_reserva }}</td>
-                <td>{{ reserva.hora_limite_retiro }}</td>
-                <td>{{ reserva.fecha_devolucion }}</td>
-                <td>{{ reserva.estado }}</td>
-                <td>
-                    <a
-                        href="/reservas/{{ reserva.id }}/"
-                        class="btn btn-info btn-sm"
-                    >
-                        Ver detalle
-                    </a>
-                    {% if reserva.estado.nombre == 'Aprobada' and not reserva.prestamo_set.exists and reserva.hora_limite_retiro > now %}
-                    <a
-                        href="/prestamos/crear/{{ reserva.id }}/"
-                        class="btn btn-success btn-sm"
-                    >
-                        Crear préstamo
-                    </a>
+            <tbody>
+                {% for reserva in reservas %}
+                <tr class="
+                    {% if reserva.estado.nombre == 'Aprobada' %}table-success
+                    {% elif reserva.estado.nombre == 'Pendiente' %}table-warning
+                    {% elif reserva.estado.nombre == 'Cancelada' %}table-secondary
+                    {% elif reserva.estado.nombre == 'Expirada' %}table-danger
                     {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+                ">
+                    <td>{{ reserva.id }}</td>
+                    <td>
+                        {% if reserva.usuario %}
+                            {{ reserva.usuario }}
+                        {% elif reserva.solicitud.all %}
+                            {{ reserva.solicitud.all.0.nombre }}
+                        {% else %}
+                            Sin usuario
+                        {% endif %}
+                    </td>
+                    <td>{{ reserva.fecha_reserva|date:"d/m/Y H:i" }}</td>
+                    <td>{{ reserva.hora_limite_retiro|date:"d/m/Y H:i" }}</td>
+                    <td>{{ reserva.fecha_devolucion|date:"d/m/Y H:i" }}</td>
+                    <td>{{ reserva.estado }}</td>
+                    <td>
+                        <a href="/reservas/{{ reserva.id }}/" class="btn btn-info btn-sm">
+                            Ver detalle
+                        </a>
+                    </td>
+                    <td>
+                        {% if reserva.estado.nombre == 'Aprobada' and not reserva.prestamo_set.exists and reserva.hora_limite_retiro > now %}
+                        <a href="/prestamos/crear/{{ reserva.id }}/" class="btn btn-success btn-sm">
+                            Crear préstamo
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
 
-    </table>
-
+        </table>
+    </div>
 </div>
 
 {% endblock %}

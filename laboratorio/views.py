@@ -158,7 +158,7 @@ def prestamos_laboratorio(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+@rol_requerido('Administrador', 'Encargado')
 def disponibilidad_laboratorio(request, id):
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
@@ -172,7 +172,7 @@ def disponibilidad_laboratorio(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+@rol_requerido('Administrador', 'Encargado')
 def eventos_laboratorio(request, id):
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
@@ -192,7 +192,7 @@ def eventos_laboratorio(request, id):
     return JsonResponse(data, safe=False)
 
 
-@rol_requerido('Administrador', 'Encargado', 'Docente')
+@rol_requerido('Administrador', 'Encargado')
 def crear_evento(request, id):
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
@@ -218,7 +218,7 @@ def crear_evento(request, id):
     return JsonResponse({'status': 'error'}, status=400)
 
 
-@rol_requerido('Administrador', 'Encargado', 'Docente')
+@rol_requerido('Administrador', 'Encargado')
 def eliminar_evento(request, id):
 
     evento = get_object_or_404(EventoLaboratorio, id=id)

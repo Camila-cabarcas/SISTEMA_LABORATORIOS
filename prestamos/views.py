@@ -85,7 +85,7 @@ def crear_prestamo(request, reserva_id):
     )
 
 
-@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+@rol_requerido('Administrador', 'Encargado')
 def detalle_prestamo(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)

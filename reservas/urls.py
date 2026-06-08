@@ -6,7 +6,8 @@ from .views import (
     cancelar_reserva,
     aprobar_reserva,
     reservas_para_prestamo,
-    horarios_disponibles
+    horarios_disponibles,
+    eliminar_insumo_reserva
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path('<int:id>/', detalle_reserva, name='detalle_reserva'),
     path('<int:id>/cancelar/', cancelar_reserva, name='cancelar_reserva'),
     path('<int:id>/aprobar/', aprobar_reserva, name='aprobar_reserva'),
+    path('<int:reserva_id>/insumo/<int:insumo_id>/eliminar/', eliminar_insumo_reserva, name='eliminar_insumo_reserva'),
 ]

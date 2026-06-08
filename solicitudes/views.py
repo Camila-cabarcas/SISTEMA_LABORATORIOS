@@ -38,23 +38,19 @@ def solicitud_profesor(request):
         if form.is_valid():
             try:
                 solicitud = form.save()
-                print(f"DEBUG vista: solicitud profesor guardada id={solicitud.id}")
+                print(f"DEBUG profesor: solicitud id={solicitud.id}, usuario={solicitud.usuario}")
                 try:
                     reserva = solicitud.crear_reserva()
-                    print(f"DEBUG vista: reserva profesor creada={reserva}")
+                    print(f"DEBUG profesor: reserva={reserva}")
                 except Exception as e:
-                    print(f"Error creando reserva profesor: {e}")
+                    print(f"ERROR crear_reserva profesor: {e}")
                 return redirect('lista_solicitudes')
             except ValidationError as e:
                 form.add_error(None, e.message if hasattr(e, 'message') else str(e))
     else:
         form = ProfesorSolicitudForm()
 
-    return render(
-        request,
-        'solicitudes/profesor.html',
-        {'form': form}
-    )
+    return render(request, 'solicitudes/profesor.html', {'form': form})
 
 
 def cursos_profesor(request):

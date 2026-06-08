@@ -32,11 +32,6 @@
         <a class="nav-link" href="/prestamos/">Préstamos</a>
         <a class="nav-link" href="/reservas/">Reservas</a>
         <a class="nav-link" href="/laboratorio/">Laboratorio</a>
-    {% elif user.rol.nombre == 'Docente' %}
-        <a class="nav-link" href="/reservas/">Reservas</a>
-        <a class="nav-link" href="/prestamos/">Préstamos</a>
-    {% elif user.rol.nombre == 'Estudiante' %}
-        <a class="nav-link" href="/reservas/">Reservas</a>
     {% endif %}
 </div>
         <div class="navbar-nav ms-auto">

@@ -1,26 +1,20 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
 from users.decorators import rol_requerido
 from .models import Reserva, ReservaInsumo, EstadoReserva
 from .forms import ReservaForm, ReservaInsumoForm
-from datetime import datetime
 from laboratorio.models import HorarioLaboratorio
 from django.http import JsonResponse
 from datetime import datetime, timedelta
 
 
-@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+@rol_requerido('Administrador', 'Encargado')
 def lista_reservas(request):
 
-    rol = request.user.rol.nombre if request.user.rol else None
     estado_filtro = request.GET.get('estado')
     fecha_filtro = request.GET.get('fecha')
 
-    if rol in ['Administrador', 'Encargado']:
-        reservas = Reserva.objects.all().order_by('-fecha_reserva')
-    else:
-        reservas = Reserva.objects.filter(
-            usuario=request.user
-        ).order_by('-fecha_reserva')
+    reservas = Reserva.objects.all().order_by('-fecha_reserva')
 
     if estado_filtro:
         reservas = reservas.filter(estado__nombre=estado_filtro)
@@ -39,7 +33,7 @@ def lista_reservas(request):
     )
 
 
-@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+@rol_requerido('Administrador', 'Encargado')
 def crear_reserva(request):
 
     if request.method == 'POST':
@@ -49,13 +43,10 @@ def crear_reserva(request):
         if form.is_valid():
 
             fecha_reserva = form.cleaned_data['fecha_reserva']
-
-            # Obtener el día de la semana en español
             dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
             dia = dias[fecha_reserva.weekday()]
             hora = fecha_reserva.time()
 
-            # Verificar si hay horario disponible
             horario_disponible = HorarioLaboratorio.objects.filter(
                 dia=dia,
                 hora_inicio__lte=hora,
@@ -87,7 +78,6 @@ def crear_reserva(request):
                 return redirect('detalle_reserva', id=reserva.pk)
 
     else:
-
         form = ReservaForm()
 
     return render(
@@ -99,7 +89,7 @@ def crear_reserva(request):
     )
 
 
-@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+@rol_requerido('Administrador', 'Encargado')
 def detalle_reserva(request, id):
 
     reserva = get_object_or_404(Reserva, id=id)
@@ -118,7 +108,6 @@ def detalle_reserva(request, id):
             return redirect('detalle_reserva', id=reserva.pk)
 
     else:
-
         form = ReservaInsumoForm()
 
     return render(
@@ -132,7 +121,7 @@ def detalle_reserva(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+@rol_requerido('Administrador', 'Encargado')
 def cancelar_reserva(request, id):
 
     reserva = get_object_or_404(Reserva, id=id)
@@ -180,10 +169,9 @@ def aprobar_reserva(request, id):
         }
     )
 
+
 @rol_requerido('Administrador', 'Encargado')
 def reservas_para_prestamo(request):
-
-    from datetime import datetime
 
     ahora = datetime.now()
 
@@ -202,10 +190,10 @@ def reservas_para_prestamo(request):
         }
     )
 
-@rol_requerido('Administrador', 'Encargado', 'Docente', 'Estudiante')
+
+@rol_requerido('Administrador', 'Encargado')
 def horarios_disponibles(request):
 
-    # Generar slots para las próximas 4 semanas
     slots = []
     hoy = datetime.now()
 
@@ -222,7 +210,6 @@ def horarios_disponibles(request):
             if dia_num is None:
                 continue
 
-            # Calcular la fecha de ese día en esta semana
             dias_hasta = (dia_num - hoy.weekday()) % 7
             fecha = hoy + timedelta(days=dias_hasta + semana * 7)
 
@@ -239,3 +226,31 @@ def horarios_disponibles(request):
             })
 
     return JsonResponse(slots, safe=False)
+
+
+@rol_requerido('Administrador', 'Encargado')
+def eliminar_insumo_reserva(request, reserva_id, insumo_id):
+
+    reserva = get_object_or_404(Reserva, id=reserva_id)
+    insumo = get_object_or_404(ReservaInsumo, id=insumo_id, reserva=reserva)
+
+    if request.method == 'POST':
+
+        insumo.delete()
+
+        # Si no quedan insumos cancelar la reserva
+        if not ReservaInsumo.objects.filter(reserva=reserva).exists():
+            reserva.estado = EstadoReserva.objects.get(nombre='Cancelada')
+            reserva.save()
+            return redirect('lista_reservas')
+
+        return redirect('detalle_reserva', id=reserva_id)
+
+    return render(
+        request,
+        'reservas/confirmar_eliminar_insumo.html',
+        {
+            'reserva': reserva,
+            'insumo': insumo
+        }
+    )
