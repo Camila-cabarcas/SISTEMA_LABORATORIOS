@@ -191,40 +191,52 @@ class SolicitudReserva(models.Model):
             self.modulos_asignados.set(modulos_disponibles)
 
     def crear_reserva(self):
-        """Crear una Reserva a partir de esta SolicitudReserva"""
+        print(f"DEBUG crear_reserva: iniciando para solicitud {self.id}")
         from datetime import datetime
         from reservas.models import EstadoReserva, ReservaInsumo
 
-        # No crear si ya existe reserva
         if self.reserva:
+            print(f"DEBUG: ya existe reserva {self.reserva.id}")
             return self.reserva
 
-        # Obtener estado "Pendiente"
+        print(f"DEBUG: buscando estado Pendiente")
         estado_pendiente = EstadoReserva.objects.filter(nombre='Pendiente').first()
         if not estado_pendiente:
+            print(f"ERROR: no existe estado Pendiente")
             raise ValueError('No existe estado "Pendiente" en EstadoReserva')
 
-        # Calcular fecha_reserva como datetime (combinando fecha y hora_inicio)
-        fecha_base = datetime.combine(self.fecha_reserva.date(), self.hora_inicio or datetime.min.time())
+        # Buscar usuario por cédula, puede ser None si no está registrado
+        print(f"DEBUG: buscando usuario con cedula={self.cedula}")
+        usuario = Usuario.objects.filter(codigo=self.cedula).first()
+        print(f"DEBUG: usuario encontrado={usuario}")
 
-        # Crear Reserva
+        fecha_base = datetime.combine(
+            self.fecha_reserva.date(),
+            self.hora_inicio or datetime.min.time()
+        )
+        print(f"DEBUG: fecha_base={fecha_base}")
+
+        print(f"DEBUG: creando reserva")
         reserva = Reserva.objects.create(
-            usuario=self.usuario,
+            usuario=usuario,  # Puede ser None
             fecha_reserva=fecha_base,
             estado=estado_pendiente
         )
+        print(f"DEBUG: reserva creada id={reserva.id}")
 
-        # Crear ReservaInsumo para cada insumo
+        print(f"DEBUG: creando insumos, cantidad={self.insumos.count()}")
         for solicitud_insumo in self.insumos.all():
+            print(f"  - insumo {solicitud_insumo.insumo.nombre} x{solicitud_insumo.cantidad}")
             ReservaInsumo.objects.create(
                 reserva=reserva,
                 insumo=solicitud_insumo.insumo,
                 cantidad=solicitud_insumo.cantidad
             )
 
-        # Guardar referencia a la reserva
+        print(f"DEBUG: guardando relacion reserva en solicitud")
         self.reserva = reserva
         self.save(update_fields=['reserva'])
+        print(f"DEBUG: crear_reserva finalizado")
 
         return reserva
 

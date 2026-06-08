@@ -12,9 +12,11 @@ class EstadoReserva(models.Model):
 
 class Reserva(models.Model):
     usuario = models.ForeignKey(
-        'users.Usuario',
-        on_delete=models.CASCADE
-    )
+    'users.Usuario',
+    on_delete=models.CASCADE,
+    null=True,
+    blank=True
+)
 
     fecha_reserva = models.DateTimeField()
 

@@ -2,7 +2,6 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError
-from users.decorators import rol_requerido
 from users.models import Usuario
 from inventario.models import Insumo
 from .models import SolicitudReserva, Curso
@@ -11,25 +10,25 @@ from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm
 
 def solicitud_estudiante(request):
     if request.method == 'POST':
-        if not request.user.is_authenticated:
-            return redirect('login')
-
-        form = EstudianteSolicitudForm(request.user, request.POST)
+        form = EstudianteSolicitudForm(None, request.POST)
         if form.is_valid():
             solicitud = form.save()
+            print(f"DEBUG vista: solicitud guardada id={solicitud.id}, cedula={solicitud.cedula}")
             try:
-                solicitud.crear_reserva()
+                reserva = solicitud.crear_reserva()
+                print(f"DEBUG vista: reserva creada={reserva}")
             except Exception as e:
                 print(f"Error creando reserva: {e}")
             return redirect('lista_solicitudes')
+        else:
+            print(f"DEBUG: form inválido, errores={form.errors}")
     else:
-        user = request.user if request.user.is_authenticated else None
-        form = EstudianteSolicitudForm(user)
+        form = EstudianteSolicitudForm(None)
 
     return render(
         request,
         'solicitudes/estudiante.html',
-        {'form': form, 'is_anonymous': not request.user.is_authenticated}
+        {'form': form}
     )
 
 
@@ -39,13 +38,14 @@ def solicitud_profesor(request):
         if form.is_valid():
             try:
                 solicitud = form.save()
+                print(f"DEBUG vista: solicitud profesor guardada id={solicitud.id}")
                 try:
-                    solicitud.crear_reserva()
+                    reserva = solicitud.crear_reserva()
+                    print(f"DEBUG vista: reserva profesor creada={reserva}")
                 except Exception as e:
-                    print(f"Error creando reserva: {e}")
+                    print(f"Error creando reserva profesor: {e}")
                 return redirect('lista_solicitudes')
             except ValidationError as e:
-                # Mostrar error de módulos insuficientes u otros errores de validación
                 form.add_error(None, e.message if hasattr(e, 'message') else str(e))
     else:
         form = ProfesorSolicitudForm()
@@ -58,7 +58,6 @@ def solicitud_profesor(request):
 
 
 def cursos_profesor(request):
-    """Retorna los cursos de un profesor basado en nombre y código (cédula)"""
     nombre = request.GET.get('nombre', '').strip()
     cedula = request.GET.get('cedula', '').strip()
 
@@ -68,17 +67,10 @@ def cursos_profesor(request):
             'cursos': []
         })
 
-    # Buscar usuario que sea docente - búsqueda parcial e case-insensitive
-    # Busca en first_name, last_name, username y full_name combinado
     docentes = Usuario.objects.filter(rol__nombre='Docente')
 
     usuarios = []
     for usuario in docentes:
-        # Buscar si el nombre ingresado coincide con:
-        # - first_name
-        # - last_name
-        # - username
-        # - nombre completo (first_name + last_name)
         nombre_lower = nombre.lower()
         if (nombre_lower in usuario.first_name.lower() or
             nombre_lower in usuario.last_name.lower() or
@@ -93,31 +85,20 @@ def cursos_profesor(request):
             'cursos': []
         })
 
-    # Si se proporciona cédula, validar que coincida
     usuario = None
     if cedula:
-        # Buscar por código (cédula) entre los usuarios encontrados
-        print(f"DEBUG: Buscando cédula '{cedula}'")
-        for u in usuarios:
-            print(f"DEBUG: Comparando con usuario {u.username}: código='{u.codigo}' (tipo: {type(u.codigo).__name__})")
-
         usuario = next((u for u in usuarios if u.codigo == cedula), None)
 
         if not usuario:
-            # Si la cédula no coincide, dar error específico
             nombres_encontrados = ', '.join([
                 u.get_full_name() or u.username for u in usuarios[:3]
             ])
-            print(f"DEBUG: NO SE ENCONTRÓ coincidencia de cédula")
             return JsonResponse({
                 'error': f'La cédula "{cedula}" no coincide con ningún docente. '
                          f'Docentes encontrados con nombre "{nombre}": {nombres_encontrados}',
                 'cursos': []
             })
-        else:
-            print(f"DEBUG: ENCONTRADO usuario {usuario.username} con cédula {usuario.codigo}")
     else:
-        # Si no hay cédula, tomar el primer usuario encontrado
         usuario = usuarios[0]
 
     if not usuario:
@@ -126,7 +107,6 @@ def cursos_profesor(request):
             'cursos': []
         })
 
-    # Obtener cursos del profesor
     cursos = Curso.objects.filter(profesor=usuario).order_by('codigo')
 
     cursos_data = [
@@ -138,11 +118,9 @@ def cursos_profesor(request):
         for c in cursos
     ]
 
-    profesor_nombre = usuario.get_full_name() or usuario.username
-
     return JsonResponse({
         'cursos': cursos_data,
-        'profesor': profesor_nombre,
+        'profesor': usuario.get_full_name() or usuario.username,
         'total': len(cursos_data)
     })
 
@@ -183,7 +161,6 @@ def buscar_insumos(request):
 
     results = []
     for i in insumos:
-        # Calcular cantidad disponible como ItemInventario con estado Disponible
         estado_disponible = EstadoItem.objects.filter(nombre='Disponible').first()
         cantidad_disponible = 0
         if estado_disponible:
@@ -192,7 +169,6 @@ def buscar_insumos(request):
                 estado=estado_disponible
             ).count()
 
-        # Mostrar en el text según disponibilidad
         if cantidad_disponible > 0:
             text = i.nombre
         else:
