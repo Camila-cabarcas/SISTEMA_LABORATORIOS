@@ -84,6 +84,7 @@
             <div class="col-md-6 mb-3">
                 <label for="id_fecha_reserva" class="form-label">Fecha *</label>
                 {{ form.fecha_reserva }}
+                <div id="fecha_error_prof" class="invalid-feedback d-none"></div>
                 {% if form.fecha_reserva.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.fecha_reserva.errors }}
@@ -94,9 +95,11 @@
 
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label for="id_hora_inicio" class="form-label">Hora Inicio *</label>
-                {{ form.hora_inicio }}
-                <small class="text-muted d-block mt-1">Mínimo 2 horas</small>
+                <label for="hora_inicio_select_prof" class="form-label">Hora Inicio *</label>
+                <select id="hora_inicio_select_prof" class="form-select" required>
+                    <option value="">-- Selecciona hora inicio --</option>
+                </select>
+                <small class="text-muted d-block mt-1">Disponible: 06:00 - 18:00</small>
                 {% if form.hora_inicio.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.hora_inicio.errors }}
@@ -105,9 +108,10 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="id_hora_fin" class="form-label">Hora Fin *</label>
-                {{ form.hora_fin }}
-                <small class="text-muted d-block mt-1">Máximo 8 horas</small>
+                <label for="hora_fin_select_prof" class="form-label">Hora Fin (máx. 8 horas) *</label>
+                <select id="hora_fin_select_prof" class="form-select" required disabled>
+                    <option value="">-- Selecciona primero la hora inicio --</option>
+                </select>
                 <div id="error_duracion_prof" class="invalid-feedback d-none"></div>
                 {% if form.hora_fin.errors %}
                     <div class="invalid-feedback d-block">
@@ -116,6 +120,9 @@
                 {% endif %}
             </div>
         </div>
+
+        {{ form.hora_inicio }}
+        {{ form.hora_fin }}
 
         <div class="mb-3">
             <div class="form-check">
@@ -431,45 +438,110 @@ function actualizarListaInsumosProf() {
     listContainer.style.display = Object.keys(insumosSeleccionadosProf).length ? 'block' : 'none';
 }
 
-// Validación de horas para profesor (máximo 8 horas)
-const horaInicioProf = document.getElementById('id_hora_inicio');
-const horaFinProf = document.getElementById('id_hora_fin');
+// Validación de fecha - parsear manualmente para evitar problema de zona horaria
+const fechaInputProf = document.getElementById('id_fecha_reserva');
+
+function validarFechaProf() {
+    const fechaValue = fechaInputProf.value;
+    if (!fechaValue) return;
+
+    // Parsear manualmente YYYY-MM-DD para evitar conversión UTC
+    const partes = fechaValue.split('-');
+    const fecha = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+    const diaSemana = fecha.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+
+    const errorDiv = document.getElementById('fecha_error_prof');
+
+    if (diaSemana === 0 || diaSemana === 6) {
+        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        errorDiv.textContent = `El laboratorio solo está disponible de lunes a viernes. ${diasSemana[diaSemana]} no está disponible.`;
+        errorDiv.classList.remove('d-none');
+        fechaInputProf.classList.add('is-invalid');
+        fechaInputProf.value = '';
+    } else {
+        errorDiv.classList.add('d-none');
+        fechaInputProf.classList.remove('is-invalid');
+    }
+}
+
+if (fechaInputProf) {
+    fechaInputProf.addEventListener('change', validarFechaProf);
+    const hoy = new Date();
+    const manana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
+    const y = manana.getFullYear();
+    const m = String(manana.getMonth() + 1).padStart(2, '0');
+    const d = String(manana.getDate()).padStart(2, '0');
+    fechaInputProf.min = `${y}-${m}-${d}`;
+}
+
+// Generador de horas cada 30 minutos (06:00 - 18:00)
+function generarHorasProf() {
+    const horas = [];
+    for (let h = 6; h <= 18; h++) {
+        for (let m of [0, 30]) {
+            const hora = String(h).padStart(2, '0');
+            const min = String(m).padStart(2, '0');
+            horas.push(`${hora}:${min}`);
+        }
+    }
+    return horas;
+}
+
+const horasTotalesProf = generarHorasProf();
+const horaInicioSelectProf = document.getElementById('hora_inicio_select_prof');
+const horaFinSelectProf = document.getElementById('hora_fin_select_prof');
+const horaInicioInputProf = document.getElementById('id_hora_inicio');
+const horaFinInputProf = document.getElementById('id_hora_fin');
 const errorDuracionProf = document.getElementById('error_duracion_prof');
 
-horaInicioProf.addEventListener('change', function() {
-    if (!horaInicioProf.value) return;
-
-    if (horaFinProf.value) {
-        validarDuracionProf();
-    }
+// Llenar dropdown de hora inicio
+horasTotalesProf.forEach(hora => {
+    const option = document.createElement('option');
+    option.value = hora;
+    option.textContent = hora;
+    horaInicioSelectProf.appendChild(option);
 });
 
-horaFinProf.addEventListener('change', validarDuracionProf);
+// Actualizar hora fin cuando cambia hora inicio
+horaInicioSelectProf.addEventListener('change', function() {
+    horaFinSelectProf.innerHTML = '<option value="">-- Selecciona hora fin --</option>';
+    horaFinSelectProf.disabled = false;
 
-function validarDuracionProf() {
-    if (!horaInicioProf.value || !horaFinProf.value) {
-        errorDuracionProf.classList.add('d-none');
-        horaFinProf.classList.remove('is-invalid');
+    if (!this.value) {
+        horaFinSelectProf.disabled = true;
+        horaFinSelectProf.innerHTML = '<option value="">-- Selecciona primero la hora inicio --</option>';
         return;
     }
 
-    const inicio = new Date(`2000-01-01T${horaInicioProf.value}`);
-    const fin = new Date(`2000-01-01T${horaFinProf.value}`);
-    const duracionMinutos = (fin - inicio) / (1000 * 60);
+    // Parsear hora inicio
+    const [horaIni, minIni] = this.value.split(':').map(Number);
+    const minutoIni = horaIni * 60 + minIni;
+    const minutoFin2h = minutoIni + 120;  // +2 horas
+    const minutoFin8h = minutoIni + 480;  // +8 horas
 
-    if (duracionMinutos < 120) {
-        horaFinProf.classList.add('is-invalid');
-        errorDuracionProf.textContent = 'Mínimo 2 horas de diferencia';
-        errorDuracionProf.classList.remove('d-none');
-    } else if (duracionMinutos > 480) {
-        horaFinProf.classList.add('is-invalid');
-        errorDuracionProf.textContent = 'Máximo 8 horas de diferencia';
-        errorDuracionProf.classList.remove('d-none');
-    } else {
-        horaFinProf.classList.remove('is-invalid');
-        errorDuracionProf.classList.add('d-none');
-    }
-}
+    // Generar opciones de hora fin
+    horasTotalesProf.forEach(hora => {
+        const [horaFin, minFin] = hora.split(':').map(Number);
+        const minutoTotal = horaFin * 60 + minFin;
+
+        // Mostrar si está entre 2h y 8h después de inicio
+        if (minutoTotal > minutoFin2h && minutoTotal <= minutoFin8h) {
+            const option = document.createElement('option');
+            option.value = hora;
+            option.textContent = hora;
+            horaFinSelectProf.appendChild(option);
+        }
+    });
+});
+
+// Sincronizar con los inputs hidden
+horaInicioSelectProf.addEventListener('change', function() {
+    horaInicioInputProf.value = this.value;
+});
+
+horaFinSelectProf.addEventListener('change', function() {
+    horaFinInputProf.value = this.value;
+});
 </script>
 
 {% endblock %}

@@ -26,9 +26,7 @@
                 <label for="id_nombre" class="form-label">Nombre Completo *</label>
                 {{ form.nombre }}
                 {% if form.nombre.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.nombre.errors }}
-                    </div>
+                    <div class="invalid-feedback d-block">{{ form.nombre.errors }}</div>
                 {% endif %}
             </div>
 
@@ -46,9 +44,7 @@
                 >
                 <div id="cedula_error" class="invalid-feedback d-none"></div>
                 {% if form.cedula.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.cedula.errors }}
-                    </div>
+                    <div class="invalid-feedback d-block">{{ form.cedula.errors }}</div>
                 {% endif %}
             </div>
         </div>
@@ -57,9 +53,7 @@
             <label for="id_programa" class="form-label">Programa/Carrera *</label>
             {{ form.programa }}
             {% if form.programa.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.programa.errors }}
-                </div>
+                <div class="invalid-feedback d-block">{{ form.programa.errors }}</div>
             {% endif %}
         </div>
 
@@ -71,46 +65,46 @@
                 <label for="id_laboratorio" class="form-label">Laboratorio *</label>
                 {{ form.laboratorio }}
                 {% if form.laboratorio.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.laboratorio.errors }}
-                    </div>
+                    <div class="invalid-feedback d-block">{{ form.laboratorio.errors }}</div>
                 {% endif %}
             </div>
 
             <div class="col-md-6 mb-3">
                 <label for="id_fecha_reserva" class="form-label">Fecha *</label>
                 {{ form.fecha_reserva }}
+                <div id="fecha_error" class="invalid-feedback d-none"></div>
                 {% if form.fecha_reserva.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.fecha_reserva.errors }}
-                    </div>
+                    <div class="invalid-feedback d-block">{{ form.fecha_reserva.errors }}</div>
                 {% endif %}
             </div>
         </div>
 
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label for="id_hora_inicio" class="form-label">Hora Inicio *</label>
-                {{ form.hora_inicio }}
-                <small class="text-muted d-block mt-1">Mínimo 2 horas</small>
+                <label for="hora_inicio_select" class="form-label">Hora Inicio *</label>
+                <select id="hora_inicio_select" class="form-select" required>
+                    <option value="">-- Selecciona hora inicio --</option>
+                </select>
+                <small class="text-muted d-block mt-1">Disponible: 06:00 - 18:00</small>
                 {% if form.hora_inicio.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.hora_inicio.errors }}
-                    </div>
+                    <div class="invalid-feedback d-block">{{ form.hora_inicio.errors }}</div>
                 {% endif %}
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="id_hora_fin" class="form-label">Hora Fin *</label>
-                {{ form.hora_fin }}
+                <label for="hora_fin_select" class="form-label">Hora Fin (máx. 4 horas) *</label>
+                <select id="hora_fin_select" class="form-select" required disabled>
+                    <option value="">-- Selecciona primero la hora inicio --</option>
+                </select>
                 <div id="error_duracion" class="invalid-feedback d-none"></div>
                 {% if form.hora_fin.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.hora_fin.errors }}
-                    </div>
+                    <div class="invalid-feedback d-block">{{ form.hora_fin.errors }}</div>
                 {% endif %}
             </div>
         </div>
+
+        {{ form.hora_inicio }}
+        {{ form.hora_fin }}
 
         <div class="mb-3">
             <div class="form-check">
@@ -142,13 +136,7 @@
 
             <div class="col-md-4 mb-3">
                 <label for="insumo_cantidad" class="form-label">Cantidad</label>
-                <input
-                    type="number"
-                    id="insumo_cantidad"
-                    class="form-control"
-                    min="1"
-                    value="1"
-                >
+                <input type="number" id="insumo_cantidad" class="form-control" min="1" value="1">
             </div>
         </div>
 
@@ -158,8 +146,7 @@
 
         <div id="insumos_lista" class="mb-3" style="display: none;">
             <h6>Insumos Seleccionados:</h6>
-            <div class="list-group" id="insumos_items">
-            </div>
+            <div class="list-group" id="insumos_items"></div>
         </div>
 
         {{ form.insumos_ids }}
@@ -170,80 +157,130 @@
             <label for="id_observaciones" class="form-label">Observaciones</label>
             {{ form.observaciones }}
             {% if form.observaciones.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.observaciones.errors }}
-                </div>
+                <div class="invalid-feedback d-block">{{ form.observaciones.errors }}</div>
             {% endif %}
         </div>
 
-        {% if form.non_field_errors %}
-            <div class="alert alert-danger" role="alert">
-                {% for error in form.non_field_errors %}
-                    <p>{{ error }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        <button type="submit" class="btn btn-primary">
-            Enviar Solicitud
-        </button>
-        <a href="/solicitudes/" class="btn btn-secondary">
-            Cancelar
-        </a>
+        <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+        <a href="/solicitudes/" class="btn btn-secondary">Cancelar</a>
 
     </form>
-
 </div>
 
 <script>
 let insumosSeleccionados = {};
 
-// Validación de fecha (solo lunes-viernes)
+// Validación de fecha - parsear manualmente para evitar problema de zona horaria
 const fechaInput = document.getElementById('id_fecha_reserva');
 
 function validarFecha() {
     const fechaValue = fechaInput.value;
     if (!fechaValue) return;
 
-    const fecha = new Date(fechaValue);
+    // Parsear manualmente YYYY-MM-DD para evitar conversión UTC
+    const partes = fechaValue.split('-');
+    const anio = parseInt(partes[0]);
+    const mes = parseInt(partes[1]) - 1;
+    const dia = parseInt(partes[2]);
+    const fecha = new Date(anio, mes, dia); // Sin UTC
     const diaSemana = fecha.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
 
-    // Permitir solo lunes-viernes (1-5)
+    const errorDiv = document.getElementById('fecha_error');
+
     if (diaSemana === 0 || diaSemana === 6) {
         const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-        const errorDiv = document.getElementById('fecha_error');
-        if (!errorDiv) {
-            const div = document.createElement('div');
-            div.id = 'fecha_error';
-            div.className = 'invalid-feedback d-block';
-            div.textContent = `El laboratorio solo está disponible de lunes a viernes. ${diasSemana[diaSemana]} no está disponible.`;
-            fechaInput.parentNode.appendChild(div);
-        } else {
-            errorDiv.textContent = `El laboratorio solo está disponible de lunes a viernes. ${diasSemana[diaSemana]} no está disponible.`;
-        }
+        errorDiv.textContent = `El laboratorio solo está disponible de lunes a viernes. ${diasSemana[diaSemana]} no está disponible.`;
+        errorDiv.classList.remove('d-none');
         fechaInput.classList.add('is-invalid');
-        fechaInput.value = ''; // Limpiar el valor
+        fechaInput.value = '';
     } else {
-        const errorDiv = document.getElementById('fecha_error');
-        if (errorDiv) errorDiv.remove();
+        errorDiv.classList.add('d-none');
         fechaInput.classList.remove('is-invalid');
     }
 }
 
 if (fechaInput) {
     fechaInput.addEventListener('change', validarFecha);
-    // Establecer min/max para el input type=date
     const hoy = new Date();
-    const mañana = new Date(hoy);
-    mañana.setDate(mañana.getDate() + 1);
-    fechaInput.min = mañana.toISOString().split('T')[0];
+    const manana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
+    const y = manana.getFullYear();
+    const m = String(manana.getMonth() + 1).padStart(2, '0');
+    const d = String(manana.getDate()).padStart(2, '0');
+    fechaInput.min = `${y}-${m}-${d}`;
 }
+
+// Generador de horas cada 30 minutos (06:00 - 18:00)
+function generarHoras() {
+    const horas = [];
+    for (let h = 6; h <= 18; h++) {
+        for (let m of [0, 30]) {
+            const hora = String(h).padStart(2, '0');
+            const min = String(m).padStart(2, '0');
+            horas.push(`${hora}:${min}`);
+        }
+    }
+    return horas;
+}
+
+const horasTotales = generarHoras();
+const horaInicioSelect = document.getElementById('hora_inicio_select');
+const horaFinSelect = document.getElementById('hora_fin_select');
+const horaInicioInput = document.getElementById('id_hora_inicio');
+const horaFinInput = document.getElementById('id_hora_fin');
+
+// Llenar dropdown de hora inicio
+horasTotales.forEach(hora => {
+    const option = document.createElement('option');
+    option.value = hora;
+    option.textContent = hora;
+    horaInicioSelect.appendChild(option);
+});
+
+// Actualizar hora fin cuando cambia hora inicio
+horaInicioSelect.addEventListener('change', function() {
+    horaFinSelect.innerHTML = '<option value="">-- Selecciona hora fin --</option>';
+    horaFinSelect.disabled = false;
+
+    if (!this.value) {
+        horaFinSelect.disabled = true;
+        horaFinSelect.innerHTML = '<option value="">-- Selecciona primero la hora inicio --</option>';
+        return;
+    }
+
+    // Parsear hora inicio
+    const [horaIni, minIni] = this.value.split(':').map(Number);
+    const minutoIni = horaIni * 60 + minIni;
+    const minutoFin2h = minutoIni + 120;  // +2 horas
+    const minutoFin4h = minutoIni + 240;  // +4 horas
+
+    // Generar opciones de hora fin
+    horasTotales.forEach(hora => {
+        const [horaFin, minFin] = hora.split(':').map(Number);
+        const minutoTotal = horaFin * 60 + minFin;
+
+        // Mostrar si está entre 2h y 4h después de inicio
+        if (minutoTotal > minutoFin2h && minutoTotal <= minutoFin4h) {
+            const option = document.createElement('option');
+            option.value = hora;
+            option.textContent = hora;
+            horaFinSelect.appendChild(option);
+        }
+    });
+});
+
+// Sincronizar con los inputs hidden
+horaInicioSelect.addEventListener('change', function() {
+    horaInicioInput.value = this.value;
+});
+
+horaFinSelect.addEventListener('change', function() {
+    horaFinInput.value = this.value;
+});
 
 // Validación de cédula (solo números)
 document.getElementById('id_cedula').addEventListener('input', function(e) {
     const valor = e.target.value;
     const soloNumeros = valor.replace(/[^0-9]/g, '');
-
     if (valor !== soloNumeros) {
         e.target.value = soloNumeros;
         const errorDiv = document.getElementById('cedula_error');
@@ -251,13 +288,12 @@ document.getElementById('id_cedula').addEventListener('input', function(e) {
         errorDiv.classList.remove('d-none');
         e.target.classList.add('is-invalid');
     } else {
-        const errorDiv = document.getElementById('cedula_error');
-        errorDiv.classList.add('d-none');
+        document.getElementById('cedula_error').classList.add('d-none');
         e.target.classList.remove('is-invalid');
     }
 });
 
-// Buscador de insumos sin librerías externas
+// Buscador de insumos
 const buscarInput = document.getElementById('insumo_buscar');
 const dropdownDiv = document.getElementById('insumo_dropdown');
 let insumosCache = null;
@@ -265,7 +301,7 @@ let insumosCache = null;
 buscarInput.addEventListener('click', mostrarInsumos);
 buscarInput.addEventListener('input', buscarInsumos);
 document.addEventListener('click', function(e) {
-    if (e.target !== buscarInput && e.target.parentElement !== dropdownDiv) {
+    if (e.target !== buscarInput && !dropdownDiv.contains(e.target)) {
         dropdownDiv.style.display = 'none';
     }
 });
@@ -287,11 +323,7 @@ function mostrarInsumos() {
 
 function buscarInsumos(e) {
     const query = e.target.value;
-    if (query === '') {
-        mostrarInsumos();
-        return;
-    }
-
+    if (query === '') { mostrarInsumos(); return; }
     fetch(`/solicitudes/buscar-insumos/?q=${encodeURIComponent(query)}`)
         .then(r => r.json())
         .then(data => {
@@ -307,54 +339,36 @@ function renderDropdown(insumos) {
         btn.type = 'button';
         btn.className = 'list-group-item list-group-item-action';
         btn.textContent = insumo.text;
-
         if (insumo.disabled) {
             btn.style.pointerEvents = 'none';
             btn.style.color = '#999';
             btn.style.backgroundColor = '#f5f5f5';
         } else {
-            btn.onclick = (e) => {
-                e.preventDefault();
-                seleccionarInsumo(insumo);
-            };
+            btn.onclick = (e) => { e.preventDefault(); seleccionarInsumo(insumo); };
         }
-
         dropdownDiv.appendChild(btn);
     });
 }
 
 function seleccionarInsumo(insumo) {
-    document.getElementById('insumo_buscar').value = insumo.text;
+    buscarInput.value = insumo.text;
     dropdownDiv.style.display = 'none';
-    document.getElementById('insumo_buscar').dataset.insumoId = insumo.id;
+    buscarInput.dataset.insumoId = insumo.id;
 }
 
-// Botón agregar insumo
 document.getElementById('agregar_insumo_btn').addEventListener('click', function() {
-    const buscar = document.getElementById('insumo_buscar');
-    const insumoId = buscar.dataset.insumoId;
+    const insumoId = buscarInput.dataset.insumoId;
     const cantidad = parseInt(document.getElementById('insumo_cantidad').value) || 1;
-
-    if (!insumoId) {
-        alert('Selecciona un insumo de la lista');
-        return;
-    }
-
-    const texto = buscar.value;
-
+    if (!insumoId) { alert('Selecciona un insumo de la lista'); return; }
+    const texto = buscarInput.value;
     if (insumosSeleccionados[insumoId]) {
         insumosSeleccionados[insumoId].cantidad += cantidad;
     } else {
-        insumosSeleccionados[insumoId] = {
-            id: insumoId,
-            nombre: texto.split('(')[0].trim(),
-            cantidad: cantidad
-        };
+        insumosSeleccionados[insumoId] = { id: insumoId, nombre: texto.split('(')[0].trim(), cantidad: cantidad };
     }
-
     actualizarListaInsumos();
-    buscar.value = '';
-    delete buscar.dataset.insumoId;
+    buscarInput.value = '';
+    delete buscarInput.dataset.insumoId;
     document.getElementById('insumo_cantidad').value = '1';
 });
 
@@ -366,46 +380,33 @@ function eliminarInsumo(insumoId) {
 function actualizarListaInsumos() {
     const lista = document.getElementById('insumos_items');
     const listContainer = document.getElementById('insumos_lista');
-
     lista.innerHTML = '';
-    const ids = [];
-    const cantidades = [];
-
+    const ids = [], cantidades = [];
     Object.values(insumosSeleccionados).forEach(insumo => {
         const item = document.createElement('div');
         item.className = 'list-group-item d-flex justify-content-between align-items-center';
         item.innerHTML = `
             <div>
                 <strong>${insumo.nombre}</strong>
-                <span class="badge bg-primary">${insumo.cantidad}</span>
+                <span class="badge bg-primary ms-2">${insumo.cantidad}</span>
             </div>
-            <button type="button" class="btn btn-sm btn-danger" onclick="eliminarInsumo(${insumo.id})">
-                Eliminar
-            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="eliminarInsumo(${insumo.id})">Eliminar</button>
         `;
         lista.appendChild(item);
         ids.push(insumo.id);
         cantidades.push(insumo.cantidad);
     });
-
     document.getElementById('id_insumos_ids').value = ids.join(',');
     document.getElementById('id_insumos_cantidades').value = cantidades.join(',');
     listContainer.style.display = Object.keys(insumosSeleccionados).length ? 'block' : 'none';
 }
 
-// Validación de hora_fin basada en hora_inicio
+// Validación de duración
 const horaInicio = document.getElementById('id_hora_inicio');
 const horaFin = document.getElementById('id_hora_fin');
 const errorDuracion = document.getElementById('error_duracion');
 
-horaInicio.addEventListener('change', function() {
-    if (!horaInicio.value) return;
-
-    if (horaFin.value) {
-        validarDuracion();
-    }
-});
-
+horaInicio.addEventListener('change', function() { if (horaFin.value) validarDuracion(); });
 horaFin.addEventListener('change', validarDuracion);
 
 function validarDuracion() {
@@ -414,16 +415,14 @@ function validarDuracion() {
         horaFin.classList.remove('is-invalid');
         return;
     }
-
     const inicio = new Date(`2000-01-01T${horaInicio.value}`);
     const fin = new Date(`2000-01-01T${horaFin.value}`);
-    const duracionMinutos = (fin - inicio) / (1000 * 60);
-
-    if (duracionMinutos < 120) {
+    const minutos = (fin - inicio) / (1000 * 60);
+    if (minutos < 120) {
         horaFin.classList.add('is-invalid');
         errorDuracion.textContent = 'Mínimo 2 horas de diferencia';
         errorDuracion.classList.remove('d-none');
-    } else if (duracionMinutos > 240) {
+    } else if (minutos > 240) {
         horaFin.classList.add('is-invalid');
         errorDuracion.textContent = 'Máximo 4 horas de diferencia';
         errorDuracion.classList.remove('d-none');
