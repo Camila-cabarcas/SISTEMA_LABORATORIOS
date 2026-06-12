@@ -51,10 +51,39 @@
             <p><strong>Laboratorio:</strong>
                 {% if solicitante %}{{ solicitante.laboratorio }}{% else %}No especificado{% endif %}
             </p>
-            <p><strong>Módulo:</strong>
+
+            <p><strong>Módulo(s):</strong>
                 {% if solicitante %}
-                    {% if solicitante.necesita_modulo %}Sí requiere{% else %}No requiere{% endif %}
-                {% else %}No especificado{% endif %}
+                    {% if solicitante.necesita_modulo %}
+                        {% with modulos=solicitante.modulos_asignados.all %}
+                        {% if modulos %}
+                            {% if modulos.count == 1 %}
+                                <span class="badge bg-primary">{{ modulos.0.nombre }}</span>
+                            {% else %}
+                                <a class="text-decoration-none" data-bs-toggle="collapse"
+                                   href="#lista-modulos" role="button">
+                                    <span class="badge bg-primary">
+                                        {{ modulos.count }} módulos asignados ▾
+                                    </span>
+                                </a>
+                                <div class="collapse mt-1" id="lista-modulos">
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for m in modulos %}
+                                        <span class="badge bg-secondary">{{ m.nombre }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-warning">Requiere módulo — aún sin asignar</span>
+                        {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        <span class="text-muted">No requiere módulo</span>
+                    {% endif %}
+                {% else %}
+                    No especificado
+                {% endif %}
             </p>
 
         </div>
@@ -116,6 +145,7 @@
 
 </div>
 
+{% if reserva.estado.nombre != 'Expirada' and reserva.estado.nombre != 'Cancelada' %}
 <div class="card p-4 mb-4">
     <h5>Agregar insumo a la reserva</h5>
     <form method="POST">
@@ -124,6 +154,7 @@
         <button type="submit" class="btn btn-primary">Guardar insumo</button>
     </form>
 </div>
+{% endif %}
 
 <div class="card p-4">
     <h5>Insumos reservados</h5>
@@ -168,6 +199,7 @@
 
 {% endwith %}
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.querySelectorAll('.form-eliminar-insumo').forEach(function(form) {
     form.addEventListener('submit', function(e) {

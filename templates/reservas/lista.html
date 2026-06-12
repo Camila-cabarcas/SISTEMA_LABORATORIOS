@@ -16,7 +16,7 @@
 </div>
 
 <form method="GET" class="card p-3 mb-4" id="filtro-form">
-    <input type="hidden" name="estado" id="estado-hidden" value="{{ estado_filtro }}">
+    <input type="hidden" name="estado"       id="estado-hidden"       value="{{ estado_filtro }}">
     <input type="hidden" name="fecha_inicio" id="fecha_inicio_hidden" value="{{ fecha_inicio }}">
     <input type="hidden" name="fecha_fin"    id="fecha_fin_hidden"    value="{{ fecha_fin }}">
 
@@ -102,6 +102,51 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Paginación -->
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <small class="text-muted">
+            Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }}
+            de {{ page_obj.paginator.count }} reservas
+        </small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">«</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">‹</a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">›</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">»</a>
+                </li>
+                {% endif %}
+
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
 </div>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">

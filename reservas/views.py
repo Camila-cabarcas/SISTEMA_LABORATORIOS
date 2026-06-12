@@ -5,6 +5,7 @@ from .models import Reserva, ReservaInsumo, EstadoReserva
 from .forms import ReservaForm, ReservaInsumoForm
 from laboratorio.models import HorarioLaboratorio
 from django.http import JsonResponse
+from django.core.paginator import Paginator
 from datetime import datetime, timedelta, date
 
 
@@ -51,14 +52,19 @@ def lista_reservas(request):
     if fecha_fin:
         reservas = reservas.filter(fecha_reserva__date__lte=fecha_fin)
 
+    paginator   = Paginator(reservas, 15)
+    page_number = request.GET.get('page', 1)
+    page_obj    = paginator.get_page(page_number)
+
     return render(request, 'reservas/lista.html', {
-        'reservas': reservas,
-        'now': datetime.now(),
+        'reservas':      page_obj,
+        'page_obj':      page_obj,
+        'now':           datetime.now(),
         'estado_filtro': estado_filtro,
         'cedula_filtro': cedula_filtro,
-        'tipo_filtro': tipo_filtro,
-        'fecha_inicio': fecha_inicio,
-        'fecha_fin': fecha_fin,
+        'tipo_filtro':   tipo_filtro,
+        'fecha_inicio':  fecha_inicio,
+        'fecha_fin':     fecha_fin,
     })
 
 
@@ -196,7 +202,7 @@ def detalle_reserva(request, id):
     return render(request, 'reservas/detalle.html', {
         'reserva': reserva,
         'insumos': insumos,
-        'form': form
+        'form':    form
     })
 
 
