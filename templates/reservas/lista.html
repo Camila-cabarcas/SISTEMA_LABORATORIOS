@@ -4,47 +4,64 @@
 
 <h1 class="mb-4">Reservas</h1>
 
-<div class="d-flex justify-content-between mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
     <a href="/reservas/crear/" class="btn btn-primary">Nueva Reserva</a>
     <div class="d-flex gap-2">
-        <a href="?" class="btn btn-dark btn-sm">Todas</a>
-        <a href="?estado=Aprobada" class="btn btn-success btn-sm">Aprobadas</a>
-        <a href="?estado=Pendiente" class="btn btn-warning btn-sm">Pendientes</a>
-        <a href="?estado=Cancelada" class="btn btn-secondary btn-sm">Canceladas</a>
-        <a href="?estado=Expirada" class="btn btn-danger btn-sm">Expiradas</a>
+        <a class="btn btn-dark btn-sm estado-btn"      data-estado="">Todas</a>
+        <a class="btn btn-success btn-sm estado-btn"   data-estado="Aprobada">Aprobadas</a>
+        <a class="btn btn-warning btn-sm estado-btn"   data-estado="Pendiente">Pendientes</a>
+        <a class="btn btn-secondary btn-sm estado-btn" data-estado="Cancelada">Canceladas</a>
+        <a class="btn btn-danger btn-sm estado-btn"    data-estado="Expirada">Expiradas</a>
     </div>
 </div>
 
-<form method="GET" class="mb-4">
-    <div class="input-group" style="max-width: 300px;">
-        <input
-            type="date"
-            name="fecha"
-            class="form-control"
-            value="{{ fecha_filtro }}"
-        >
-        <button class="btn btn-dark" type="submit">Buscar</button>
-        <a href="?" class="btn btn-secondary">Limpiar</a>
+<form method="GET" class="card p-3 mb-4" id="filtro-form">
+    <input type="hidden" name="estado" id="estado-hidden" value="{{ estado_filtro }}">
+    <input type="hidden" name="fecha_inicio" id="fecha_inicio_hidden" value="{{ fecha_inicio }}">
+    <input type="hidden" name="fecha_fin"    id="fecha_fin_hidden"    value="{{ fecha_fin }}">
+
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label small mb-1">Cédula</label>
+            <input type="text" name="cedula" class="form-control form-control-sm"
+                   placeholder="Cédula..." value="{{ cedula_filtro }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-1">Tipo</label>
+            <select name="tipo" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                <option value="estudiante" {% if tipo_filtro == 'estudiante' %}selected{% endif %}>Estudiante</option>
+                <option value="profesor"   {% if tipo_filtro == 'profesor'   %}selected{% endif %}>Profesor</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1">Rango de fechas</label>
+            <input type="text" id="date-range-picker" class="form-control form-control-sm"
+                   placeholder="Selecciona un rango..." readonly
+                   value="{% if fecha_inicio %}{{ fecha_inicio }}{% if fecha_fin %} a {{ fecha_fin }}{% endif %}{% endif %}">
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button class="btn btn-dark btn-sm" type="submit">Buscar</button>
+            <a href="/reservas/" class="btn btn-secondary btn-sm">Limpiar</a>
+        </div>
     </div>
 </form>
 
 <div class="card p-4">
     <div class="table-responsive">
         <table class="table table-striped">
-
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>Solicitante</th>
-                    <th>Fecha Reserva</th>
-                    <th>Límite Retiro</th>
+                    <th>Fecha Solicitud</th>
+                    <th>Fecha de Préstamo</th>
                     <th>Fecha Devolución</th>
                     <th>Estado</th>
                     <th>Ver detalle</th>
                     <th>Préstamo</th>
                 </tr>
             </thead>
-
             <tbody>
                 {% for reserva in reservas %}
                 <tr class="
@@ -64,8 +81,8 @@
                             Sin usuario
                         {% endif %}
                     </td>
+                    <td>{{ reserva.fecha_creacion|date:"d/m/Y H:i" }}</td>
                     <td>{{ reserva.fecha_reserva|date:"d/m/Y H:i" }}</td>
-                    <td>{{ reserva.hora_limite_retiro|date:"d/m/Y H:i" }}</td>
                     <td>{{ reserva.fecha_devolucion|date:"d/m/Y H:i" }}</td>
                     <td>{{ reserva.estado }}</td>
                     <td>
@@ -83,9 +100,45 @@
                 </tr>
                 {% endfor %}
             </tbody>
-
         </table>
     </div>
 </div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+
+<script>
+const estadoActual = "{{ estado_filtro }}";
+
+document.querySelectorAll('.estado-btn').forEach(function(btn) {
+    if (btn.dataset.estado === estadoActual) {
+        btn.style.outline = '2px solid rgba(255,255,255,0.6)';
+        btn.style.outlineOffset = '2px';
+    }
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('estado-hidden').value = this.dataset.estado;
+        document.getElementById('filtro-form').submit();
+    });
+});
+
+flatpickr("#date-range-picker", {
+    mode: "range",
+    dateFormat: "Y-m-d",
+    locale: "es",
+    allowInput: false,
+    onChange: function(selectedDates) {
+        if (selectedDates.length === 1) {
+            const d = selectedDates[0].toISOString().split('T')[0];
+            document.getElementById('fecha_inicio_hidden').value = d;
+            document.getElementById('fecha_fin_hidden').value = d;
+        } else if (selectedDates.length === 2) {
+            document.getElementById('fecha_inicio_hidden').value = selectedDates[0].toISOString().split('T')[0];
+            document.getElementById('fecha_fin_hidden').value = selectedDates[1].toISOString().split('T')[0];
+        }
+    }
+});
+</script>
 
 {% endblock %}

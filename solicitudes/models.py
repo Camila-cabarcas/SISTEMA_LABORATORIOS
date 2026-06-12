@@ -227,6 +227,7 @@ class SolicitudReserva(models.Model):
     def crear_reserva(self):
         from datetime import datetime
         from reservas.models import EstadoReserva, ReservaInsumo
+        from users.models import Usuario
 
         if self.reserva:
             return self.reserva
@@ -242,9 +243,17 @@ class SolicitudReserva(models.Model):
             self.hora_inicio or datetime.min.time()
         )
 
+        fecha_devolucion = None
+        if self.hora_fin:
+            fecha_devolucion = datetime.combine(
+                self.fecha_reserva.date(),
+                self.hora_fin
+            )
+
         reserva = Reserva.objects.create(
             usuario=usuario,
             fecha_reserva=fecha_base,
+            fecha_devolucion=fecha_devolucion,
             estado=estado_pendiente
         )
 

@@ -4,24 +4,468 @@
 
 <h1 class="mb-4">Nueva Reserva</h1>
 
+{% if errors %}
+<div class="alert alert-danger">
+    {% for e in errors %}<div>{{ e }}</div>{% endfor %}
+</div>
+{% endif %}
+
 <div class="card p-4">
-
-    <form method="POST">
-
+    <form method="POST" id="crear-form">
         {% csrf_token %}
 
-        {{ form.as_p }}
+        <h5 class="mb-3">Tipo de solicitante</h5>
+        <div class="d-flex gap-3 mb-4">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="tipo_solicitante"
+                       id="tipo-estudiante" value="estudiante"
+                       {% if not post_data or post_data.tipo_solicitante == 'estudiante' %}checked{% endif %}>
+                <label class="form-check-label" for="tipo-estudiante">Estudiante</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="tipo_solicitante"
+                       id="tipo-profesor" value="profesor"
+                       {% if post_data.tipo_solicitante == 'profesor' %}checked{% endif %}>
+                <label class="form-check-label" for="tipo-profesor">Profesor</label>
+            </div>
+        </div>
 
-        <button type="submit" class="btn btn-primary">
-            Crear Reserva
-        </button>
+        <hr>
+        <h5 class="mb-3">Información personal</h5>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Nombre completo *</label>
+                <input type="text" name="nombre" class="form-control"
+                       value="{{ post_data.nombre }}" placeholder="Nombre completo">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Cédula *</label>
+                <input type="text" name="cedula" class="form-control"
+                       value="{{ post_data.cedula }}" placeholder="Número de identificación"
+                       inputmode="numeric" pattern="[0-9]*">
+            </div>
+        </div>
 
-        <a href="/reservas/" class="btn btn-secondary ms-2">
-            Cancelar
-        </a>
+        <div id="campo-programa" class="mb-3">
+            <label class="form-label">Programa/Carrera</label>
+            <input type="text" name="programa" class="form-control"
+                   value="{{ post_data.programa }}" placeholder="Programa o carrera">
+        </div>
 
+        <div id="campo-curso" class="mb-3" style="display:none;">
+            <label class="form-label">Curso</label>
+            <select name="curso" id="id_curso" class="form-select" disabled>
+                <option value="">-- Ingresa nombre y cédula del profesor --</option>
+            </select>
+            <small id="curso-msg" class="d-none"></small>
+        </div>
+
+        <hr>
+        <h5 class="mb-3">Información de la reserva</h5>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Laboratorio *</label>
+                <select name="laboratorio" class="form-select">
+                    <option value="">-- Selecciona laboratorio --</option>
+                    {% for lab in laboratorios %}
+                    <option value="{{ lab.id }}"
+                        {% if post_data.laboratorio == lab.id|stringformat:"s" %}selected{% endif %}>
+                        {{ lab.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Fecha *</label>
+                <input type="text" id="fecha-picker" name="fecha" class="form-control"
+                       placeholder="Selecciona una fecha..." readonly
+                       value="{{ post_data.fecha }}">
+                <small id="fecha-hint" class="text-muted">Lunes a viernes</small>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Horario *
+                <small id="max-horas-label" class="text-muted">(máx. 4 horas, mín. 2 horas)</small>
+            </label>
+
+            <input type="hidden" name="hora_inicio" id="hora_inicio_hidden" value="{{ post_data.hora_inicio }}">
+            <input type="hidden" name="hora_fin"    id="hora_fin_hidden"    value="{{ post_data.hora_fin }}">
+
+            <input type="text" id="horario-display" class="form-control" readonly
+                   placeholder="Selecciona el horario..."
+                   value="{% if post_data.hora_inicio and post_data.hora_fin %}{{ post_data.hora_inicio }} → {{ post_data.hora_fin }}{% endif %}"
+                   style="cursor:pointer;">
+
+            <div id="time-range-panel" style="
+                display: none;
+                position: absolute;
+                z-index: 9999;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                padding: 20px;
+                width: 340px;
+                margin-top: 4px;
+            ">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold" style="font-size:1.1rem;">Horario</span>
+                    <button type="button" id="btn-reset-time"
+                            style="background:none; border:1px solid #e0d6cc; border-radius:6px;
+                                   padding:2px 10px; color:#c07a50; cursor:pointer; font-size:.85rem;">
+                        Reset
+                    </button>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
+                        <small style="color:#999; font-size:.7rem;">Desde</small>
+                        <div id="display-desde" style="font-weight:600; color:#333;">--:--</div>
+                    </div>
+                    <span style="color:#999;">→</span>
+                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
+                        <small style="color:#999; font-size:.7rem;">Hasta</small>
+                        <div id="display-hasta" style="font-weight:600; color:#333;">--:--</div>
+                    </div>
+                </div>
+
+                <div id="time-slots" style="
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 6px;
+                    max-height: 220px;
+                    overflow-y: auto;
+                "></div>
+
+                <div id="time-error" class="text-danger small mt-2 d-none"></div>
+
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" id="btn-close-time"
+                            style="background:none; border:none; color:#999; cursor:pointer;">
+                        Cerrar
+                    </button>
+                    <button type="button" id="btn-confirm-time"
+                            style="background:none; border:none; color:#c07a50;
+                                   font-weight:600; cursor:pointer;">
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" name="necesita_modulo"
+                   id="id_necesita_modulo"
+                   {% if not post_data or post_data.necesita_modulo %}checked{% endif %}>
+            <label class="form-check-label" for="id_necesita_modulo">
+                Necesita módulo/puesto en el laboratorio
+            </label>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Observaciones</label>
+            <textarea name="observaciones" class="form-control" rows="2"
+                      placeholder="Observaciones opcionales...">{{ post_data.observaciones }}</textarea>
+        </div>
+
+        <div id="form-error" class="text-danger small mb-3 d-none">
+            Completa todos los campos requeridos.
+        </div>
+
+        <button type="submit" class="btn btn-primary">Crear Reserva</button>
+        <a href="/reservas/" class="btn btn-secondary ms-2">Cancelar</a>
     </form>
-
 </div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+
+<style>
+.time-slot {
+    padding: 6px 4px;
+    border-radius: 6px;
+    text-align: center;
+    font-size: .8rem;
+    cursor: pointer;
+    background: #f8f5f2;
+    color: #333;
+    border: none;
+    transition: background .15s;
+}
+.time-slot:hover { background: #f0e8e0; }
+.time-slot.slot-start, .time-slot.slot-end {
+    background: #c07a50;
+    color: white;
+    border-radius: 50px;
+}
+.time-slot.slot-range {
+    background: #f0e0d0;
+    color: #333;
+    border-radius: 0;
+}
+.time-slot.slot-disabled {
+    opacity: .35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+</style>
+
+<script>
+let tipoActual = document.querySelector('input[name="tipo_solicitante"]:checked').value;
+let maxHoras   = tipoActual === 'profesor' ? 8 : 4;
+let fpInstance = null;
+let slotInicio = null;
+let slotFin    = null;
+
+function strToMin(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+}
+
+// ── Flatpickr fecha ────────────────────────────────────────────
+function getMinDate() {
+    if (tipoActual === 'profesor') {
+        const m = new Date();
+        m.setDate(m.getDate() + 1);
+        return m;
+    }
+    return 'today';
+}
+
+function initFlatpickr() {
+    if (fpInstance) fpInstance.destroy();
+    fpInstance = flatpickr("#fecha-picker", {
+        mode: "single",
+        dateFormat: "Y-m-d",
+        locale: "es",
+        minDate: getMinDate(),
+        disable: [d => d.getDay() === 0 || d.getDay() === 6],
+    });
+}
+
+// ── Time Range Picker ──────────────────────────────────────────
+function generarSlots() {
+    const slots = [];
+    for (let h = 6; h <= 18; h++) {
+        for (let m of [0, 30]) {
+            if (h === 18 && m === 30) continue;
+            slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+        }
+    }
+    return slots;
+}
+
+const SLOTS = generarSlots();
+
+function renderSlots() {
+    const container = document.getElementById('time-slots');
+    container.innerHTML = '';
+
+    SLOTS.forEach(slot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'time-slot';
+        btn.textContent = slot;
+        btn.dataset.slot = slot;
+
+        const minSlot = strToMin(slot);
+
+        if (!slotInicio) {
+            if (minSlot > strToMin('18:00') - 120) {
+                btn.classList.add('slot-disabled');
+            }
+        } else {
+            const minInicio = strToMin(slotInicio);
+            const minMin    = minInicio + 120;
+            const minMax    = minInicio + maxHoras * 60;
+
+            if (slot === slotInicio) {
+                btn.classList.add('slot-start');
+            } else if (slotFin && slot === slotFin) {
+                btn.classList.add('slot-end');
+            } else if (slotFin && minSlot > minInicio && minSlot < strToMin(slotFin)) {
+                btn.classList.add('slot-range');
+            } else if (minSlot < minMin || minSlot > minMax || minSlot > strToMin('18:00')) {
+                btn.classList.add('slot-disabled');
+            }
+        }
+
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            onSlotClick(slot);
+        });
+
+        container.appendChild(btn);
+    });
+}
+
+function onSlotClick(slot) {
+    document.getElementById('time-error').classList.add('d-none');
+
+    if (!slotInicio) {
+        slotInicio = slot;
+        slotFin    = null;
+        document.getElementById('display-desde').textContent = slot;
+        document.getElementById('display-hasta').textContent = '--:--';
+    } else if (!slotFin) {
+        const minInicio = strToMin(slotInicio);
+        const minSlot   = strToMin(slot);
+        const diff      = minSlot - minInicio;
+
+        if (diff < 120) {
+            showTimeError(`Mínimo 2 horas. Selecciona desde ${slotInicio} en adelante.`);
+            return;
+        }
+        if (diff > maxHoras * 60) {
+            showTimeError(`Máximo ${maxHoras} horas para ${tipoActual}.`);
+            return;
+        }
+        slotFin = slot;
+        document.getElementById('display-hasta').textContent = slot;
+    } else {
+        slotInicio = slot;
+        slotFin    = null;
+        document.getElementById('display-desde').textContent = slot;
+        document.getElementById('display-hasta').textContent = '--:--';
+    }
+
+    renderSlots();
+}
+
+function showTimeError(msg) {
+    const el = document.getElementById('time-error');
+    el.textContent = msg;
+    el.classList.remove('d-none');
+}
+
+function resetTime() {
+    slotInicio = null;
+    slotFin    = null;
+    document.getElementById('display-desde').textContent = '--:--';
+    document.getElementById('display-hasta').textContent = '--:--';
+    document.getElementById('time-error').classList.add('d-none');
+    renderSlots();
+}
+
+// Abrir/cerrar panel
+document.getElementById('horario-display').addEventListener('click', function(e) {
+    e.stopPropagation();
+    const panel = document.getElementById('time-range-panel');
+    if (panel.style.display === 'none') {
+        renderSlots();
+        panel.style.display = 'block';
+    } else {
+        panel.style.display = 'none';
+    }
+});
+
+// Evitar que clicks dentro del panel lo cierren
+document.getElementById('time-range-panel').addEventListener('click', function(e) {
+    e.stopPropagation();
+});
+
+document.getElementById('btn-reset-time').addEventListener('click', resetTime);
+
+document.getElementById('btn-close-time').addEventListener('click', function() {
+    document.getElementById('time-range-panel').style.display = 'none';
+});
+
+document.getElementById('btn-confirm-time').addEventListener('click', function() {
+    if (!slotInicio || !slotFin) {
+        showTimeError('Selecciona hora de inicio y fin.');
+        return;
+    }
+    document.getElementById('hora_inicio_hidden').value = slotInicio;
+    document.getElementById('hora_fin_hidden').value    = slotFin;
+    document.getElementById('horario-display').value    = `${slotInicio} → ${slotFin}`;
+    document.getElementById('time-range-panel').style.display = 'none';
+});
+
+// Cerrar panel al hacer click fuera
+document.addEventListener('click', function() {
+    document.getElementById('time-range-panel').style.display = 'none';
+});
+
+// ── Cambio de tipo ─────────────────────────────────────────────
+document.querySelectorAll('input[name="tipo_solicitante"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        tipoActual = this.value;
+        maxHoras   = tipoActual === 'profesor' ? 8 : 4;
+        document.getElementById('max-horas-label').textContent =
+            `(máx. ${maxHoras} horas, mín. 2 horas)`;
+
+        if (tipoActual === 'profesor') {
+            document.getElementById('campo-programa').style.display = 'none';
+            document.getElementById('campo-curso').style.display    = 'block';
+            document.getElementById('fecha-hint').textContent =
+                'Lunes a viernes — mínimo 1 día de anticipación';
+        } else {
+            document.getElementById('campo-programa').style.display = 'block';
+            document.getElementById('campo-curso').style.display    = 'none';
+            document.getElementById('fecha-hint').textContent = 'Lunes a viernes';
+        }
+
+        document.getElementById('fecha-picker').value = '';
+        resetTime();
+        initFlatpickr();
+    });
+});
+
+// ── Cursos del profesor ────────────────────────────────────────
+function cargarCursos() {
+    const nombre = document.querySelector('input[name="nombre"]').value;
+    const cedula = document.querySelector('input[name="cedula"]').value;
+    if (tipoActual !== 'profesor' || !nombre || !cedula) return;
+
+    const msg = document.getElementById('curso-msg');
+    const sel = document.getElementById('id_curso');
+    msg.textContent = 'Cargando cursos...';
+    msg.classList.remove('d-none');
+
+    fetch(`/solicitudes/cursos-profesor/?nombre=${encodeURIComponent(nombre)}&cedula=${encodeURIComponent(cedula)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                sel.innerHTML = '<option value="">-- Profesor no encontrado --</option>';
+                sel.disabled = true;
+                msg.textContent = data.error;
+                msg.className = 'text-danger d-block';
+                return;
+            }
+            sel.innerHTML = '<option value="">-- Selecciona un curso --</option>';
+            data.cursos.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `${c.nombre} (${c.codigo})`;
+                sel.appendChild(opt);
+            });
+            sel.disabled = false;
+            msg.classList.add('d-none');
+        })
+        .catch(() => {
+            msg.textContent = 'Error cargando cursos.';
+            msg.className = 'text-danger d-block';
+        });
+}
+
+document.querySelector('input[name="nombre"]').addEventListener('blur', cargarCursos);
+document.querySelector('input[name="cedula"]').addEventListener('blur', cargarCursos);
+
+// ── Validación al enviar ───────────────────────────────────────
+document.getElementById('crear-form').addEventListener('submit', function(e) {
+    const fecha  = document.querySelector('input[name="fecha"]').value;
+    const inicio = document.getElementById('hora_inicio_hidden').value;
+    const fin    = document.getElementById('hora_fin_hidden').value;
+    if (!fecha || !inicio || !fin) {
+        e.preventDefault();
+        document.getElementById('form-error').classList.remove('d-none');
+    }
+});
+
+// ── Init ───────────────────────────────────────────────────────
+initFlatpickr();
+</script>
 
 {% endblock %}

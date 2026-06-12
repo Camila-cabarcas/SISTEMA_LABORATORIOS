@@ -40,9 +40,9 @@ class Reserva(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        # Calcula automáticamente los tiempos
         self.hora_limite_retiro = self.fecha_reserva + timedelta(minutes=30)
-        self.fecha_devolucion = self.fecha_reserva + timedelta(hours=2)
+        if not self.fecha_devolucion:
+            self.fecha_devolucion = self.fecha_reserva + timedelta(hours=2)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -64,3 +64,4 @@ class ReservaInsumo(models.Model):
 
     def __str__(self):
         return f"{self.insumo.nombre}"
+    

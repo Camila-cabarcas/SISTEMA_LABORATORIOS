@@ -5,176 +5,226 @@ from .models import Reserva, ReservaInsumo, EstadoReserva
 from .forms import ReservaForm, ReservaInsumoForm
 from laboratorio.models import HorarioLaboratorio
 from django.http import JsonResponse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 
 @rol_requerido('Administrador', 'Encargado')
 def lista_reservas(request):
+    from django.utils import timezone
+    from django.db.models import Q
 
-    estado_filtro = request.GET.get('estado')
-    fecha_filtro = request.GET.get('fecha')
+    ahora = timezone.now()
+    estado_expirada = EstadoReserva.objects.filter(nombre='Expirada').first()
+    estado_pendiente = EstadoReserva.objects.filter(nombre='Pendiente').first()
+
+    if estado_expirada and estado_pendiente:
+        Reserva.objects.filter(
+            estado=estado_pendiente,
+            hora_limite_retiro__lt=ahora
+        ).update(estado=estado_expirada)
+
+    estado_filtro = request.GET.get('estado', '')
+    cedula_filtro = request.GET.get('cedula', '').strip()
+    tipo_filtro   = request.GET.get('tipo', '')
+    fecha_inicio  = request.GET.get('fecha_inicio', '')
+    fecha_fin     = request.GET.get('fecha_fin', '')
 
     reservas = Reserva.objects.all().order_by('-fecha_reserva')
 
     if estado_filtro:
         reservas = reservas.filter(estado__nombre=estado_filtro)
 
-    if fecha_filtro:
-        reservas = reservas.filter(fecha_reserva__date=fecha_filtro)
+    if cedula_filtro:
+        reservas = reservas.filter(
+            Q(usuario__codigo__icontains=cedula_filtro) |
+            Q(solicitud__cedula__icontains=cedula_filtro)
+        ).distinct()
 
-    return render(
-        request,
-        'reservas/lista.html',
-        {
-            'reservas': reservas,
-            'now': datetime.now(),
-            'fecha_filtro': fecha_filtro
-        }
-    )
+    if tipo_filtro:
+        reservas = reservas.filter(
+            solicitud__tipo_solicitante=tipo_filtro
+        ).distinct()
+
+    if fecha_inicio:
+        reservas = reservas.filter(fecha_reserva__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        reservas = reservas.filter(fecha_reserva__date__lte=fecha_fin)
+
+    return render(request, 'reservas/lista.html', {
+        'reservas': reservas,
+        'now': datetime.now(),
+        'estado_filtro': estado_filtro,
+        'cedula_filtro': cedula_filtro,
+        'tipo_filtro': tipo_filtro,
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+    })
 
 
 @rol_requerido('Administrador', 'Encargado')
 def crear_reserva(request):
+    from solicitudes.models import SolicitudReserva, Curso
+    from laboratorio.models import Laboratorio
+    from users.models import Usuario
+    from django.db.models import Q
+
+    laboratorios = Laboratorio.objects.all()
 
     if request.method == 'POST':
+        tipo          = request.POST.get('tipo_solicitante', 'estudiante')
+        nombre        = request.POST.get('nombre', '').strip()
+        cedula        = request.POST.get('cedula', '').strip()
+        programa      = request.POST.get('programa', '').strip()
+        curso_id      = request.POST.get('curso', '')
+        lab_id        = request.POST.get('laboratorio', '')
+        fecha_str     = request.POST.get('fecha', '')
+        hora_ini      = request.POST.get('hora_inicio', '')
+        hora_fin      = request.POST.get('hora_fin', '')
+        necesita      = request.POST.get('necesita_modulo') == 'on'
+        observaciones = request.POST.get('observaciones', '')
 
-        form = ReservaForm(request.POST)
+        errors = []
 
-        if form.is_valid():
+        if not nombre:    errors.append('El nombre es requerido.')
+        if not cedula:    errors.append('La cédula es requerida.')
+        if not lab_id:    errors.append('Selecciona un laboratorio.')
+        if not fecha_str: errors.append('Selecciona una fecha.')
+        if not hora_ini:  errors.append('Selecciona la hora de inicio.')
+        if not hora_fin:  errors.append('Selecciona la hora de fin.')
 
-            fecha_reserva = form.cleaned_data['fecha_reserva']
-            dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
-            dia = dias[fecha_reserva.weekday()]
-            hora = fecha_reserva.time()
+        fecha_obj = hora_inicio_obj = hora_fin_obj = None
 
-            horario_disponible = HorarioLaboratorio.objects.filter(
-                dia=dia,
-                hora_inicio__lte=hora,
-                hora_fin__gte=hora,
-                bloqueado=False
-            ).exists()
+        if fecha_str:
+            try:
+                fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+            except ValueError:
+                errors.append('Fecha inválida.')
 
-            horario_bloqueado = HorarioLaboratorio.objects.filter(
-                dia=dia,
-                hora_inicio__lte=hora,
-                hora_fin__gte=hora,
-                bloqueado=True
-            ).exists()
+        if hora_ini:
+            try:
+                hora_inicio_obj = datetime.strptime(hora_ini, '%H:%M').time()
+            except ValueError:
+                errors.append('Hora inicio inválida.')
 
-            if not horario_disponible or horario_bloqueado:
-                form.add_error(
-                    'fecha_reserva',
-                    'No hay disponibilidad en el laboratorio para ese horario.'
+        if hora_fin:
+            try:
+                hora_fin_obj = datetime.strptime(hora_fin, '%H:%M').time()
+            except ValueError:
+                errors.append('Hora fin inválida.')
+
+        if tipo == 'profesor' and fecha_obj:
+            if fecha_obj <= date.today():
+                errors.append('El profesor debe reservar con al menos un día de anticipación.')
+
+        if not errors:
+            laboratorio = Laboratorio.objects.filter(id=lab_id).first()
+            if not laboratorio:
+                errors.append('Laboratorio no válido.')
+
+            curso = Curso.objects.filter(id=curso_id).first() if curso_id else None
+
+            usuario = None
+            if tipo == 'profesor' and nombre:
+                partes = nombre.split()
+                query  = Q()
+                for p in partes:
+                    query |= (Q(first_name__icontains=p) |
+                              Q(last_name__icontains=p)  |
+                              Q(username__icontains=p))
+                usuario = Usuario.objects.filter(query, rol__nombre='Docente').first()
+
+            if fecha_obj and hora_inicio_obj and not errors:
+                fecha_dt = datetime.combine(fecha_obj, hora_inicio_obj)
+
+                solicitud = SolicitudReserva(
+                    tipo_solicitante=tipo,
+                    nombre=nombre,
+                    cedula=cedula,
+                    programa=programa,
+                    curso=curso,
+                    usuario=usuario,
+                    laboratorio=laboratorio,
+                    fecha_reserva=fecha_dt,
+                    hora_inicio=hora_inicio_obj,
+                    hora_fin=hora_fin_obj,
+                    necesita_modulo=necesita,
+                    observaciones=observaciones,
                 )
-            else:
-                reserva = form.save(commit=False)
-                reserva.usuario = request.user
-                rol = request.user.rol.nombre if request.user.rol else None
-                if rol in ['Administrador', 'Encargado']:
+
+                try:
+                    solicitud.save()
+                    reserva = solicitud.crear_reserva()
                     reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
-                else:
-                    reserva.estado = EstadoReserva.objects.get(nombre='Pendiente')
-                reserva.save()
-                return redirect('detalle_reserva', id=reserva.pk)
+                    reserva.save()
+                    return redirect('detalle_reserva', id=reserva.pk)
+                except Exception as e:
+                    errors.append(str(e))
 
-    else:
-        form = ReservaForm()
+        return render(request, 'reservas/crear.html', {
+            'errors': errors,
+            'laboratorios': laboratorios,
+            'post_data': request.POST,
+        })
 
-    return render(
-        request,
-        'reservas/crear.html',
-        {
-            'form': form
-        }
-    )
+    return render(request, 'reservas/crear.html', {
+        'laboratorios': laboratorios,
+    })
 
 
 @rol_requerido('Administrador', 'Encargado')
 def detalle_reserva(request, id):
-
     reserva = get_object_or_404(Reserva, id=id)
     insumos = ReservaInsumo.objects.filter(reserva=reserva)
 
     if request.method == 'POST':
-
         form = ReservaInsumoForm(request.POST)
-
         if form.is_valid():
-
             insumo = form.save(commit=False)
             insumo.reserva = reserva
             insumo.save()
-
             return redirect('detalle_reserva', id=reserva.pk)
-
     else:
         form = ReservaInsumoForm()
 
-    return render(
-        request,
-        'reservas/detalle.html',
-        {
-            'reserva': reserva,
-            'insumos': insumos,
-            'form': form
-        }
-    )
+    return render(request, 'reservas/detalle.html', {
+        'reserva': reserva,
+        'insumos': insumos,
+        'form': form
+    })
 
 
 @rol_requerido('Administrador', 'Encargado')
 def cancelar_reserva(request, id):
-
     reserva = get_object_or_404(Reserva, id=id)
 
     if request.method == 'POST':
-
         reserva.estado = EstadoReserva.objects.get(nombre='Cancelada')
         reserva.save()
-
         return redirect('lista_reservas')
 
-    return render(
-        request,
-        'reservas/cancelar.html',
-        {
-            'reserva': reserva
-        }
-    )
+    return render(request, 'reservas/cancelar.html', {'reserva': reserva})
 
 
 @rol_requerido('Administrador', 'Encargado')
 def aprobar_reserva(request, id):
-
     reserva = get_object_or_404(Reserva, id=id)
 
     if request.method == 'POST':
-
         accion = request.POST.get('accion')
-
         if accion == 'aprobar':
             reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
-
         elif accion == 'cancelar':
             reserva.estado = EstadoReserva.objects.get(nombre='Cancelada')
-
         reserva.save()
-
         return redirect('detalle_reserva', id=reserva.pk)
 
-    return render(
-        request,
-        'reservas/aprobar.html',
-        {
-            'reserva': reserva
-        }
-    )
+    return render(request, 'reservas/aprobar.html', {'reserva': reserva})
 
 
 @rol_requerido('Administrador', 'Encargado')
 def reservas_para_prestamo(request):
-
     ahora = datetime.now()
-
     reservas = Reserva.objects.filter(
         estado__nombre='Aprobada',
         prestamo__isnull=True,
@@ -182,20 +232,13 @@ def reservas_para_prestamo(request):
         fecha_reserva__lte=ahora
     ).order_by('-fecha_creacion')
 
-    return render(
-        request,
-        'reservas/para_prestamo.html',
-        {
-            'reservas': reservas
-        }
-    )
+    return render(request, 'reservas/para_prestamo.html', {'reservas': reservas})
 
 
 @rol_requerido('Administrador', 'Encargado')
 def horarios_disponibles(request):
-
     slots = []
-    hoy = datetime.now()
+    hoy   = datetime.now()
 
     dias_semana = {
         'lunes': 0, 'martes': 1, 'miercoles': 2,
@@ -209,20 +252,18 @@ def horarios_disponibles(request):
             dia_num = dias_semana.get(horario.dia)
             if dia_num is None:
                 continue
-
             dias_hasta = (dia_num - hoy.weekday()) % 7
-            fecha = hoy + timedelta(days=dias_hasta + semana * 7)
-
+            fecha  = hoy + timedelta(days=dias_hasta + semana * 7)
             inicio = datetime.combine(fecha.date(), horario.hora_inicio)
-            fin = datetime.combine(fecha.date(), horario.hora_fin)
+            fin    = datetime.combine(fecha.date(), horario.hora_fin)
 
             slots.append({
-                'title': 'Bloqueado' if horario.bloqueado else 'Disponible',
-                'start': inicio.strftime('%Y-%m-%dT%H:%M:%S'),
-                'end': fin.strftime('%Y-%m-%dT%H:%M:%S'),
-                'color': '#dc3545' if horario.bloqueado else '#28a745',
+                'title':     'Bloqueado' if horario.bloqueado else 'Disponible',
+                'start':     inicio.strftime('%Y-%m-%dT%H:%M:%S'),
+                'end':       fin.strftime('%Y-%m-%dT%H:%M:%S'),
+                'color':     '#dc3545' if horario.bloqueado else '#28a745',
                 'bloqueado': horario.bloqueado,
-                'motivo': horario.motivo_bloqueo if horario.bloqueado else ''
+                'motivo':    horario.motivo_bloqueo if horario.bloqueado else ''
             })
 
     return JsonResponse(slots, safe=False)
@@ -230,27 +271,18 @@ def horarios_disponibles(request):
 
 @rol_requerido('Administrador', 'Encargado')
 def eliminar_insumo_reserva(request, reserva_id, insumo_id):
-
     reserva = get_object_or_404(Reserva, id=reserva_id)
-    insumo = get_object_or_404(ReservaInsumo, id=insumo_id, reserva=reserva)
+    insumo  = get_object_or_404(ReservaInsumo, id=insumo_id, reserva=reserva)
 
     if request.method == 'POST':
-
         insumo.delete()
-
-        # Si no quedan insumos cancelar la reserva
         if not ReservaInsumo.objects.filter(reserva=reserva).exists():
             reserva.estado = EstadoReserva.objects.get(nombre='Cancelada')
             reserva.save()
             return redirect('lista_reservas')
-
         return redirect('detalle_reserva', id=reserva_id)
 
-    return render(
-        request,
-        'reservas/confirmar_eliminar_insumo.html',
-        {
-            'reserva': reserva,
-            'insumo': insumo
-        }
-    )
+    return render(request, 'reservas/confirmar_eliminar_insumo.html', {
+        'reserva': reserva,
+        'insumo':  insumo
+    })

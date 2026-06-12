@@ -59,9 +59,10 @@
 
         </div>
         <div class="col-md-6">
-            <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
-            <p><strong>Límite de retiro:</strong> {{ reserva.hora_limite_retiro }}</p>
-            <p><strong>Fecha devolución:</strong> {{ reserva.fecha_devolucion }}</p>
+            <p><strong>Fecha de solicitud:</strong> {{ reserva.fecha_creacion|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</p>
+            <p><strong>Fecha de uso:</strong> {{ reserva.fecha_reserva|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</p>
+            <p><strong>Límite de retiro:</strong> {{ reserva.hora_limite_retiro|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</p>
+            <p><strong>Fecha devolución:</strong> {{ reserva.fecha_devolucion|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</p>
             <p>
                 <strong>Estado:</strong>
                 {% if reserva.estado.nombre == 'Aprobada' %}
