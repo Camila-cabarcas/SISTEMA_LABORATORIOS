@@ -13,6 +13,8 @@ from .views import (
     eliminar_evento,
     mapa_laboratorio,
     toggle_modulo,
+    estado_modulos_api,
+    modulos_disponibles_api,
 )
 
 urlpatterns = [
@@ -29,4 +31,6 @@ urlpatterns = [
     path('eventos/<int:id>/eliminar/', eliminar_evento, name='eliminar_evento'),
     path('<int:id>/mapa/', mapa_laboratorio, name='mapa_laboratorio'),
     path('<int:lab_id>/modulo/<int:mod_id>/toggle/', toggle_modulo, name='toggle_modulo'),
+    path('<int:id>/modulos/estado/', estado_modulos_api, name='estado_modulos_api'),
+    path('<int:id>/modulos/disponibles/', modulos_disponibles_api, name='modulos_disponibles_api'),
 ]

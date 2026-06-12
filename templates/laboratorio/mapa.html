@@ -11,7 +11,6 @@
   </a>
 </div>
 
-<!-- Filtro de fecha -->
 <div class="card mb-4 shadow-sm">
   <div class="card-body py-2">
     <form method="get" class="row g-2 align-items-end">
@@ -22,16 +21,43 @@
                value="{{ fecha }}" autocomplete="off" style="width:150px;">
       </div>
       <div class="col-auto">
+        <label class="form-label mb-0 fw-semibold">Desde</label>
+        <select name="hora_inicio" class="form-select form-select-sm" style="width:100px;">
+          <option value="">--</option>
+          {% for h in horas_disponibles %}
+          <option value="{{ h }}" {% if h == hora_inicio_filtro %}selected{% endif %}>{{ h }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-0 fw-semibold">Hasta</label>
+        <select name="hora_fin" class="form-select form-select-sm" style="width:100px;">
+          <option value="">--</option>
+          {% for h in horas_disponibles %}
+          <option value="{{ h }}" {% if h == hora_fin_filtro %}selected{% endif %}>{{ h }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
         <button type="submit" class="btn btn-primary btn-sm">Ver disponibilidad</button>
       </div>
       <div class="col-auto">
-        <span class="text-muted small">Mostrando: <strong>{{ fecha_display }}</strong></span>
+        {% if filtro_valido %}
+        <span class="text-muted small">
+          Mostrando: <strong>{{ fecha_display }}</strong>
+          <span class="ms-1 text-primary">{{ hora_inicio_filtro }} – {{ hora_fin_filtro }}</span>
+        </span>
+        {% endif %}
       </div>
     </form>
   </div>
 </div>
 
-<!-- Leyenda -->
+{% if error_filtro %}
+<div class="alert alert-warning mt-2">{{ error_filtro }}</div>
+{% endif %}
+
+{% if filtro_valido %}
 <div class="card shadow-sm mb-3">
   <div class="card-body py-2">
     <div class="d-flex flex-wrap gap-3 align-items-center">
@@ -45,8 +71,6 @@
 </div>
 
 {% if modulos_data %}
-
-<!-- Datos ocultos -->
 <div id="modulos-source" style="display:none;">
   {% for item in modulos_data %}
   <div class="modulo-seat-data"
@@ -67,12 +91,14 @@
        {% if item.solicitud.reserva_id %}
        data-reserva-id="{{ item.solicitud.reserva_id }}"
        {% endif %}
+       {% if item.solicitud.prestamo_id %}
+       data-prestamo-id="{{ item.solicitud.prestamo_id }}"
+       {% endif %}
        {% endif %}
   ></div>
   {% endfor %}
 </div>
 
-<!-- Laboratorio visual -->
 <div class="lab-room-wrapper card shadow-sm mb-4 p-3">
   <div class="lab-room">
     <div class="lab-wall lab-wall-top">
@@ -91,12 +117,11 @@
     <div class="lab-door">🚪 Entrada</div>
   </div>
 </div>
-
 {% else %}
 <div class="alert alert-info">Este laboratorio no tiene módulos registrados.</div>
 {% endif %}
+{% endif %}
 
-<!-- Modal de detalle -->
 <div class="modal fade" id="modalModulo" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -105,33 +130,20 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-
-        <!-- Info básica -->
         <table class="table table-sm mb-0">
           <tbody>
-            <tr>
-              <th class="text-muted" style="width:40%">Nombre</th>
-              <td id="modal-nombre">—</td>
-            </tr>
-            <tr>
-              <th class="text-muted">Capacidad</th>
-              <td id="modal-capacidad">—</td>
-            </tr>
-            <tr>
-              <th class="text-muted">Estado</th>
-              <td id="modal-estado">—</td>
-            </tr>
+            <tr><th class="text-muted" style="width:40%">Nombre</th><td id="modal-nombre">—</td></tr>
+            <tr><th class="text-muted">Capacidad</th><td id="modal-capacidad">—</td></tr>
+            <tr><th class="text-muted">Estado</th><td id="modal-estado">—</td></tr>
           </tbody>
         </table>
 
-        <!-- Motivo no disponible -->
         <div id="modal-motivo-section" class="d-none mt-2">
           <div class="alert alert-secondary py-2 mb-0">
             <small><strong>Motivo:</strong> <span id="modal-motivo-texto"></span></small>
           </div>
         </div>
 
-        <!-- Info de reserva -->
         <div id="modal-reserva-section" class="d-none mt-3">
           <h6 class="fw-semibold border-top pt-3">Información de la reserva</h6>
           <table class="table table-sm mb-0">
@@ -148,14 +160,16 @@
               Ver detalle de reserva
             </a>
           </div>
+          <div id="modal-ver-prestamo-btn" class="mt-1 d-none">
+            <a id="modal-prestamo-link" href="#" class="btn btn-warning btn-sm">
+              Ver préstamo activo
+            </a>
+          </div>
         </div>
 
         {% if es_admin %}
-        <!-- Controles de admin -->
         <div class="border-top mt-3 pt-3">
           <h6 class="fw-semibold text-muted">Administrar módulo</h6>
-
-          <!-- Marcar como no disponible -->
           <div id="admin-deshabilitar" class="d-none">
             <div class="mb-2">
               <label class="form-label small mb-1">Motivo (opcional)</label>
@@ -166,8 +180,6 @@
               Marcar como no disponible
             </button>
           </div>
-
-          <!-- Habilitar -->
           <div id="admin-habilitar" class="d-none">
             <button type="button" id="btn-habilitar" class="btn btn-success btn-sm">
               Marcar como disponible
@@ -175,7 +187,6 @@
           </div>
         </div>
         {% endif %}
-
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
@@ -187,6 +198,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <style>
 .lab-room-wrapper { background: #f9f9f9; }
@@ -208,11 +220,7 @@
   font-size: .8rem;
   letter-spacing: 1px;
 }
-.lab-body {
-  display: flex;
-  gap: 12px;
-  min-height: 360px;
-}
+.lab-body { display: flex; gap: 12px; min-height: 360px; }
 .lab-col {
   display: flex;
   flex-direction: column;
@@ -220,17 +228,9 @@
   justify-content: center;
   min-width: 110px;
 }
-.lab-center-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.lab-center-area { flex: 1; display: flex; flex-direction: column; gap: 10px; }
 .lab-center-top, .lab-center-bot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
 }
 .lab-center-mid {
   flex: 1;
@@ -241,60 +241,30 @@
   justify-content: center;
 }
 .lab-row-bottom {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-top: 10px;
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; margin-top: 10px;
 }
-.lab-door {
-  text-align: center;
-  margin-top: 8px;
-  font-size: .8rem;
-  color: #666;
-  letter-spacing: 1px;
-}
+.lab-door { text-align: center; margin-top: 8px; font-size: .8rem; color: #666; }
 .modulo-seat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  padding: 10px 8px;
-  cursor: pointer;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  border-radius: 8px; padding: 10px 8px; cursor: pointer;
   transition: transform .15s, box-shadow .15s;
-  min-height: 75px;
-  width: 105px;
-  user-select: none;
-  flex-shrink: 0;
+  min-height: 75px; width: 105px; user-select: none; flex-shrink: 0;
 }
-.modulo-seat:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0,0,0,.25);
-}
-.modulo-nombre {
-  font-weight: 600;
-  font-size: .82rem;
-  text-align: center;
-  line-height: 1.2;
-}
-.modulo-capacidad {
-  font-size: .68rem;
-  opacity: .85;
-  margin-top: 3px;
-}
+.modulo-seat:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+.modulo-nombre { font-weight: 600; font-size: .82rem; text-align: center; line-height: 1.2; }
+.modulo-capacidad { font-size: .68rem; opacity: .85; margin-top: 3px; }
 </style>
 
 <script>
-const LAB_ID = {{ laboratorio.id }};
+const LAB_ID = "{{ laboratorio.id }}";
 const CSRF   = "{{ csrf_token }}";
 
-// ── Distribución de módulos ───────────────────────────────────
-const fuente = document.querySelectorAll('.modulo-seat-data');
-const total  = fuente.length;
-
-const porLado  = Math.max(2, Math.floor(total * 0.18));
-const porFila  = Math.max(2, Math.floor(total * 0.18));
+const fuente  = document.querySelectorAll('.modulo-seat-data');
+const total   = fuente.length;
+const porLado = Math.max(2, Math.floor(total * 0.18));
+const porFila = Math.max(2, Math.floor(total * 0.18));
 const restante = total - porLado * 2 - porFila;
 const centroT  = Math.floor(restante * 0.33);
 const centroB  = Math.floor(restante * 0.33);
@@ -330,25 +300,19 @@ function crearSeat(data) {
   div.setAttribute('data-bs-toggle', 'modal');
   div.setAttribute('data-bs-target', '#modalModulo');
   Object.assign(div.dataset, {
-    id:          d.id,
-    nombre:      d.nombre,
-    capacidad:   d.capacidad,
-    color:       d.color,
-    estado:      d.estado,
-    disponible:  d.disponible,
-    motivo:      d.motivo || '',
+    id: d.id, nombre: d.nombre, capacidad: d.capacidad,
+    color: d.color, estado: d.estado,
+    disponible: d.disponible, motivo: d.motivo || '',
   });
   if (d.solNombre) {
     Object.assign(div.dataset, {
-      solNombre:  d.solNombre,
-      solCedula:  d.solCedula  || '',
-      solTipo:    d.solTipo    || '',
-      solInicio:  d.solInicio  || '',
-      solFin:     d.solFin     || '',
-      solEstado:  d.solEstado  || '',
-      reservaId:  d.reservaId  || '',
+      solNombre: d.solNombre, solCedula: d.solCedula || '',
+      solTipo: d.solTipo || '', solInicio: d.solInicio || '',
+      solFin: d.solFin || '', solEstado: d.solEstado || '',
+      reservaId: d.reservaId || '',
     });
   }
+  if (d.prestamoId) div.dataset.prestamoId = d.prestamoId;
   div.innerHTML = `
     <span class="modulo-nombre">${d.nombre}</span>
     <span class="modulo-capacidad">Cap. ${d.capacidad}</span>
@@ -356,18 +320,13 @@ function crearSeat(data) {
   return div;
 }
 
-// ── Modal ─────────────────────────────────────────────────────
 const LABELS = {
-  disponible: 'Disponible',
-  ocupado:    'Ocupado (en uso ahora)',
-  reservado:  'Reservado',
-  inactivo:   'No disponible',
+  disponible: 'Disponible', ocupado: 'Ocupado (en uso ahora)',
+  reservado:  'Reservado',  inactivo: 'No disponible',
 };
 const COLORS = {
-  disponible: 'success',
-  ocupado:    'danger',
-  reservado:  'warning',
-  inactivo:   'secondary',
+  disponible: 'success', ocupado:   'danger',
+  reservado:  'warning', inactivo:  'secondary',
 };
 
 let moduloActual = null;
@@ -386,7 +345,6 @@ document.getElementById('modalModulo').addEventListener('show.bs.modal', functio
   document.getElementById('modal-header').className =
     `modal-header bg-${color} ${color === 'warning' ? 'text-dark' : 'text-white'}`;
 
-  // Motivo no disponible
   const motivoSec = document.getElementById('modal-motivo-section');
   if (d.estado === 'inactivo' && d.motivo) {
     motivoSec.classList.remove('d-none');
@@ -395,7 +353,6 @@ document.getElementById('modalModulo').addEventListener('show.bs.modal', functio
     motivoSec.classList.add('d-none');
   }
 
-  // Info de reserva
   const reservaSec = document.getElementById('modal-reserva-section');
   if (d.solNombre) {
     reservaSec.classList.remove('d-none');
@@ -412,11 +369,18 @@ document.getElementById('modalModulo').addEventListener('show.bs.modal', functio
     } else {
       verBtn.classList.add('d-none');
     }
+
+    const prestBtn = document.getElementById('modal-ver-prestamo-btn');
+    if (d.prestamoId) {
+      prestBtn.classList.remove('d-none');
+      document.getElementById('modal-prestamo-link').href = `/prestamos/${d.prestamoId}/`;
+    } else {
+      prestBtn.classList.add('d-none');
+    }
   } else {
     reservaSec.classList.add('d-none');
   }
 
-  // Controles admin
   const btnDes = document.getElementById('admin-deshabilitar');
   const btnHab = document.getElementById('admin-habilitar');
   if (btnDes && btnHab) {
@@ -431,11 +395,9 @@ document.getElementById('modalModulo').addEventListener('show.bs.modal', functio
   }
 });
 
-// ── Toggle disponibilidad ─────────────────────────────────────
 function toggleModulo(disponible) {
   if (!moduloActual) return;
   const motivo = disponible ? '' : (document.getElementById('input-motivo').value || '');
-
   fetch(`/laboratorio/${LAB_ID}/modulo/${moduloActual.id}/toggle/`, {
     method: 'POST',
     headers: {
@@ -445,12 +407,7 @@ function toggleModulo(disponible) {
     body: `disponible=${disponible}&motivo=${encodeURIComponent(motivo)}`,
   })
   .then(r => r.json())
-  .then(data => {
-    if (data.status === 'ok') {
-      // Recargar la página para reflejar el cambio
-      location.reload();
-    }
-  });
+  .then(data => { if (data.status === 'ok') location.reload(); });
 }
 
 const btnDes = document.getElementById('btn-deshabilitar');
@@ -458,12 +415,39 @@ const btnHab = document.getElementById('btn-habilitar');
 if (btnDes) btnDes.addEventListener('click', () => toggleModulo('false'));
 if (btnHab) btnHab.addEventListener('click', () => toggleModulo('true'));
 
-// ── Flatpickr ─────────────────────────────────────────────────
-flatpickr("#fecha-picker", {
-  locale: "es",
-  dateFormat: "Y-m-d",
-  allowInput: true,
-});
+flatpickr("#fecha-picker", { locale: "es", dateFormat: "Y-m-d", allowInput: true });
+
+function actualizarEstados() {
+  const fecha   = document.getElementById('fecha-picker').value ||
+                  new Date().toISOString().split('T')[0];
+  const selIni  = document.querySelector('select[name="hora_inicio"]');
+  const selFin  = document.querySelector('select[name="hora_fin"]');
+  const horaIni = selIni ? selIni.value : '';
+  const horaFin = selFin ? selFin.value : '';
+  fetch(`/laboratorio/${LAB_ID}/modulos/estado/?fecha=${fecha}&hora_inicio=${horaIni}&hora_fin=${horaFin}`)
+    .then(r => r.json())
+    .then(estados => {
+      document.querySelectorAll('.modulo-seat').forEach(seat => {
+        const id = seat.dataset.id;
+        if (!estados[id]) return;
+        const nuevoColor = estados[id].color;
+        const viejoColor = seat.dataset.color;
+        if (nuevoColor !== viejoColor) {
+          ['bg-success','bg-danger','bg-warning','bg-secondary'].forEach(c =>
+            seat.classList.remove(c)
+          );
+          seat.classList.remove('text-dark', 'text-white');
+          seat.classList.add(`bg-${nuevoColor}`);
+          seat.classList.add(nuevoColor === 'warning' ? 'text-dark' : 'text-white');
+          seat.dataset.color  = nuevoColor;
+          seat.dataset.estado = estados[id].estado;
+        }
+      });
+    })
+    .catch(err => console.warn('Error actualizando estados:', err));
+}
+
+setInterval(actualizarEstados, 30000);
 </script>
 
 {% endblock %}

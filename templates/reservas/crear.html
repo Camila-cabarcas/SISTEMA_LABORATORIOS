@@ -117,7 +117,6 @@
                         Reset
                     </button>
                 </div>
-
                 <div class="d-flex align-items-center gap-2 mb-3">
                     <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
                         <small style="color:#999; font-size:.7rem;">Desde</small>
@@ -129,27 +128,13 @@
                         <div id="display-hasta" style="font-weight:600; color:#333;">--:--</div>
                     </div>
                 </div>
-
-                <div id="time-slots" style="
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 6px;
-                    max-height: 220px;
-                    overflow-y: auto;
-                "></div>
-
+                <div id="time-slots" style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; max-height:220px; overflow-y:auto;"></div>
                 <div id="time-error" class="text-danger small mt-2 d-none"></div>
-
                 <div class="d-flex justify-content-between mt-3">
                     <button type="button" id="btn-close-time"
-                            style="background:none; border:none; color:#999; cursor:pointer;">
-                        Cerrar
-                    </button>
+                            style="background:none; border:none; color:#999; cursor:pointer;">Cerrar</button>
                     <button type="button" id="btn-confirm-time"
-                            style="background:none; border:none; color:#c07a50;
-                                   font-weight:600; cursor:pointer;">
-                        Confirmar
-                    </button>
+                            style="background:none; border:none; color:#c07a50; font-weight:600; cursor:pointer;">Confirmar</button>
                 </div>
             </div>
         </div>
@@ -161,6 +146,56 @@
             <label class="form-check-label" for="id_necesita_modulo">
                 Necesita módulo/puesto en el laboratorio
             </label>
+        </div>
+
+        <!-- Sección de módulos con layout de laboratorio -->
+        <div id="seccion-modulos" class="mb-3" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-semibold mb-0">
+                    Selección de módulos
+                    <small id="modulos-limite-label" class="text-muted">(máx. 1 módulo)</small>
+                </label>
+                <button type="button" id="btn-cargar-modulos" class="btn btn-outline-primary btn-sm"
+                        style="display:none;">
+                    🔄 Ver disponibilidad
+                </button>
+            </div>
+
+            <input type="hidden" name="modulos_ids" id="modulos_ids_hidden" value="">
+
+            <!-- Leyenda -->
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="badge bg-success px-2 py-1">Disponible</span>
+                <span class="badge bg-warning text-dark px-2 py-1">Reservado</span>
+                <span class="badge bg-secondary px-2 py-1">No disponible</span>
+                <span class="badge bg-primary px-2 py-1">Seleccionado</span>
+            </div>
+
+            <!-- Lab room layout -->
+            <div class="lab-room-form">
+                <div class="lab-wall-form">↑ Pizarrón</div>
+                <div class="lab-body-form">
+                    <div class="lab-col-form" id="form-zona-izquierda"></div>
+                    <div class="lab-center-form">
+                        <div class="lab-center-row-form" id="form-zona-centro-top"></div>
+                        <div class="lab-center-mid-form"  id="form-zona-centro-mid"></div>
+                        <div class="lab-center-row-form" id="form-zona-centro-bot"></div>
+                    </div>
+                    <div class="lab-col-form" id="form-zona-derecha"></div>
+                </div>
+                <div class="lab-bottom-form" id="form-zona-inferior"></div>
+                <div class="lab-door-form">🚪 Entrada</div>
+            </div>
+
+            <p id="modulos-placeholder" class="text-muted small mt-2">
+                Selecciona laboratorio y fecha primero, luego haz clic en "Ver disponibilidad".
+            </p>
+
+            <div id="modulos-seleccionados-lista" class="mt-2 d-none">
+                <small class="text-primary fw-semibold">
+                    Módulos seleccionados: <span id="modulos-seleccionados-nombres"></span>
+                </small>
+            </div>
         </div>
 
         <div class="mb-3">
@@ -183,33 +218,66 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 
 <style>
+/* ── Time picker ── */
 .time-slot {
-    padding: 6px 4px;
-    border-radius: 6px;
-    text-align: center;
-    font-size: .8rem;
-    cursor: pointer;
-    background: #f8f5f2;
-    color: #333;
-    border: none;
-    transition: background .15s;
+    padding: 6px 4px; border-radius: 6px; text-align: center;
+    font-size: .8rem; cursor: pointer; background: #f8f5f2;
+    color: #333; border: none; transition: background .15s;
 }
 .time-slot:hover { background: #f0e8e0; }
 .time-slot.slot-start, .time-slot.slot-end {
-    background: #c07a50;
-    color: white;
-    border-radius: 50px;
+    background: #c07a50; color: white; border-radius: 50px;
 }
-.time-slot.slot-range {
-    background: #f0e0d0;
-    color: #333;
-    border-radius: 0;
+.time-slot.slot-range { background: #f0e0d0; color: #333; border-radius: 0; }
+.time-slot.slot-disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
+
+/* ── Lab room en formulario ── */
+.lab-room-form {
+    border: 3px solid #343a40;
+    border-radius: 8px;
+    background: #fff;
+    padding: 10px;
+    min-height: 400px;
 }
-.time-slot.slot-disabled {
-    opacity: .35;
-    cursor: not-allowed;
-    pointer-events: none;
+.lab-wall-form {
+    background: #343a40; color: white; text-align: center;
+    padding: 5px; border-radius: 4px; margin-bottom: 8px;
+    font-size: .8rem; letter-spacing: 1px;
 }
+.lab-body-form { display: flex; gap: 10px; min-height: 280px; }
+.lab-col-form {
+    display: flex; flex-direction: column;
+    gap: 6px; justify-content: center; min-width: 95px;
+}
+.lab-center-form { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.lab-center-row-form { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.lab-center-mid-form {
+    flex: 1; display: flex; flex-wrap: wrap;
+    gap: 6px; align-content: center; justify-content: center;
+}
+.lab-bottom-form {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: center; margin-top: 8px;
+}
+.lab-door-form { text-align: center; margin-top: 6px; font-size: .8rem; color: #666; }
+
+/* ── Módulo en formulario ── */
+.modulo-form-seat {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: 8px; padding: 8px 6px;
+    min-height: 65px; width: 90px; flex-shrink: 0;
+    font-size: .78rem; font-weight: 600; text-align: center;
+    transition: transform .15s, box-shadow .15s;
+    user-select: none;
+}
+.modulo-form-seat.seleccionable { cursor: pointer; }
+.modulo-form-seat.seleccionable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+.modulo-form-seat.no-seleccionable { cursor: not-allowed; opacity: .5; }
+.modulo-cap-form { font-size: .65rem; opacity: .85; margin-top: 2px; }
 </style>
 
 <script>
@@ -227,19 +295,14 @@ function strToMin(hhmm) {
 // ── Flatpickr fecha ────────────────────────────────────────────
 function getMinDate() {
     if (tipoActual === 'profesor') {
-        const m = new Date();
-        m.setDate(m.getDate() + 1);
-        return m;
+        const m = new Date(); m.setDate(m.getDate() + 1); return m;
     }
     return 'today';
 }
-
 function initFlatpickr() {
     if (fpInstance) fpInstance.destroy();
     fpInstance = flatpickr("#fecha-picker", {
-        mode: "single",
-        dateFormat: "Y-m-d",
-        locale: "es",
+        mode: "single", dateFormat: "Y-m-d", locale: "es",
         minDate: getMinDate(),
         disable: [d => d.getDay() === 0 || d.getDay() === 6],
     });
@@ -248,143 +311,90 @@ function initFlatpickr() {
 // ── Time Range Picker ──────────────────────────────────────────
 function generarSlots() {
     const slots = [];
-    for (let h = 6; h <= 18; h++) {
+    for (let h = 6; h <= 18; h++)
         for (let m of [0, 30]) {
             if (h === 18 && m === 30) continue;
             slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
         }
-    }
     return slots;
 }
-
 const SLOTS = generarSlots();
 
 function renderSlots() {
     const container = document.getElementById('time-slots');
     container.innerHTML = '';
-
     SLOTS.forEach(slot => {
         const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'time-slot';
-        btn.textContent = slot;
-        btn.dataset.slot = slot;
-
+        btn.type = 'button'; btn.className = 'time-slot';
+        btn.textContent = slot; btn.dataset.slot = slot;
         const minSlot = strToMin(slot);
-
         if (!slotInicio) {
-            if (minSlot > strToMin('18:00') - 120) {
-                btn.classList.add('slot-disabled');
-            }
+            if (minSlot > strToMin('18:00') - 120) btn.classList.add('slot-disabled');
         } else {
             const minInicio = strToMin(slotInicio);
-            const minMin    = minInicio + 120;
-            const minMax    = minInicio + maxHoras * 60;
-
-            if (slot === slotInicio) {
-                btn.classList.add('slot-start');
-            } else if (slotFin && slot === slotFin) {
-                btn.classList.add('slot-end');
-            } else if (slotFin && minSlot > minInicio && minSlot < strToMin(slotFin)) {
-                btn.classList.add('slot-range');
-            } else if (minSlot < minMin || minSlot > minMax || minSlot > strToMin('18:00')) {
-                btn.classList.add('slot-disabled');
-            }
+            const minMin = minInicio + 120;
+            const minMax = minInicio + maxHoras * 60;
+            if (slot === slotInicio) btn.classList.add('slot-start');
+            else if (slotFin && slot === slotFin) btn.classList.add('slot-end');
+            else if (slotFin && minSlot > minInicio && minSlot < strToMin(slotFin)) btn.classList.add('slot-range');
+            else if (minSlot < minMin || minSlot > minMax || minSlot > strToMin('18:00')) btn.classList.add('slot-disabled');
         }
-
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            onSlotClick(slot);
-        });
-
+        btn.addEventListener('click', function(e) { e.stopPropagation(); onSlotClick(slot); });
         container.appendChild(btn);
     });
 }
 
 function onSlotClick(slot) {
     document.getElementById('time-error').classList.add('d-none');
-
     if (!slotInicio) {
-        slotInicio = slot;
-        slotFin    = null;
+        slotInicio = slot; slotFin = null;
         document.getElementById('display-desde').textContent = slot;
         document.getElementById('display-hasta').textContent = '--:--';
     } else if (!slotFin) {
-        const minInicio = strToMin(slotInicio);
-        const minSlot   = strToMin(slot);
-        const diff      = minSlot - minInicio;
-
-        if (diff < 120) {
-            showTimeError(`Mínimo 2 horas. Selecciona desde ${slotInicio} en adelante.`);
-            return;
-        }
-        if (diff > maxHoras * 60) {
-            showTimeError(`Máximo ${maxHoras} horas para ${tipoActual}.`);
-            return;
-        }
+        const diff = strToMin(slot) - strToMin(slotInicio);
+        if (diff < 120) { showTimeError(`Mínimo 2 horas.`); return; }
+        if (diff > maxHoras * 60) { showTimeError(`Máximo ${maxHoras} horas.`); return; }
         slotFin = slot;
         document.getElementById('display-hasta').textContent = slot;
     } else {
-        slotInicio = slot;
-        slotFin    = null;
+        slotInicio = slot; slotFin = null;
         document.getElementById('display-desde').textContent = slot;
         document.getElementById('display-hasta').textContent = '--:--';
     }
-
     renderSlots();
 }
 
 function showTimeError(msg) {
     const el = document.getElementById('time-error');
-    el.textContent = msg;
-    el.classList.remove('d-none');
+    el.textContent = msg; el.classList.remove('d-none');
 }
-
 function resetTime() {
-    slotInicio = null;
-    slotFin    = null;
+    slotInicio = null; slotFin = null;
     document.getElementById('display-desde').textContent = '--:--';
     document.getElementById('display-hasta').textContent = '--:--';
     document.getElementById('time-error').classList.add('d-none');
     renderSlots();
 }
 
-// Abrir/cerrar panel
 document.getElementById('horario-display').addEventListener('click', function(e) {
     e.stopPropagation();
     const panel = document.getElementById('time-range-panel');
-    if (panel.style.display === 'none') {
-        renderSlots();
-        panel.style.display = 'block';
-    } else {
-        panel.style.display = 'none';
-    }
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'block') renderSlots();
 });
-
-// Evitar que clicks dentro del panel lo cierren
-document.getElementById('time-range-panel').addEventListener('click', function(e) {
-    e.stopPropagation();
-});
-
+document.getElementById('time-range-panel').addEventListener('click', e => e.stopPropagation());
 document.getElementById('btn-reset-time').addEventListener('click', resetTime);
-
-document.getElementById('btn-close-time').addEventListener('click', function() {
+document.getElementById('btn-close-time').addEventListener('click', () => {
     document.getElementById('time-range-panel').style.display = 'none';
 });
-
 document.getElementById('btn-confirm-time').addEventListener('click', function() {
-    if (!slotInicio || !slotFin) {
-        showTimeError('Selecciona hora de inicio y fin.');
-        return;
-    }
+    if (!slotInicio || !slotFin) { showTimeError('Selecciona inicio y fin.'); return; }
     document.getElementById('hora_inicio_hidden').value = slotInicio;
     document.getElementById('hora_fin_hidden').value    = slotFin;
     document.getElementById('horario-display').value    = `${slotInicio} → ${slotFin}`;
     document.getElementById('time-range-panel').style.display = 'none';
 });
-
-// Cerrar panel al hacer click fuera
-document.addEventListener('click', function() {
+document.addEventListener('click', () => {
     document.getElementById('time-range-panel').style.display = 'none';
 });
 
@@ -393,23 +403,20 @@ document.querySelectorAll('input[name="tipo_solicitante"]').forEach(radio => {
     radio.addEventListener('change', function() {
         tipoActual = this.value;
         maxHoras   = tipoActual === 'profesor' ? 8 : 4;
-        document.getElementById('max-horas-label').textContent =
-            `(máx. ${maxHoras} horas, mín. 2 horas)`;
-
+        document.getElementById('max-horas-label').textContent = `(máx. ${maxHoras} horas, mín. 2 horas)`;
         if (tipoActual === 'profesor') {
             document.getElementById('campo-programa').style.display = 'none';
             document.getElementById('campo-curso').style.display    = 'block';
-            document.getElementById('fecha-hint').textContent =
-                'Lunes a viernes — mínimo 1 día de anticipación';
+            document.getElementById('fecha-hint').textContent = 'Lunes a viernes — mínimo 1 día de anticipación';
         } else {
             document.getElementById('campo-programa').style.display = 'block';
             document.getElementById('campo-curso').style.display    = 'none';
             document.getElementById('fecha-hint').textContent = 'Lunes a viernes';
         }
-
         document.getElementById('fecha-picker').value = '';
         resetTime();
         initFlatpickr();
+        actualizarLimiteModulos();
     });
 });
 
@@ -418,40 +425,190 @@ function cargarCursos() {
     const nombre = document.querySelector('input[name="nombre"]').value;
     const cedula = document.querySelector('input[name="cedula"]').value;
     if (tipoActual !== 'profesor' || !nombre || !cedula) return;
-
     const msg = document.getElementById('curso-msg');
     const sel = document.getElementById('id_curso');
-    msg.textContent = 'Cargando cursos...';
-    msg.classList.remove('d-none');
-
+    msg.textContent = 'Cargando cursos...'; msg.classList.remove('d-none');
     fetch(`/solicitudes/cursos-profesor/?nombre=${encodeURIComponent(nombre)}&cedula=${encodeURIComponent(cedula)}`)
         .then(r => r.json())
         .then(data => {
             if (data.error) {
                 sel.innerHTML = '<option value="">-- Profesor no encontrado --</option>';
-                sel.disabled = true;
-                msg.textContent = data.error;
-                msg.className = 'text-danger d-block';
-                return;
+                sel.disabled = true; msg.textContent = data.error;
+                msg.className = 'text-danger d-block'; return;
             }
             sel.innerHTML = '<option value="">-- Selecciona un curso --</option>';
             data.cursos.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.id;
                 opt.textContent = `${c.nombre} (${c.codigo})`;
+                opt.dataset.cantidad = c.cantidad_estudiantes || 30;
                 sel.appendChild(opt);
             });
-            sel.disabled = false;
-            msg.classList.add('d-none');
+            sel.disabled = false; msg.classList.add('d-none');
         })
-        .catch(() => {
-            msg.textContent = 'Error cargando cursos.';
-            msg.className = 'text-danger d-block';
+        .catch(() => { msg.textContent = 'Error.'; msg.className = 'text-danger d-block'; });
+}
+document.querySelector('input[name="nombre"]').addEventListener('blur', cargarCursos);
+document.querySelector('input[name="cedula"]').addEventListener('blur', cargarCursos);
+
+document.getElementById('id_curso').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    maxModulos = parseInt(opt.dataset.cantidad) || 1;
+    document.getElementById('modulos-limite-label').textContent =
+        `(máx. ${maxModulos} módulo${maxModulos > 1 ? 's' : ''})`;
+    modulosSeleccionados.clear();
+    limpiarZonas();
+});
+
+// ── Módulos ────────────────────────────────────────────────────
+let modulosSeleccionados = new Set();
+let maxModulos = 1;
+let modulosData = [];
+
+const checkModulo    = document.getElementById('id_necesita_modulo');
+const seccionModulos = document.getElementById('seccion-modulos');
+
+if (checkModulo) {
+    checkModulo.addEventListener('change', function() {
+        seccionModulos.style.display = this.checked ? 'block' : 'none';
+        if (!this.checked) {
+            modulosSeleccionados.clear();
+            document.getElementById('modulos_ids_hidden').value = '';
+            limpiarZonas();
+        }
+    });
+    if (checkModulo.checked) seccionModulos.style.display = 'block';
+}
+
+function actualizarLimiteModulos() {
+    const tipo = document.querySelector('input[name="tipo_solicitante"]:checked').value;
+    if (tipo === 'estudiante') {
+        maxModulos = 1;
+        document.getElementById('modulos-limite-label').textContent = '(máx. 1 módulo)';
+    } else {
+        maxModulos = 30;
+        document.getElementById('modulos-limite-label').textContent = '(según cantidad de estudiantes del curso)';
+    }
+    modulosSeleccionados.clear();
+    limpiarZonas();
+}
+
+document.querySelector('select[name="laboratorio"]').addEventListener('change', mostrarBtnModulos);
+document.querySelector('input[name="fecha"]').addEventListener('change', mostrarBtnModulos);
+
+function mostrarBtnModulos() {
+    const labId = document.querySelector('select[name="laboratorio"]').value;
+    const fecha = document.querySelector('input[name="fecha"]').value;
+    document.getElementById('btn-cargar-modulos').style.display =
+        (labId && fecha) ? 'inline-block' : 'none';
+}
+
+document.getElementById('btn-cargar-modulos').addEventListener('click', cargarModulos);
+
+function cargarModulos() {
+    const labId  = document.querySelector('select[name="laboratorio"]').value;
+    const fecha  = document.querySelector('input[name="fecha"]').value;
+    const inicio = document.getElementById('hora_inicio_hidden').value;
+    const fin    = document.getElementById('hora_fin_hidden').value;
+    if (!labId || !fecha) { alert('Selecciona laboratorio y fecha primero.'); return; }
+
+    fetch(`/laboratorio/${labId}/modulos/disponibles/?fecha=${fecha}&hora_inicio=${inicio}&hora_fin=${fin}`)
+        .then(r => r.json())
+        .then(data => {
+            modulosData = data.modulos;
+            document.getElementById('modulos-placeholder').style.display = 'none';
+            renderModulosLab();
         });
 }
 
-document.querySelector('input[name="nombre"]').addEventListener('blur', cargarCursos);
-document.querySelector('input[name="cedula"]').addEventListener('blur', cargarCursos);
+function limpiarZonas() {
+    ['form-zona-izquierda','form-zona-centro-top','form-zona-centro-mid',
+     'form-zona-centro-bot','form-zona-derecha','form-zona-inferior'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+}
+
+function renderModulosLab() {
+    limpiarZonas();
+    const total    = modulosData.length;
+    const porLado  = Math.max(2, Math.floor(total * 0.18));
+    const porFila  = Math.max(2, Math.floor(total * 0.18));
+    const restante = total - porLado * 2 - porFila;
+    const centroT  = Math.floor(restante * 0.33);
+    const centroB  = Math.floor(restante * 0.33);
+    const centroM  = restante - centroT - centroB;
+
+    const zonas = [
+        { id: 'form-zona-izquierda',  count: porLado },
+        { id: 'form-zona-centro-top', count: centroT },
+        { id: 'form-zona-centro-mid', count: centroM },
+        { id: 'form-zona-centro-bot', count: centroB },
+        { id: 'form-zona-derecha',    count: porLado },
+        { id: 'form-zona-inferior',   count: porFila },
+    ];
+
+    let idx = 0;
+    zonas.forEach(zona => {
+        const c = document.getElementById(zona.id);
+        if (!c) return;
+        for (let i = 0; i < zona.count && idx < total; i++, idx++) {
+            c.appendChild(crearModuloSeat(modulosData[idx]));
+        }
+    });
+    const cm = document.getElementById('form-zona-centro-mid');
+    while (idx < total) { cm.appendChild(crearModuloSeat(modulosData[idx])); idx++; }
+
+    actualizarHidden();
+}
+
+function crearModuloSeat(m) {
+    const seleccionado  = modulosSeleccionados.has(m.id);
+    const seleccionable = m.seleccionable;
+    const div = document.createElement('div');
+
+    div.className = `modulo-form-seat ${seleccionable ? 'seleccionable' : 'no-seleccionable'}`;
+    div.style.background = seleccionado ? '#0d6efd' :
+                           m.color === 'success' ? '#198754' :
+                           m.color === 'warning'  ? '#ffc107' : '#6c757d';
+    div.style.color = (m.color === 'warning' && !seleccionado) ? '#333' : 'white';
+    if (seleccionado) div.style.outline = '3px solid #0a58ca';
+    div.innerHTML = `
+        <span>${m.nombre}</span>
+        <span class="modulo-cap-form">Cap. ${m.capacidad}</span>
+    `;
+
+    if (seleccionable) {
+        div.addEventListener('click', function() {
+            if (modulosSeleccionados.has(m.id)) {
+                modulosSeleccionados.delete(m.id);
+            } else {
+                if (modulosSeleccionados.size >= maxModulos) {
+                    alert(`Solo puedes seleccionar máximo ${maxModulos} módulo${maxModulos > 1 ? 's' : ''}.`);
+                    return;
+                }
+                modulosSeleccionados.add(m.id);
+            }
+            renderModulosLab();
+        });
+    }
+    return div;
+}
+
+function actualizarHidden() {
+    const ids = Array.from(modulosSeleccionados);
+    document.getElementById('modulos_ids_hidden').value = ids.join(',');
+    const lista   = document.getElementById('modulos-seleccionados-lista');
+    const nombres = document.getElementById('modulos-seleccionados-nombres');
+    if (ids.length > 0) {
+        lista.classList.remove('d-none');
+        nombres.textContent = modulosData
+            .filter(m => modulosSeleccionados.has(m.id))
+            .map(m => m.nombre).join(', ');
+    } else {
+        lista.classList.add('d-none');
+    }
+}
 
 // ── Validación al enviar ───────────────────────────────────────
 document.getElementById('crear-form').addEventListener('submit', function(e) {

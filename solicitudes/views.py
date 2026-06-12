@@ -84,7 +84,15 @@ def cursos_profesor(request):
         return JsonResponse({'error': 'No se pudo identificar al profesor', 'cursos': []})
 
     cursos = Curso.objects.filter(profesor=usuario).order_by('codigo')
-    cursos_data = [{'id': c.id, 'nombre': c.nombre, 'codigo': c.codigo} for c in cursos]
+    cursos_data = [
+        {
+            'id': c.id,
+            'nombre': c.nombre,
+            'codigo': c.codigo,
+            'cantidad_estudiantes': c.cantidad_estudiantes,
+        }
+        for c in cursos
+    ]
 
     return JsonResponse({
         'cursos': cursos_data,

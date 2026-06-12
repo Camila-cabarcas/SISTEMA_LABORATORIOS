@@ -154,6 +154,12 @@ def crear_reserva(request):
 
                 try:
                     solicitud.save()
+                    modulos_ids_str = request.POST.get('modulos_ids', '')
+                    if modulos_ids_str:
+                        from laboratorio.models import Modulo
+                        ids = [int(x) for x in modulos_ids_str.split(',') if x.strip().isdigit()]
+                        modulos = Modulo.objects.filter(id__in=ids, laboratorio=laboratorio)
+                        solicitud.modulos_asignados.set(modulos)
                     reserva = solicitud.crear_reserva()
                     reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
                     reserva.save()
