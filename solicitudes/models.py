@@ -93,7 +93,6 @@ class SolicitudReserva(models.Model):
                 partes_nombre = self.nombre.split()
                 query = Q()
                 for parte in partes_nombre:
-                    # Buscar en first_name, last_name y username
                     query |= Q(first_name__icontains=parte) | Q(last_name__icontains=parte) | Q(username__icontains=parte)
 
                 usuarios = Usuario.objects.filter(query, rol__nombre='Docente')
@@ -105,23 +104,60 @@ class SolicitudReserva(models.Model):
 
         # Validación de horario
         if self.hora_inicio is not None and self.hora_fin is not None:
-            # Validar que hora_fin > hora_inicio
+
             if self.hora_fin <= self.hora_inicio:
                 errors['hora_fin'] = 'La hora de fin debe ser posterior a la hora de inicio.'
 
-            # Validar duración
             duracion = self._calcular_duracion()
+
             if duracion < timedelta(hours=2):
                 errors['hora_fin'] = 'El préstamo debe ser mínimo 2 horas.'
 
-            # Máximo 8 horas para profesores, 4 para estudiantes
             max_horas = 8 if self.tipo_solicitante == 'profesor' else 4
             if duracion > timedelta(hours=max_horas):
                 errors['hora_fin'] = f'El préstamo no puede exceder {max_horas} horas.'
 
-            # Validar dentro del horario del laboratorio
             if self.laboratorio and self.fecha_reserva:
                 self._validar_horario_laboratorio(errors)
+
+            # Validar horas acumuladas en el día
+            if self.fecha_reserva and not errors.get('hora_fin'):
+                fecha = self.fecha_reserva.date()
+
+                solicitudes_mismo_dia = SolicitudReserva.objects.filter(
+                    fecha_reserva__date=fecha
+                ).exclude(pk=self.pk if self.pk else None)
+
+                if self.tipo_solicitante == 'estudiante' and self.cedula:
+                    solicitudes_mismo_dia = solicitudes_mismo_dia.filter(
+                        cedula=self.cedula,
+                        tipo_solicitante='estudiante'
+                    )
+                elif self.tipo_solicitante == 'profesor' and self.usuario:
+                    solicitudes_mismo_dia = solicitudes_mismo_dia.filter(
+                        usuario=self.usuario,
+                        tipo_solicitante='profesor'
+                    )
+                else:
+                    solicitudes_mismo_dia = solicitudes_mismo_dia.none()
+
+                horas_usadas = timedelta(0)
+                for s in solicitudes_mismo_dia:
+                    if s.hora_inicio and s.hora_fin:
+                        horas_usadas += s._calcular_duracion()
+
+                total = horas_usadas + duracion
+                limite = timedelta(hours=max_horas)
+
+                if total > limite:
+                    restante = limite - horas_usadas
+                    horas_r = restante.seconds // 3600
+                    minutos_r = (restante.seconds % 3600) // 60
+                    errors['hora_fin'] = (
+                        f'Ya tienes reservas este día. '
+                        f'El límite es {max_horas}h por día. '
+                        f'Tiempo disponible restante: {horas_r}h {minutos_r}min.'
+                    )
 
         if errors:
             raise ValidationError(errors)
@@ -135,7 +171,6 @@ class SolicitudReserva(models.Model):
         return timedelta(0)
 
     def _validar_horario_laboratorio(self, errors):
-        from django.utils import timezone
         from datetime import datetime
 
         fecha = self.fecha_reserva.date()
@@ -164,8 +199,7 @@ class SolicitudReserva(models.Model):
             return
 
         horario = horarios.first()
-        
-        # Validación defensiva para asegurar que las variables existan antes del formateo
+
         if self.hora_inicio and self.hora_fin and horario:
             if self.hora_inicio < horario.hora_inicio or self.hora_fin > horario.hora_fin:
                 errors['hora_inicio'] = (
@@ -191,60 +225,44 @@ class SolicitudReserva(models.Model):
             self.modulos_asignados.set(modulos_disponibles)
 
     def crear_reserva(self):
-        print(f"DEBUG crear_reserva: iniciando para solicitud {self.id}")
         from datetime import datetime
         from reservas.models import EstadoReserva, ReservaInsumo
 
         if self.reserva:
-            print(f"DEBUG: ya existe reserva {self.reserva.id}")
             return self.reserva
 
-        print(f"DEBUG: buscando estado Pendiente")
         estado_pendiente = EstadoReserva.objects.filter(nombre='Pendiente').first()
         if not estado_pendiente:
-            print(f"ERROR: no existe estado Pendiente")
             raise ValueError('No existe estado "Pendiente" en EstadoReserva')
 
-        # Buscar usuario por cédula, puede ser None si no está registrado
-        print(f"DEBUG: buscando usuario con cedula={self.cedula}")
         usuario = Usuario.objects.filter(codigo=self.cedula).first()
-        print(f"DEBUG: usuario encontrado={usuario}")
 
         fecha_base = datetime.combine(
             self.fecha_reserva.date(),
             self.hora_inicio or datetime.min.time()
         )
-        print(f"DEBUG: fecha_base={fecha_base}")
 
-        print(f"DEBUG: creando reserva")
         reserva = Reserva.objects.create(
-            usuario=usuario,  # Puede ser None
+            usuario=usuario,
             fecha_reserva=fecha_base,
             estado=estado_pendiente
         )
-        print(f"DEBUG: reserva creada id={reserva.id}")
 
-        print(f"DEBUG: creando insumos, cantidad={self.insumos.count()}")
         for solicitud_insumo in self.insumos.all():
-            print(f"  - insumo {solicitud_insumo.insumo.nombre} x{solicitud_insumo.cantidad}")
             ReservaInsumo.objects.create(
                 reserva=reserva,
                 insumo=solicitud_insumo.insumo,
                 cantidad=solicitud_insumo.cantidad
             )
 
-        print(f"DEBUG: guardando relacion reserva en solicitud")
         self.reserva = reserva
         self.save(update_fields=['reserva'])
-        print(f"DEBUG: crear_reserva finalizado")
 
         return reserva
 
     def __str__(self):
         if self.tipo_solicitante == 'profesor':
             return f"Solicitud Profesor - {self.nombre} ({self.curso})"
-        
-        # Evita errores si el usuario llega a ser nulo (null=True en el modelo)
         if self.usuario:
             return f"Solicitud Estudiante - {self.usuario.username}"
         return f"Solicitud Estudiante Anónimo - ID {self.id}"

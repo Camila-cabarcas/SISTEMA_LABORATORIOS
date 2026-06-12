@@ -17,21 +17,37 @@
 </h1>
 
 <div class="card p-4 mb-4">
-    <h5>Información de la reserva</h5>
+    <h5 class="mb-3">Información de la reserva</h5>
     <div class="row">
         <div class="col-md-6">
-            <p><strong>Solicitante:</strong>
-                {% if solicitante %}
-                    {{ solicitante.nombre }}
-                {% elif reserva.usuario %}
-                    {{ reserva.usuario }}
-                {% else %}
-                    Sin usuario
+
+            {% if solicitante %}
+                <p>
+                    <strong>Tipo:</strong>
+                    {% if solicitante.tipo_solicitante == 'profesor' %}
+                        <span class="badge bg-success">Profesor</span>
+                    {% else %}
+                        <span class="badge bg-info text-dark">Estudiante</span>
+                    {% endif %}
+                </p>
+                <p><strong>Solicitante:</strong> {{ solicitante.nombre }}</p>
+                <p><strong>Cédula/ID:</strong> {{ solicitante.cedula|default:"No registrada" }}</p>
+                {% if solicitante.programa %}
+                    <p><strong>Programa/Carrera:</strong> {{ solicitante.programa }}</p>
                 {% endif %}
-            </p>
-            {% if solicitante and reserva.usuario and solicitante.nombre != reserva.usuario.get_full_name %}
-            <p><strong>Gestionada por:</strong> {{ reserva.usuario }}</p>
+                {% if solicitante.curso %}
+                    <p><strong>Curso:</strong> {{ solicitante.curso }}</p>
+                {% endif %}
+            {% elif reserva.usuario %}
+                <p><strong>Solicitante:</strong> {{ reserva.usuario.get_full_name|default:reserva.usuario.username }}</p>
+            {% else %}
+                <p><strong>Solicitante:</strong> <span class="text-muted">Sin usuario</span></p>
             {% endif %}
+
+            {% if reserva.usuario and solicitante and solicitante.nombre != reserva.usuario.get_full_name %}
+                <p><strong>Gestionada por:</strong> {{ reserva.usuario }}</p>
+            {% endif %}
+
             <p><strong>Laboratorio:</strong>
                 {% if solicitante %}{{ solicitante.laboratorio }}{% else %}No especificado{% endif %}
             </p>
@@ -40,51 +56,79 @@
                     {% if solicitante.necesita_modulo %}Sí requiere{% else %}No requiere{% endif %}
                 {% else %}No especificado{% endif %}
             </p>
+
         </div>
         <div class="col-md-6">
             <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
             <p><strong>Límite de retiro:</strong> {{ reserva.hora_limite_retiro }}</p>
             <p><strong>Fecha devolución:</strong> {{ reserva.fecha_devolucion }}</p>
-            <p><strong>Estado:</strong> {{ reserva.estado }}</p>
+            <p>
+                <strong>Estado:</strong>
+                {% if reserva.estado.nombre == 'Aprobada' %}
+                    <span class="badge bg-success">{{ reserva.estado }}</span>
+                {% elif reserva.estado.nombre == 'Pendiente' %}
+                    <span class="badge bg-warning text-dark">{{ reserva.estado }}</span>
+                {% elif reserva.estado.nombre == 'Cancelada' %}
+                    <span class="badge bg-danger">{{ reserva.estado }}</span>
+                {% elif reserva.estado.nombre == 'Expirada' %}
+                    <span class="badge bg-secondary">{{ reserva.estado }}</span>
+                {% else %}
+                    {{ reserva.estado }}
+                {% endif %}
+            </p>
             {% if solicitante and solicitante.observaciones %}
-            <p><strong>Observaciones:</strong> {{ solicitante.observaciones }}</p>
+                <p><strong>Observaciones:</strong> {{ solicitante.observaciones }}</p>
             {% endif %}
         </div>
     </div>
 
+    {% if solicitante and solicitante.insumos.all %}
+    <hr>
+    <h6 class="mt-2">Insumos solicitados originalmente</h6>
+    <table class="table table-sm table-bordered w-auto">
+        <thead class="table-light">
+            <tr>
+                <th>Insumo</th>
+                <th>Cantidad pedida</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for si in solicitante.insumos.all %}
+            <tr>
+                <td>{{ si.insumo.nombre }}</td>
+                <td>{{ si.cantidad }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
     {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Encargado' %}
-    {% if reserva.estado.nombre == 'Pendiente' %}
-    <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/">
-        {% csrf_token %}
-        <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2">Aprobar</button>
-        <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
-    </form>
+        {% if reserva.estado.nombre == 'Pendiente' %}
+        <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/" class="mt-3">
+            {% csrf_token %}
+            <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2">Aprobar</button>
+            <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
+        </form>
+        {% endif %}
     {% endif %}
-    {% endif %}
+
 </div>
 
 <div class="card p-4 mb-4">
-
     <h5>Agregar insumo a la reserva</h5>
-
     <form method="POST">
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">
-            Guardar insumo
-        </button>
+        <button type="submit" class="btn btn-primary">Guardar insumo</button>
     </form>
-
 </div>
 
 <div class="card p-4">
-
     <h5>Insumos reservados</h5>
 
     {% if insumos %}
-
     <table class="table table-striped">
-
         <thead>
             <tr>
                 <th>Insumo</th>
@@ -94,7 +138,6 @@
                 {% endif %}
             </tr>
         </thead>
-
         <tbody>
             {% for insumo in insumos %}
             <tr>
@@ -114,17 +157,12 @@
             </tr>
             {% endfor %}
         </tbody>
-
     </table>
-
     {% else %}
     <p class="text-muted">No hay insumos agregados aún.</p>
     {% endif %}
 
-    <a href="/reservas/" class="btn btn-secondary mt-3">
-        Volver
-    </a>
-
+    <a href="/reservas/" class="btn btn-secondary mt-3">Volver</a>
 </div>
 
 {% endwith %}

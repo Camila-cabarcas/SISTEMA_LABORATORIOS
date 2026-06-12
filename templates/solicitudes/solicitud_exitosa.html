@@ -1,0 +1,25 @@
+{% extends 'base_publica.html' %}
+
+{% block contenido %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 text-center">
+        <div class="card p-5 shadow-sm">
+            <div class="mb-3" style="font-size: 3rem;">✅</div>
+            <h2 class="mb-2">¡Solicitud enviada!</h2>
+            <p class="text-muted mb-4">
+                Tu solicitud de reserva fue recibida correctamente.<br>
+                Un encargado la revisará y recibirás confirmación.
+            </p>
+            {% if tipo == 'profesor' %}
+                <a href="{% url 'solicitud_profesor' %}" class="btn btn-primary">
+                    Nueva solicitud
+                </a>
+            {% else %}
+                <a href="{% url 'solicitud_estudiante' %}" class="btn btn-primary">
+                    Nueva solicitud
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
