@@ -82,11 +82,13 @@ class EventoLaboratorio(models.Model):
 class Modulo(models.Model):
 
     nombre = models.CharField(max_length=100)
-
     capacidad = models.PositiveIntegerField()
-
     disponible = models.BooleanField(default=True)
-
+    motivo_no_disponible = models.CharField(  # ← nuevo
+        max_length=300,
+        blank=True,
+        default=''
+    )
     laboratorio = models.ForeignKey(
         Laboratorio,
         on_delete=models.CASCADE,

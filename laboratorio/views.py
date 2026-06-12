@@ -228,3 +228,122 @@ def eliminar_evento(request, id):
         return JsonResponse({'status': 'ok'})
 
     return JsonResponse({'status': 'error'}, status=400)
+
+
+@rol_requerido('Administrador', 'Encargado')
+def mapa_laboratorio(request, id):
+    from datetime import date, datetime
+    from django.utils import timezone
+    from solicitudes.models import SolicitudReserva
+
+    laboratorio = get_object_or_404(Laboratorio, id=id)
+
+    fecha_str = request.GET.get('fecha', '')
+    try:
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        fecha = date.today()
+
+    solicitudes = SolicitudReserva.objects.filter(
+        laboratorio=laboratorio,
+        fecha_reserva__date=fecha,
+        reserva__estado__nombre__in=['Pendiente', 'Aprobada'],
+        necesita_modulo=True,
+    ).select_related(
+        'reserva__estado', 'usuario'
+    ).prefetch_related('modulos_asignados')
+
+    modulo_solicitudes = {}
+    for sol in solicitudes:
+        for modulo in sol.modulos_asignados.all():
+            modulo_solicitudes.setdefault(modulo.id, []).append(sol)
+
+    es_hoy      = (fecha == date.today())
+    hora_actual = timezone.now().time()
+
+    modulos_data = []
+    for modulo in laboratorio.modulos.all():
+        soles = modulo_solicitudes.get(modulo.id, [])
+
+        if not modulo.disponible:
+            estado        = 'inactivo'
+            color         = 'secondary'
+            solicitud_info = None
+            motivo        = modulo.motivo_no_disponible
+
+        elif soles:
+            sol_activa = None
+            if es_hoy:
+                for sol in soles:
+                    if (sol.hora_inicio and sol.hora_fin
+                            and sol.hora_inicio <= hora_actual <= sol.hora_fin):
+                        sol_activa = sol
+                        break
+
+            sol_relevante = sol_activa if sol_activa else soles[0]
+            estado = 'ocupado' if sol_activa else 'reservado'
+            color  = 'danger'  if sol_activa else 'warning'
+            motivo = ''
+
+            if sol_relevante.nombre:
+                nombre_sol = sol_relevante.nombre
+            elif sol_relevante.usuario:
+                nombre_sol = sol_relevante.usuario.get_full_name() or sol_relevante.usuario.username
+            else:
+                nombre_sol = 'Desconocido'
+
+            estado_reserva = (
+                sol_relevante.reserva.estado.nombre
+                if sol_relevante.reserva and sol_relevante.reserva.estado
+                else '—'
+            )
+
+            solicitud_info = {
+                'nombre':        nombre_sol,
+                'cedula':        sol_relevante.cedula,
+                'tipo':          sol_relevante.get_tipo_solicitante_display(),
+                'hora_inicio':   sol_relevante.hora_inicio.strftime('%H:%M') if sol_relevante.hora_inicio else '—',
+                'hora_fin':      sol_relevante.hora_fin.strftime('%H:%M')    if sol_relevante.hora_fin    else '—',
+                'estado_reserva': estado_reserva,
+                'reserva_id':    sol_relevante.reserva.id if sol_relevante.reserva else None,
+            }
+        else:
+            estado        = 'disponible'
+            color         = 'success'
+            solicitud_info = None
+            motivo        = ''
+
+        modulos_data.append({
+            'modulo':    modulo,
+            'estado':    estado,
+            'color':     color,
+            'solicitud': solicitud_info,
+            'motivo':    motivo,
+        })
+
+    return render(request, 'laboratorio/mapa.html', {
+        'laboratorio':  laboratorio,
+        'modulos_data': modulos_data,
+        'fecha':        fecha.strftime('%Y-%m-%d'),
+        'fecha_display': fecha.strftime('%d/%m/%Y'),
+        'es_admin':     request.user.rol.nombre in ['Administrador', 'Encargado'],
+    })
+
+@rol_requerido('Administrador', 'Encargado')
+def toggle_modulo(request, lab_id, mod_id):
+    from .models import Modulo
+    modulo = get_object_or_404(Modulo, id=mod_id, laboratorio__id=lab_id)
+
+    if request.method == 'POST':
+        disponible = request.POST.get('disponible') == 'true'
+        motivo     = request.POST.get('motivo', '').strip()
+        modulo.disponible            = disponible
+        modulo.motivo_no_disponible  = '' if disponible else motivo
+        modulo.save()
+        return JsonResponse({
+            'status':     'ok',
+            'disponible': modulo.disponible,
+            'motivo':     modulo.motivo_no_disponible,
+        })
+
+    return JsonResponse({'status': 'error'}, status=400)
