@@ -1,6 +1,6 @@
 """
 forms.py — solicitudes
-Formularios EstudianteSolicitudForm y ProfesorSolicitudForm con guardado de insumos y validación de cédula.
+Formularios EstudianteSolicitudForm, ProfesorSolicitudForm y CursoForm.
 """
 from django import forms
 from django.core.exceptions import ValidationError
@@ -261,3 +261,29 @@ class ProfesorSolicitudForm(forms.ModelForm):
                     pass
         except (ValueError, AttributeError):
             pass
+
+
+class CursoForm(forms.ModelForm):
+
+    class Meta:
+        model = Curso
+        fields = ['nombre', 'codigo', 'profesor', 'cantidad_estudiantes']
+        widgets = {
+            'nombre': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Nombre del curso'}
+            ),
+            'codigo': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Código único del curso'}
+            ),
+            'profesor': forms.Select(attrs={'class': 'form-select'}),
+            'cantidad_estudiantes': forms.NumberInput(
+                attrs={'class': 'form-control', 'min': '1'}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from users.models import Usuario
+        self.fields['profesor'].queryset = (
+            Usuario.objects.filter(rol__nombre='Docente').order_by('last_name', 'first_name')
+        )

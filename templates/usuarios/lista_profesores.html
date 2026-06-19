@@ -1,0 +1,64 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Profesores</h1>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="/usuarios/profesores/crear/" class="btn btn-primary">Nuevo Profesor</a>
+
+    <form method="GET" class="d-flex gap-2">
+        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+               placeholder="Buscar por nombre o cédula..." style="width: 280px;">
+        <button type="submit" class="btn btn-dark btn-sm">Buscar</button>
+        {% if q %}
+        <a href="/usuarios/profesores/" class="btn btn-secondary btn-sm">Limpiar</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card p-4">
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>Cédula</th>
+                    <th>Correo</th>
+                    <th>Programa</th>
+                    <th>Cursos</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profesor in profesores %}
+                <tr>
+                    <td>{{ profesor.first_name }} {{ profesor.last_name }}</td>
+                    <td>{{ profesor.username }}</td>
+                    <td>{{ profesor.codigo|default:"—" }}</td>
+                    <td>{{ profesor.email|default:"—" }}</td>
+                    <td>{{ profesor.programa|default:"—" }}</td>
+                    <td>
+                        <span class="badge bg-secondary">{{ profesor.curso_set.count }}</span>
+                    </td>
+                    <td class="d-flex gap-1">
+                        <a href="/usuarios/profesores/{{ profesor.id }}/"
+                           class="btn btn-info btn-sm">Ver</a>
+                        <a href="/usuarios/profesores/{{ profesor.id }}/editar/"
+                           class="btn btn-warning btn-sm">Editar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-3">
+                        No se encontraron profesores{% if q %} con "{{ q }}"{% endif %}.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

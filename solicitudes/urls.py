@@ -1,6 +1,6 @@
 """
 urls.py — solicitudes
-Rutas de la app solicitudes: formularios públicos, página de confirmación y APIs de insumos y cursos.
+Rutas de la app solicitudes: formularios públicos, APIs de insumos/cursos y gestión de cursos.
 """
 from django.urls import path
 from .views import (
@@ -11,6 +11,10 @@ from .views import (
     buscar_insumos,
     cursos_profesor,
     solicitud_exitosa,
+    lista_cursos,
+    crear_curso,
+    editar_curso,
+    eliminar_curso,
 )
 
 urlpatterns = [
@@ -21,4 +25,9 @@ urlpatterns = [
     path('api/insumos/', api_insumos, name='api_insumos'),
     path('buscar-insumos/', buscar_insumos, name='buscar_insumos'),
     path('cursos-profesor/', cursos_profesor, name='cursos_profesor'),
+    # Gestión de cursos
+    path('cursos/', lista_cursos, name='lista_cursos'),
+    path('cursos/crear/', crear_curso, name='crear_curso'),
+    path('cursos/<int:id>/editar/', editar_curso, name='editar_curso'),
+    path('cursos/<int:id>/eliminar/', eliminar_curso, name='eliminar_curso'),
 ]

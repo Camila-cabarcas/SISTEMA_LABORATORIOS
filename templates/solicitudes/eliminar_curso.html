@@ -1,0 +1,26 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Eliminar Curso</h1>
+
+<div class="card p-4" style="max-width: 520px;">
+    <p class="mb-1">
+        ¿Estás seguro de que deseas eliminar el curso
+        <strong>{{ curso.nombre }} ({{ curso.codigo }})</strong>?
+    </p>
+    <p class="text-muted small mb-4">
+        Esta acción no se puede deshacer. Las solicitudes de reserva que referencien
+        este curso quedarán sin curso asignado.
+    </p>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+            <a href="/solicitudes/cursos/" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

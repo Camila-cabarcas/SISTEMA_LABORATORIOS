@@ -1,0 +1,75 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">{{ profesor.first_name }} {{ profesor.last_name }}</h1>
+    <div class="d-flex gap-2">
+        <a href="/usuarios/profesores/{{ profesor.id }}/editar/" class="btn btn-warning">Editar</a>
+        <a href="/usuarios/profesores/" class="btn btn-secondary">Volver</a>
+    </div>
+</div>
+
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Información del Profesor</h5>
+    <div class="row">
+        <div class="col-md-6">
+            <p><strong>Nombre completo:</strong> {{ profesor.first_name }} {{ profesor.last_name }}</p>
+            <p><strong>Usuario:</strong> {{ profesor.username }}</p>
+            <p><strong>Cédula:</strong> {{ profesor.codigo|default:"No registrada" }}</p>
+        </div>
+        <div class="col-md-6">
+            <p><strong>Correo:</strong> {{ profesor.email|default:"No registrado" }}</p>
+            <p><strong>Programa:</strong> {{ profesor.programa|default:"No especificado" }}</p>
+            <p>
+                <strong>Estado:</strong>
+                {% if profesor.is_active %}
+                    <span class="badge bg-success">Activo</span>
+                {% else %}
+                    <span class="badge bg-danger">Inactivo</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Cursos asignados</h5>
+        <a href="/solicitudes/cursos/crear/" class="btn btn-primary btn-sm">+ Nuevo Curso</a>
+    </div>
+
+    {% if cursos %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Estudiantes</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for curso in cursos %}
+                <tr>
+                    <td>{{ curso.codigo }}</td>
+                    <td>{{ curso.nombre }}</td>
+                    <td>{{ curso.cantidad_estudiantes }}</td>
+                    <td class="d-flex gap-1">
+                        <a href="/solicitudes/cursos/{{ curso.id }}/editar/"
+                           class="btn btn-warning btn-sm">Editar</a>
+                        <a href="/solicitudes/cursos/{{ curso.id }}/eliminar/"
+                           class="btn btn-danger btn-sm">Eliminar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">Este profesor no tiene cursos asignados aún.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

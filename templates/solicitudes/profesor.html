@@ -25,7 +25,6 @@
 {% endif %}
 
 <div class="card p-4">
-
     <form method="POST" id="profesor-form">
         {% csrf_token %}
 
@@ -57,35 +56,23 @@
                 <label for="id_nombre" class="form-label">Nombre Completo *</label>
                 {{ form.nombre }}
                 {% if form.nombre.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.nombre.errors }}
-                    </div>
+                    <div class="invalid-feedback d-block">{{ form.nombre.errors }}</div>
                 {% endif %}
             </div>
-
             <div class="col-md-6 mb-3">
                 <label for="id_cedula" class="form-label">Cédula *</label>
-                <input
-                    type="text"
-                    name="cedula"
-                    id="id_cedula"
-                    class="form-control"
-                    placeholder="Número de identificación"
-                    inputmode="numeric"
-                    pattern="[0-9]*"
-                    maxlength="20"
-                    value="{{ post_data.cedula|default:'' }}"
-                >
+                <input type="text" name="cedula" id="id_cedula" class="form-control"
+                       placeholder="Número de identificación" inputmode="numeric"
+                       pattern="[0-9]*" maxlength="20"
+                       value="{{ post_data.cedula|default:'' }}">
                 <div id="cedula_error" class="invalid-feedback d-none"></div>
                 {% if form.cedula.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.cedula.errors }}
-                    </div>
+                    <div class="invalid-feedback d-block">{{ form.cedula.errors }}</div>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Sección NORMAL: selector de curso (se oculta en modo libre) -->
+        <!-- Sección NORMAL -->
         <div id="seccion_normal">
             <div class="row">
                 <div class="col-md-6 mb-3">
@@ -94,54 +81,37 @@
                     <small id="curso_cargando" class="text-muted d-none">Cargando cursos...</small>
                     <small id="curso_sin_profesor" class="text-warning d-none">Ingresa el nombre del profesor para cargar sus cursos</small>
                     {% if form.curso.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.curso.errors }}
-                        </div>
+                        <div class="invalid-feedback d-block">{{ form.curso.errors }}</div>
                     {% endif %}
                 </div>
-
                 <div class="col-md-6 mb-3">
                     <label for="id_laboratorio" class="form-label">Laboratorio *</label>
                     {{ form.laboratorio }}
                     {% if form.laboratorio.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.laboratorio.errors }}
-                        </div>
+                        <div class="invalid-feedback d-block">{{ form.laboratorio.errors }}</div>
                     {% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- Sección LIBRE: grupo, asistentes, descripción (se oculta en modo normal) -->
+        <!-- Sección LIBRE -->
         <div id="seccion_libre" style="display:none;">
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="nombre_grupo" class="form-label">Nombre del grupo o actividad *</label>
-                    <input
-                        type="text"
-                        id="nombre_grupo"
-                        name="nombre_grupo"
-                        class="form-control"
-                        placeholder="Ej: Semillero de Robótica, Práctica Módulo 3..."
-                        value="{{ post_data.nombre_grupo|default:'' }}"
-                    >
+                    <input type="text" id="nombre_grupo" name="nombre_grupo" class="form-control"
+                           placeholder="Ej: Semillero de Robótica, Práctica Módulo 3..."
+                           value="{{ post_data.nombre_grupo|default:'' }}">
                 </div>
-
                 <div class="col-md-6 mb-3">
                     <label for="cantidad_asistentes" class="form-label">Cantidad de asistentes *</label>
-                    <input
-                        type="number"
-                        id="cantidad_asistentes"
-                        name="cantidad_asistentes"
-                        class="form-control"
-                        min="1"
-                        placeholder="Número de estudiantes asistentes"
-                        value="{{ post_data.cantidad_asistentes|default:'' }}"
-                    >
+                    <input type="number" id="cantidad_asistentes" name="cantidad_asistentes"
+                           class="form-control" min="1"
+                           placeholder="Número de estudiantes asistentes"
+                           value="{{ post_data.cantidad_asistentes|default:'' }}">
                     <small class="text-muted">Define cuántos módulos se asignarán automáticamente.</small>
                 </div>
             </div>
-
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="id_laboratorio_libre" class="form-label">Laboratorio *</label>
@@ -155,16 +125,11 @@
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="col-md-6 mb-3">
                     <label for="descripcion_actividad" class="form-label">Descripción de lo que se dictará *</label>
-                    <textarea
-                        id="descripcion_actividad"
-                        name="descripcion_actividad"
-                        class="form-control"
-                        rows="3"
-                        placeholder="Describe la actividad o práctica a realizar..."
-                    >{{ post_data.descripcion_actividad|default:'' }}</textarea>
+                    <textarea id="descripcion_actividad" name="descripcion_actividad"
+                              class="form-control" rows="3"
+                              placeholder="Describe la actividad o práctica a realizar...">{{ post_data.descripcion_actividad|default:'' }}</textarea>
                 </div>
             </div>
         </div>
@@ -173,48 +138,81 @@
         <h5 class="mb-3">Horario de Reserva</h5>
 
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
                 <label for="id_fecha_reserva" class="form-label">Fecha *</label>
                 {{ form.fecha_reserva }}
                 <div id="fecha_error_prof" class="invalid-feedback d-none"></div>
                 {% if form.fecha_reserva.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.fecha_reserva.errors }}
-                    </div>
+                    <div class="invalid-feedback d-block">{{ form.fecha_reserva.errors }}</div>
                 {% endif %}
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="hora_inicio_select_prof" class="form-label">Hora Inicio *</label>
-                <select id="hora_inicio_select_prof" class="form-select" required>
-                    <option value="">-- Selecciona hora inicio --</option>
-                </select>
-                <small class="text-muted d-block mt-1">Disponible: 06:00 - 18:00</small>
-                {% if form.hora_inicio.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.hora_inicio.errors }}
-                    </div>
-                {% endif %}
-            </div>
+        <!-- Time Range Picker -->
+        <div class="mb-3">
+            <label class="form-label">
+                Horario *
+                <small class="text-muted">(mín. 2 horas, máx. 8 horas)</small>
+            </label>
 
-            <div class="col-md-6 mb-3">
-                <label for="hora_fin_select_prof" class="form-label">Hora Fin (máx. 8 horas) *</label>
-                <select id="hora_fin_select_prof" class="form-select" required disabled>
-                    <option value="">-- Selecciona primero la hora inicio --</option>
-                </select>
-                <div id="error_duracion_prof" class="invalid-feedback d-none"></div>
-                {% if form.hora_fin.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.hora_fin.errors }}
+            <input type="hidden" name="hora_inicio" id="id_hora_inicio" value="">
+            <input type="hidden" name="hora_fin"    id="id_hora_fin"    value="">
+
+            <input type="text" id="horario-display-prof" class="form-control" readonly
+                   placeholder="Selecciona el horario..."
+                   style="cursor:pointer; max-width:300px;">
+
+            <div id="time-range-panel-prof" style="
+                display: none;
+                position: absolute;
+                z-index: 9999;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                padding: 20px;
+                width: 340px;
+                margin-top: 4px;
+            ">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold" style="font-size:1.1rem;">Horario</span>
+                    <button type="button" id="btn-reset-time-prof"
+                            style="background:none; border:1px solid #e0d6cc; border-radius:6px;
+                                   padding:2px 10px; color:#c07a50; cursor:pointer; font-size:.85rem;">
+                        Reset
+                    </button>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
+                        <small style="color:#999; font-size:.7rem;">Desde</small>
+                        <div id="display-desde-prof" style="font-weight:600; color:#333;">--:--</div>
                     </div>
-                {% endif %}
+                    <span style="color:#999;">→</span>
+                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
+                        <small style="color:#999; font-size:.7rem;">Hasta</small>
+                        <div id="display-hasta-prof" style="font-weight:600; color:#333;">--:--</div>
+                    </div>
+                </div>
+                <div id="time-slots-prof" style="
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 6px;
+                    max-height: 220px;
+                    overflow-y: auto;
+                "></div>
+                <div id="time-error-prof" class="text-danger small mt-2 d-none"></div>
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" id="btn-close-time-prof"
+                            style="background:none; border:none; color:#999; cursor:pointer;">
+                        Cerrar
+                    </button>
+                    <button type="button" id="btn-confirm-time-prof"
+                            style="background:none; border:none; color:#c07a50;
+                                   font-weight:600; cursor:pointer;">
+                        Confirmar
+                    </button>
+                </div>
             </div>
         </div>
-
-        {{ form.hora_inicio }}
-        {{ form.hora_fin }}
 
         <div class="mb-3">
             <div class="form-check">
@@ -232,27 +230,18 @@
             <div class="col-md-8 mb-3">
                 <label for="insumo_buscar_prof" class="form-label">Buscar Insumo</label>
                 <div style="position: relative;">
-                    <input
-                        type="text"
-                        id="insumo_buscar_prof"
-                        class="form-control"
-                        placeholder="Escribe para buscar o haz clic para ver todos..."
-                        autocomplete="off"
-                    >
-                    <div id="insumo_dropdown_prof" class="list-group mt-2" style="position: absolute; width: 100%; z-index: 1000; max-height: 250px; overflow-y: auto; display: none; top: 100%;">
+                    <input type="text" id="insumo_buscar_prof" class="form-control"
+                           placeholder="Escribe para buscar o haz clic para ver todos..."
+                           autocomplete="off">
+                    <div id="insumo_dropdown_prof" class="list-group mt-2"
+                         style="position: absolute; width: 100%; z-index: 1000;
+                                max-height: 250px; overflow-y: auto; display: none; top: 100%;">
                     </div>
                 </div>
             </div>
-
             <div class="col-md-4 mb-3">
                 <label for="insumo_cantidad_prof" class="form-label">Cantidad</label>
-                <input
-                    type="number"
-                    id="insumo_cantidad_prof"
-                    class="form-control"
-                    min="1"
-                    value="1"
-                >
+                <input type="number" id="insumo_cantidad_prof" class="form-control" min="1" value="1">
             </div>
         </div>
 
@@ -262,56 +251,157 @@
 
         <div id="insumos_lista_prof" class="mb-3" style="display: none;">
             <h6>Insumos Seleccionados:</h6>
-            <div class="list-group" id="insumos_items_prof">
-            </div>
+            <div class="list-group" id="insumos_items_prof"></div>
         </div>
 
-        <input type="hidden" name="insumos_ids" id="id_insumos_ids_prof" value="">
+        <input type="hidden" name="insumos_ids"        id="id_insumos_ids_prof"        value="">
         <input type="hidden" name="insumos_cantidades" id="id_insumos_cantidades_prof" value="">
 
         <div class="mb-3">
             <label for="id_observaciones" class="form-label">Observaciones</label>
             {{ form.observaciones }}
             {% if form.observaciones.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.observaciones.errors }}
-                </div>
+                <div class="invalid-feedback d-block">{{ form.observaciones.errors }}</div>
             {% endif %}
         </div>
 
         {% if form.non_field_errors %}
             <div class="alert alert-danger" role="alert">
-                {% for error in form.non_field_errors %}
-                    <p>{{ error }}</p>
-                {% endfor %}
+                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
             </div>
         {% endif %}
 
-        <button type="submit" class="btn btn-primary">
-            Enviar Solicitud
-        </button>
-        <a href="/solicitudes/" class="btn btn-secondary">
-            Cancelar
-        </a>
+        <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+        <a href="/solicitudes/" class="btn btn-secondary">Cancelar</a>
 
     </form>
-
 </div>
+
+<style>
+.time-slot {
+    padding: 6px 4px; border-radius: 6px; text-align: center;
+    font-size: .8rem; cursor: pointer; background: #f8f5f2;
+    color: #333; border: none; transition: background .15s;
+}
+.time-slot:hover { background: #f0e8e0; }
+.time-slot.slot-start, .time-slot.slot-end {
+    background: #c07a50; color: white; border-radius: 50px;
+}
+.time-slot.slot-range { background: #f0e0d0; color: #333; border-radius: 0; }
+.time-slot.slot-disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
+</style>
 
 <script>
 let insumosSeleccionadosProf = {};
+let slotInicioProf = null;
+let slotFinProf    = null;
+const MAX_HORAS_PROF = 8;
 
-// ─── Toggle de modalidad ───────────────────────────────────────────────────
+function strToMinProf(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+}
+
+// ── Time Range Picker ──────────────────────────────────────────
+function generarSlotsProf() {
+    const slots = [];
+    for (let h = 6; h <= 18; h++)
+        for (let m of [0, 30]) {
+            if (h === 18 && m === 30) continue;
+            slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+        }
+    return slots;
+}
+const SLOTS_PROF = generarSlotsProf();
+
+function renderSlotsProf() {
+    const container = document.getElementById('time-slots-prof');
+    container.innerHTML = '';
+    SLOTS_PROF.forEach(slot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'time-slot';
+        btn.textContent = slot;
+        const minSlot = strToMinProf(slot);
+
+        if (!slotInicioProf) {
+            if (minSlot > strToMinProf('18:00') - 120) btn.classList.add('slot-disabled');
+        } else {
+            const minInicio = strToMinProf(slotInicioProf);
+            const minMin = minInicio + 120;
+            const minMax = minInicio + MAX_HORAS_PROF * 60;
+            if (slot === slotInicioProf) btn.classList.add('slot-start');
+            else if (slotFinProf && slot === slotFinProf) btn.classList.add('slot-end');
+            else if (slotFinProf && minSlot > minInicio && minSlot < strToMinProf(slotFinProf)) btn.classList.add('slot-range');
+            else if (minSlot < minMin || minSlot > minMax || minSlot > strToMinProf('18:00')) btn.classList.add('slot-disabled');
+        }
+        btn.addEventListener('click', e => { e.stopPropagation(); onSlotClickProf(slot); });
+        container.appendChild(btn);
+    });
+}
+
+function onSlotClickProf(slot) {
+    document.getElementById('time-error-prof').classList.add('d-none');
+    if (!slotInicioProf) {
+        slotInicioProf = slot; slotFinProf = null;
+        document.getElementById('display-desde-prof').textContent = slot;
+        document.getElementById('display-hasta-prof').textContent = '--:--';
+    } else if (!slotFinProf) {
+        const diff = strToMinProf(slot) - strToMinProf(slotInicioProf);
+        if (diff < 120) { showTimeErrorProf('Mínimo 2 horas.'); return; }
+        if (diff > MAX_HORAS_PROF * 60) { showTimeErrorProf(`Máximo ${MAX_HORAS_PROF} horas.`); return; }
+        slotFinProf = slot;
+        document.getElementById('display-hasta-prof').textContent = slot;
+    } else {
+        slotInicioProf = slot; slotFinProf = null;
+        document.getElementById('display-desde-prof').textContent = slot;
+        document.getElementById('display-hasta-prof').textContent = '--:--';
+    }
+    renderSlotsProf();
+}
+
+function showTimeErrorProf(msg) {
+    const el = document.getElementById('time-error-prof');
+    el.textContent = msg; el.classList.remove('d-none');
+}
+
+function resetTimeProf() {
+    slotInicioProf = null; slotFinProf = null;
+    document.getElementById('display-desde-prof').textContent = '--:--';
+    document.getElementById('display-hasta-prof').textContent = '--:--';
+    document.getElementById('time-error-prof').classList.add('d-none');
+    renderSlotsProf();
+}
+
+document.getElementById('horario-display-prof').addEventListener('click', function(e) {
+    e.stopPropagation();
+    const panel = document.getElementById('time-range-panel-prof');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'block') renderSlotsProf();
+});
+document.getElementById('time-range-panel-prof').addEventListener('click', e => e.stopPropagation());
+document.getElementById('btn-reset-time-prof').addEventListener('click', resetTimeProf);
+document.getElementById('btn-close-time-prof').addEventListener('click', () => {
+    document.getElementById('time-range-panel-prof').style.display = 'none';
+});
+document.getElementById('btn-confirm-time-prof').addEventListener('click', function() {
+    if (!slotInicioProf || !slotFinProf) { showTimeErrorProf('Selecciona inicio y fin.'); return; }
+    document.getElementById('id_hora_inicio').value = slotInicioProf;
+    document.getElementById('id_hora_fin').value    = slotFinProf;
+    document.getElementById('horario-display-prof').value = `${slotInicioProf} → ${slotFinProf}`;
+    document.getElementById('time-range-panel-prof').style.display = 'none';
+});
+document.addEventListener('click', () => {
+    document.getElementById('time-range-panel-prof').style.display = 'none';
+});
+
+// ── Toggle de modalidad ────────────────────────────────────────
 function aplicarModo(esLibre) {
     document.getElementById('seccion_normal').style.display = esLibre ? 'none' : '';
     document.getElementById('seccion_libre').style.display  = esLibre ? '' : 'none';
     document.getElementById('reserva_libre_hidden').value   = esLibre ? '1' : '0';
-
     const cursoSelect = document.getElementById('id_curso');
     if (cursoSelect) cursoSelect.required = !esLibre;
-
-    // El laboratorio del modo libre tiene name="laboratorio" también
-    // pero el del modo normal se deshabilita para que no se duplique en el POST
     const labNormal = document.getElementById('id_laboratorio');
     const labLibre  = document.getElementById('id_laboratorio_libre');
     if (labNormal) labNormal.disabled = esLibre;
@@ -319,42 +409,32 @@ function aplicarModo(esLibre) {
 }
 
 document.querySelectorAll('input[name="modo_reserva"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-        aplicarModo(this.value === 'libre');
-    });
+    radio.addEventListener('change', function() { aplicarModo(this.value === 'libre'); });
 });
-
-// Aplicar estado inicial
 const modoLibreRadio = document.getElementById('modo_libre');
 aplicarModo(modoLibreRadio && modoLibreRadio.checked);
 
-// ─── Validación de cédula (solo números) ──────────────────────────────────
+// ── Validación de cédula ───────────────────────────────────────
 document.getElementById('id_cedula').addEventListener('input', function(e) {
-    const valor = e.target.value;
-    const soloNumeros = valor.replace(/[^0-9]/g, '');
-
-    if (valor !== soloNumeros) {
+    const soloNumeros = e.target.value.replace(/[^0-9]/g, '');
+    if (e.target.value !== soloNumeros) {
         e.target.value = soloNumeros;
         const errorDiv = document.getElementById('cedula_error');
         errorDiv.textContent = 'Solo números permitidos';
         errorDiv.classList.remove('d-none');
         e.target.classList.add('is-invalid');
     } else {
-        const errorDiv = document.getElementById('cedula_error');
-        errorDiv.classList.add('d-none');
+        document.getElementById('cedula_error').classList.add('d-none');
         e.target.classList.remove('is-invalid');
     }
-
     cargarCursosPorProfesor();
 });
-
 document.getElementById('id_nombre').addEventListener('change', cargarCursosPorProfesor);
 
 function cargarCursosPorProfesor() {
     const nombre = document.getElementById('id_nombre').value;
     const cedula = document.getElementById('id_cedula').value;
-
-    const cargando   = document.getElementById('curso_cargando');
+    const cargando    = document.getElementById('curso_cargando');
     const sinProfesor = document.getElementById('curso_sin_profesor');
     const cursoSelect = document.getElementById('id_curso');
 
@@ -373,7 +453,6 @@ function cargarCursosPorProfesor() {
         .then(r => r.json())
         .then(data => {
             cargando.classList.add('d-none');
-
             if (data.error) {
                 cursoSelect.disabled = true;
                 cursoSelect.innerHTML = '<option value="">-- Profesor no encontrado --</option>';
@@ -382,10 +461,8 @@ function cargarCursosPorProfesor() {
                 sinProfesor.className = 'text-danger d-block';
                 return;
             }
-
             cursoSelect.disabled = false;
             cursoSelect.innerHTML = '<option value="">-- Selecciona un curso --</option>';
-
             if (data.cursos && data.cursos.length > 0) {
                 data.cursos.forEach(curso => {
                     const option = document.createElement('option');
@@ -395,38 +472,56 @@ function cargarCursosPorProfesor() {
                 });
                 sinProfesor.classList.add('d-none');
             } else {
-                const option = document.createElement('option');
-                option.value = '';
-                option.textContent = '-- Este profesor no tiene cursos registrados --';
-                option.disabled = true;
-                cursoSelect.appendChild(option);
+                cursoSelect.innerHTML += '<option value="" disabled>-- Este profesor no tiene cursos --</option>';
                 sinProfesor.textContent = 'El profesor no tiene cursos registrados';
                 sinProfesor.classList.remove('d-none');
                 sinProfesor.className = 'text-info d-block';
             }
         })
-        .catch(err => {
+        .catch(() => {
             cargando.classList.add('d-none');
             cursoSelect.disabled = true;
             cursoSelect.innerHTML = '<option value="">-- Error cargando cursos --</option>';
-            sinProfesor.textContent = 'Error al cargar los cursos. Intenta de nuevo.';
+            sinProfesor.textContent = 'Error al cargar los cursos.';
             sinProfesor.classList.remove('d-none');
             sinProfesor.className = 'text-danger d-block';
-            console.error(err);
         });
 }
 
-// ─── Buscador de insumos ──────────────────────────────────────────────────
+// ── Validación de fecha ────────────────────────────────────────
+const fechaInputProf = document.getElementById('id_fecha_reserva');
+if (fechaInputProf) {
+    fechaInputProf.addEventListener('change', function() {
+        const partes = this.value.split('-');
+        const fecha = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+        const dia = fecha.getDay();
+        const errorDiv = document.getElementById('fecha_error_prof');
+        if (dia === 0 || dia === 6) {
+            const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+            errorDiv.textContent = `Solo lunes a viernes. ${dias[dia]} no está disponible.`;
+            errorDiv.classList.remove('d-none');
+            this.classList.add('is-invalid');
+            this.value = '';
+        } else {
+            errorDiv.classList.add('d-none');
+            this.classList.remove('is-invalid');
+        }
+    });
+    const hoy    = new Date();
+    const manana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
+    fechaInputProf.min = `${manana.getFullYear()}-${String(manana.getMonth()+1).padStart(2,'0')}-${String(manana.getDate()).padStart(2,'0')}`;
+}
+
+// ── Buscador de insumos ────────────────────────────────────────
 const buscarInputProf = document.getElementById('insumo_buscar_prof');
 const dropdownDivProf = document.getElementById('insumo_dropdown_prof');
-let insumosCacheProf = null;
+let insumosCacheProf  = null;
 
 buscarInputProf.addEventListener('click', mostrarInsumosProf);
 buscarInputProf.addEventListener('input', buscarInsumosProf);
 document.addEventListener('click', function(e) {
-    if (e.target !== buscarInputProf && e.target.parentElement !== dropdownDivProf) {
+    if (e.target !== buscarInputProf && e.target.parentElement !== dropdownDivProf)
         dropdownDivProf.style.display = 'none';
-    }
 });
 
 function mostrarInsumosProf() {
@@ -449,10 +544,7 @@ function buscarInsumosProf(e) {
     if (query === '') { mostrarInsumosProf(); return; }
     fetch(`/solicitudes/buscar-insumos/?q=${encodeURIComponent(query)}`)
         .then(r => r.json())
-        .then(data => {
-            renderDropdownProf(data.results);
-            dropdownDivProf.style.display = 'block';
-        });
+        .then(data => { renderDropdownProf(data.results); dropdownDivProf.style.display = 'block'; });
 }
 
 function renderDropdownProf(insumos) {
@@ -462,13 +554,12 @@ function renderDropdownProf(insumos) {
         btn.type = 'button';
         btn.className = 'list-group-item list-group-item-action';
         btn.textContent = insumo.text;
-
         if (insumo.disabled) {
             btn.style.pointerEvents = 'none';
             btn.style.color = '#999';
             btn.style.backgroundColor = '#f5f5f5';
         } else {
-            btn.onclick = (e) => { e.preventDefault(); seleccionarInsumoProf(insumo); };
+            btn.onclick = e => { e.preventDefault(); seleccionarInsumoProf(insumo); };
         }
         dropdownDivProf.appendChild(btn);
     });
@@ -484,21 +575,13 @@ document.getElementById('agregar_insumo_btn_prof').addEventListener('click', fun
     const buscar   = document.getElementById('insumo_buscar_prof');
     const insumoId = buscar.dataset.insumoId;
     const cantidad = parseInt(document.getElementById('insumo_cantidad_prof').value) || 1;
-
     if (!insumoId) { alert('Selecciona un insumo de la lista'); return; }
-
     const texto = buscar.value;
-
     if (insumosSeleccionadosProf[insumoId]) {
         insumosSeleccionadosProf[insumoId].cantidad += cantidad;
     } else {
-        insumosSeleccionadosProf[insumoId] = {
-            id: insumoId,
-            nombre: texto.split('(')[0].trim(),
-            cantidad: cantidad
-        };
+        insumosSeleccionadosProf[insumoId] = { id: insumoId, nombre: texto.split('(')[0].trim(), cantidad };
     }
-
     actualizarListaInsumosProf();
     buscar.value = '';
     delete buscar.dataset.insumoId;
@@ -513,10 +596,8 @@ function eliminarInsumoProf(insumoId) {
 function actualizarListaInsumosProf() {
     const lista         = document.getElementById('insumos_items_prof');
     const listContainer = document.getElementById('insumos_lista_prof');
-
     lista.innerHTML = '';
     const ids = [], cantidades = [];
-
     Object.values(insumosSeleccionadosProf).forEach(insumo => {
         const item = document.createElement('div');
         item.className = 'list-group-item d-flex justify-content-between align-items-center';
@@ -527,107 +608,15 @@ function actualizarListaInsumosProf() {
             </div>
             <button type="button" class="btn btn-sm btn-danger" onclick="eliminarInsumoProf(${insumo.id})">
                 Eliminar
-            </button>
-        `;
+            </button>`;
         lista.appendChild(item);
         ids.push(insumo.id);
         cantidades.push(insumo.cantidad);
     });
-
     document.getElementById('id_insumos_ids_prof').value       = ids.join(',');
     document.getElementById('id_insumos_cantidades_prof').value = cantidades.join(',');
     listContainer.style.display = Object.keys(insumosSeleccionadosProf).length ? 'block' : 'none';
 }
-
-// ─── Validación de fecha ──────────────────────────────────────────────────
-const fechaInputProf = document.getElementById('id_fecha_reserva');
-
-function validarFechaProf() {
-    const fechaValue = fechaInputProf.value;
-    if (!fechaValue) return;
-
-    const partes = fechaValue.split('-');
-    const fecha = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
-    const diaSemana = fecha.getDay();
-
-    const errorDiv = document.getElementById('fecha_error_prof');
-
-    if (diaSemana === 0 || diaSemana === 6) {
-        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-        errorDiv.textContent = `El laboratorio solo está disponible de lunes a viernes. ${diasSemana[diaSemana]} no está disponible.`;
-        errorDiv.classList.remove('d-none');
-        fechaInputProf.classList.add('is-invalid');
-        fechaInputProf.value = '';
-    } else {
-        errorDiv.classList.add('d-none');
-        fechaInputProf.classList.remove('is-invalid');
-    }
-}
-
-if (fechaInputProf) {
-    fechaInputProf.addEventListener('change', validarFechaProf);
-    const hoy    = new Date();
-    const manana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
-    const y = manana.getFullYear();
-    const m = String(manana.getMonth() + 1).padStart(2, '0');
-    const d = String(manana.getDate()).padStart(2, '0');
-    fechaInputProf.min = `${y}-${m}-${d}`;
-}
-
-// ─── Selectores de hora ───────────────────────────────────────────────────
-function generarHorasProf() {
-    const horas = [];
-    for (let h = 6; h <= 18; h++) {
-        for (let m of [0, 30]) {
-            horas.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-        }
-    }
-    return horas;
-}
-
-const horasTotalesProf     = generarHorasProf();
-const horaInicioSelectProf = document.getElementById('hora_inicio_select_prof');
-const horaFinSelectProf    = document.getElementById('hora_fin_select_prof');
-const horaInicioInputProf  = document.getElementById('id_hora_inicio');
-const horaFinInputProf     = document.getElementById('id_hora_fin');
-
-horasTotalesProf.forEach(hora => {
-    const option = document.createElement('option');
-    option.value = hora; option.textContent = hora;
-    horaInicioSelectProf.appendChild(option);
-});
-
-horaInicioSelectProf.addEventListener('change', function() {
-    horaFinSelectProf.innerHTML = '<option value="">-- Selecciona hora fin --</option>';
-    horaFinSelectProf.disabled = false;
-
-    if (!this.value) {
-        horaFinSelectProf.disabled = true;
-        horaFinSelectProf.innerHTML = '<option value="">-- Selecciona primero la hora inicio --</option>';
-        return;
-    }
-
-    const [horaIni, minIni] = this.value.split(':').map(Number);
-    const minutoIni   = horaIni * 60 + minIni;
-    const minutoFin2h = minutoIni + 120;
-    const minutoFin8h = minutoIni + 480;
-
-    horasTotalesProf.forEach(hora => {
-        const [horaFin, minFin] = hora.split(':').map(Number);
-        const minutoTotal = horaFin * 60 + minFin;
-        if (minutoTotal > minutoFin2h && minutoTotal <= minutoFin8h) {
-            const option = document.createElement('option');
-            option.value = hora; option.textContent = hora;
-            horaFinSelectProf.appendChild(option);
-        }
-    });
-
-    horaInicioInputProf.value = this.value;
-});
-
-horaFinSelectProf.addEventListener('change', function() {
-    horaFinInputProf.value = this.value;
-});
 </script>
 
 {% endblock %}

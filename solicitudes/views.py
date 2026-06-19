@@ -2,14 +2,16 @@
 views.py — solicitudes
 Vistas públicas de solicitud para estudiante y profesor, APIs de insumos y cursos, y página de confirmación.
 """
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from users.models import Usuario
+from users.decorators import rol_requerido
 from inventario.models import Insumo
 from .models import SolicitudReserva, Curso, SolicitudInsumo
-from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm
+from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm, CursoForm
 
 
 def solicitud_estudiante(request):
@@ -259,3 +261,59 @@ def buscar_insumos(request):
         })
 
     return JsonResponse({'results': results})
+
+
+# ── Gestión de cursos ────────────────────────────────────────────────────────
+
+@rol_requerido('Administrador', 'Encargado')
+def lista_cursos(request):
+    q = request.GET.get('q', '').strip()
+    cursos = Curso.objects.select_related('profesor').order_by('codigo')
+    if q:
+        cursos = cursos.filter(
+            Q(nombre__icontains=q)              |
+            Q(codigo__icontains=q)              |
+            Q(profesor__first_name__icontains=q) |
+            Q(profesor__last_name__icontains=q)
+        )
+    return render(request, 'solicitudes/lista_cursos.html', {
+        'cursos': cursos,
+        'q': q,
+    })
+
+
+@rol_requerido('Administrador', 'Encargado')
+def crear_curso(request):
+    if request.method == 'POST':
+        form = CursoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('lista_cursos')
+    else:
+        form = CursoForm()
+    return render(request, 'solicitudes/crear_curso.html', {'form': form})
+
+
+@rol_requerido('Administrador', 'Encargado')
+def editar_curso(request, id):
+    curso = get_object_or_404(Curso, id=id)
+    if request.method == 'POST':
+        form = CursoForm(request.POST, instance=curso)
+        if form.is_valid():
+            form.save()
+            return redirect('lista_cursos')
+    else:
+        form = CursoForm(instance=curso)
+    return render(request, 'solicitudes/editar_curso.html', {
+        'form': form,
+        'curso': curso,
+    })
+
+
+@rol_requerido('Administrador', 'Encargado')
+def eliminar_curso(request, id):
+    curso = get_object_or_404(Curso, id=id)
+    if request.method == 'POST':
+        curso.delete()
+        return redirect('lista_cursos')
+    return render(request, 'solicitudes/eliminar_curso.html', {'curso': curso})
