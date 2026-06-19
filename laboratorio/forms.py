@@ -1,3 +1,7 @@
+"""
+forms.py — laboratorio
+Formulario LaboratorioForm para crear y editar laboratorios.
+"""
 from django import forms
 from .models import Laboratorio
 

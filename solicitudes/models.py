@@ -1,3 +1,8 @@
+"""
+models.py — solicitudes
+Define SolicitudReserva, SolicitudInsumo y Curso; contiene la lógica de validación de reglas de negocio
+y el método crear_reserva() que genera la Reserva asociada en estado "Pendiente".
+"""
 from django.db import models
 from django.core.exceptions import ValidationError
 from datetime import timedelta

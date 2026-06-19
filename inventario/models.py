@@ -1,3 +1,7 @@
+"""
+models.py — inventario
+Define Insumo, ItemInventario, MovimientoInventario y los modelos de estado (EstadoItem, EstadoInsumo, TipoMovimiento).
+"""
 from django.db import models
 
 class TipoMovimiento(models.Model):

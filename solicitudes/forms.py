@@ -1,3 +1,7 @@
+"""
+forms.py — solicitudes
+Formularios EstudianteSolicitudForm y ProfesorSolicitudForm con guardado de insumos y validación de cédula.
+"""
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import SolicitudReserva, Curso, SolicitudInsumo

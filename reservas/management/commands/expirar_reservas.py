@@ -1,3 +1,7 @@
+"""
+expirar_reservas.py — reservas
+Management command que marca como "Expiradas" las reservas pendientes o aprobadas cuya hora_limite_retiro ya pasó.
+"""
 from django.core.management.base import BaseCommand
 from datetime import datetime
 from reservas.models import Reserva, EstadoReserva

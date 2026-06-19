@@ -1,3 +1,7 @@
+"""
+views.py — solicitudes
+Vistas públicas de solicitud para estudiante y profesor, APIs de insumos y cursos, y página de confirmación.
+"""
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse

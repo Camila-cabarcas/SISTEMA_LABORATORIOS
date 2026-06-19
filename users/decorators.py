@@ -1,3 +1,7 @@
+"""
+decorators.py — users
+Decorador rol_requerido que protege vistas según el rol del usuario autenticado.
+"""
 from django.shortcuts import redirect
 from functools import wraps
 

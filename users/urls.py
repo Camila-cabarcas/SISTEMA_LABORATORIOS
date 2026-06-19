@@ -1,3 +1,7 @@
+"""
+urls.py — users
+Rutas de la app users: gestión de usuarios y página de acceso denegado.
+"""
 from django.urls import path
 from .views import (
     lista_usuarios,

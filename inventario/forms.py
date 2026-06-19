@@ -1,3 +1,7 @@
+"""
+forms.py — inventario
+Formularios InsumoForm, ItemInventarioForm y MovimientoInventarioForm.
+"""
 from django import forms
 from .models import Insumo
 from .models import (

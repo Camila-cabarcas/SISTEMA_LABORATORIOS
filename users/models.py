@@ -1,3 +1,7 @@
+"""
+models.py — users
+Define los modelos Rol y Usuario (extiende AbstractUser con los campos codigo, programa y rol).
+"""
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 

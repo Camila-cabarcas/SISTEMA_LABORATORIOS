@@ -1,3 +1,7 @@
+"""
+urls.py — solicitudes
+Rutas de la app solicitudes: formularios públicos, página de confirmación y APIs de insumos y cursos.
+"""
 from django.urls import path
 from .views import (
     solicitud_estudiante,

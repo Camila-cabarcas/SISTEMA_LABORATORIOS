@@ -1,3 +1,7 @@
+"""
+signals.py — prestamos
+Actualiza el estado de los ítems y registra movimientos al crear un PrestamoItem o cambiar el estado de un Prestamo.
+"""
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Prestamo, PrestamoItem

@@ -1,3 +1,7 @@
+"""
+models.py — laboratorio
+Define Laboratorio, HorarioLaboratorio, EventoLaboratorio y Modulo con sus estados de disponibilidad.
+"""
 from django.db import models
 
 

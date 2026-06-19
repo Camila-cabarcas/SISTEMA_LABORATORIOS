@@ -1,3 +1,7 @@
+"""
+urls.py — reservas
+Rutas de la app reservas: listado, creación, detalle, aprobación, cancelación y horarios disponibles.
+"""
 from django.urls import path
 from .views import (
     lista_reservas,

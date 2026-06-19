@@ -1,3 +1,7 @@
+"""
+views.py — laboratorio
+Vistas para gestionar laboratorios, eventos, mapa visual de módulos y APIs de estado en tiempo real.
+"""
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from users.decorators import rol_requerido

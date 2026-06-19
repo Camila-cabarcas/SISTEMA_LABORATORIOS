@@ -1,3 +1,7 @@
+"""
+forms.py — reservas
+Formularios ReservaForm y ReservaInsumoForm para crear reservas y asociar insumos a ellas.
+"""
 from django import forms
 from .models import Reserva, ReservaInsumo
 

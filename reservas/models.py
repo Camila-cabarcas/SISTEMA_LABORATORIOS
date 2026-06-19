@@ -1,3 +1,7 @@
+"""
+models.py — reservas
+Define Reserva, ReservaInsumo y EstadoReserva; calcula hora_limite_retiro y fecha_devolucion al guardar.
+"""
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta

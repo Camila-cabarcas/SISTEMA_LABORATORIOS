@@ -1,3 +1,7 @@
+"""
+models.py — prestamos
+Define Prestamo, PrestamoItem y EstadoPrestamo, vinculados a una reserva aprobada y a ítems de inventario.
+"""
 from django.db import models
 from users.models import Usuario
 from reservas.models import Reserva

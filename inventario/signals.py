@@ -1,3 +1,7 @@
+"""
+signals.py — inventario
+Registra automáticamente un MovimientoInventario al cambiar el estado de un ítem a Dañado, Mantenimiento o Baja.
+"""
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import ItemInventario, MovimientoInventario, TipoMovimiento

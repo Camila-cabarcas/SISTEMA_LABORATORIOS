@@ -1,0 +1,11 @@
+﻿asgiref==3.11.1
+ast_serialize==0.4.0
+Django==6.0.5
+django-stubs==6.0.4
+django-stubs-ext==6.0.4
+librt==0.11.0
+pathspec==1.1.1
+sqlparse==0.5.5
+types-PyYAML==6.0.12.20260518
+typing_extensions==4.15.0
+tzdata==2026.2

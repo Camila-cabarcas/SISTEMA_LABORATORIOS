@@ -1,3 +1,7 @@
+"""
+views.py — users
+Vistas para listar, crear, editar y desactivar usuarios del sistema (solo Administrador).
+"""
 from django.shortcuts import render, redirect, get_object_or_404
 from users.decorators import rol_requerido
 from .models import Usuario

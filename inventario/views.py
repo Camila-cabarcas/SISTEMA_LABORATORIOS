@@ -1,3 +1,7 @@
+"""
+views.py — inventario
+Vistas para gestionar insumos, ítems físicos, movimientos de inventario e historial por ítem.
+"""
 from django.shortcuts import render, redirect
 from django.db.models import Count, Q
 from users.decorators import rol_requerido

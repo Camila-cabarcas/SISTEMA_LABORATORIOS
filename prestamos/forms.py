@@ -1,3 +1,7 @@
+"""
+forms.py — prestamos
+Formularios PrestamoForm, CambiarEstadoPrestamoForm y PrestamoItemForm.
+"""
 from django import forms
 from .models import Prestamo, PrestamoItem
 from inventario.models import ItemInventario

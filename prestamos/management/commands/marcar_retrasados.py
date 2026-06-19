@@ -1,3 +1,7 @@
+"""
+marcar_retrasados.py — prestamos
+Management command que marca como "Retrasados" los préstamos activos cuya fecha de devolución ya pasó (con 5 minutos de gracia).
+"""
 from django.core.management.base import BaseCommand
 from datetime import datetime, timedelta
 from prestamos.models import Prestamo, EstadoPrestamo

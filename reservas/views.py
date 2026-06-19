@@ -1,3 +1,7 @@
+"""
+views.py — reservas
+Vistas para listar, crear manualmente, aprobar, cancelar y gestionar reservas e insumos asociados.
+"""
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from users.decorators import rol_requerido

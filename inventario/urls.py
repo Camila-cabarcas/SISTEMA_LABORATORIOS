@@ -1,3 +1,7 @@
+"""
+urls.py — inventario
+Rutas de la app inventario: insumos, ítems físicos, movimientos e historial por ítem.
+"""
 from django.urls import path
 from .views import (
     inicio,

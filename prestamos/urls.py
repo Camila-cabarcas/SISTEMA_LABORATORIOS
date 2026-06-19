@@ -1,3 +1,7 @@
+"""
+urls.py — prestamos
+Rutas de la app prestamos: listado, creación por reserva, detalle, cambio de estado y devolución.
+"""
 from django.urls import path
 from .views import (
     lista_prestamos,
