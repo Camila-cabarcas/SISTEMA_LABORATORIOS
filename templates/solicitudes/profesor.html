@@ -14,10 +14,41 @@
     </div>
 {% endif %}
 
+{% if errores_libres %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Error en la solicitud:</strong>
+        {% for error in errores_libres %}
+            <div>{{ error }}</div>
+        {% endfor %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+
 <div class="card p-4">
 
     <form method="POST" id="profesor-form">
         {% csrf_token %}
+
+        <!-- Toggle de modalidad -->
+        <div class="mb-4 p-3 bg-light rounded border">
+            <p class="fw-semibold mb-2">Modalidad de reserva</p>
+            <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="modo_reserva" id="modo_normal"
+                       value="normal" autocomplete="off"
+                       {% if not errores_libres %}checked{% endif %}>
+                <label class="btn btn-outline-primary" for="modo_normal">
+                    Tengo curso registrado en el sistema
+                </label>
+                <input type="radio" class="btn-check" name="modo_reserva" id="modo_libre"
+                       value="libre" autocomplete="off"
+                       {% if errores_libres %}checked{% endif %}>
+                <label class="btn btn-outline-warning" for="modo_libre">
+                    Reserva libre (semillero, práctica externa, grupo sin curso)
+                </label>
+            </div>
+        </div>
+        <input type="hidden" name="reserva_libre" id="reserva_libre_hidden"
+               value="{% if errores_libres %}1{% else %}0{% endif %}">
 
         <h5 class="mb-3">Información del Profesor</h5>
 
@@ -43,6 +74,7 @@
                     inputmode="numeric"
                     pattern="[0-9]*"
                     maxlength="20"
+                    value="{{ post_data.cedula|default:'' }}"
                 >
                 <div id="cedula_error" class="invalid-feedback d-none"></div>
                 {% if form.cedula.errors %}
@@ -53,27 +85,87 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="id_curso" class="form-label">Curso *</label>
-                {{ form.curso }}
-                <small id="curso_cargando" class="text-muted d-none">Cargando cursos...</small>
-                <small id="curso_sin_profesor" class="text-warning d-none">Ingresa el nombre del profesor para cargar sus cursos</small>
-                {% if form.curso.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.curso.errors }}
-                    </div>
-                {% endif %}
+        <!-- Sección NORMAL: selector de curso (se oculta en modo libre) -->
+        <div id="seccion_normal">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="id_curso" class="form-label">Curso *</label>
+                    {{ form.curso }}
+                    <small id="curso_cargando" class="text-muted d-none">Cargando cursos...</small>
+                    <small id="curso_sin_profesor" class="text-warning d-none">Ingresa el nombre del profesor para cargar sus cursos</small>
+                    {% if form.curso.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.curso.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="id_laboratorio" class="form-label">Laboratorio *</label>
+                    {{ form.laboratorio }}
+                    {% if form.laboratorio.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.laboratorio.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección LIBRE: grupo, asistentes, descripción (se oculta en modo normal) -->
+        <div id="seccion_libre" style="display:none;">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nombre_grupo" class="form-label">Nombre del grupo o actividad *</label>
+                    <input
+                        type="text"
+                        id="nombre_grupo"
+                        name="nombre_grupo"
+                        class="form-control"
+                        placeholder="Ej: Semillero de Robótica, Práctica Módulo 3..."
+                        value="{{ post_data.nombre_grupo|default:'' }}"
+                    >
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="cantidad_asistentes" class="form-label">Cantidad de asistentes *</label>
+                    <input
+                        type="number"
+                        id="cantidad_asistentes"
+                        name="cantidad_asistentes"
+                        class="form-control"
+                        min="1"
+                        placeholder="Número de estudiantes asistentes"
+                        value="{{ post_data.cantidad_asistentes|default:'' }}"
+                    >
+                    <small class="text-muted">Define cuántos módulos se asignarán automáticamente.</small>
+                </div>
             </div>
 
-            <div class="col-md-6 mb-3">
-                <label for="id_laboratorio" class="form-label">Laboratorio *</label>
-                {{ form.laboratorio }}
-                {% if form.laboratorio.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.laboratorio.errors }}
-                    </div>
-                {% endif %}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="id_laboratorio_libre" class="form-label">Laboratorio *</label>
+                    <select id="id_laboratorio_libre" name="laboratorio" class="form-select">
+                        <option value="">-- Selecciona un laboratorio --</option>
+                        {% for lab in form.laboratorio.field.queryset %}
+                            <option value="{{ lab.pk }}"
+                                {% if post_data.laboratorio == lab.pk|stringformat:"s" %}selected{% endif %}>
+                                {{ lab }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="descripcion_actividad" class="form-label">Descripción de lo que se dictará *</label>
+                    <textarea
+                        id="descripcion_actividad"
+                        name="descripcion_actividad"
+                        class="form-control"
+                        rows="3"
+                        placeholder="Describe la actividad o práctica a realizar..."
+                    >{{ post_data.descripcion_actividad|default:'' }}</textarea>
+                </div>
             </div>
         </div>
 
@@ -209,7 +301,34 @@
 <script>
 let insumosSeleccionadosProf = {};
 
-// Validación de cédula (solo números)
+// ─── Toggle de modalidad ───────────────────────────────────────────────────
+function aplicarModo(esLibre) {
+    document.getElementById('seccion_normal').style.display = esLibre ? 'none' : '';
+    document.getElementById('seccion_libre').style.display  = esLibre ? '' : 'none';
+    document.getElementById('reserva_libre_hidden').value   = esLibre ? '1' : '0';
+
+    const cursoSelect = document.getElementById('id_curso');
+    if (cursoSelect) cursoSelect.required = !esLibre;
+
+    // El laboratorio del modo libre tiene name="laboratorio" también
+    // pero el del modo normal se deshabilita para que no se duplique en el POST
+    const labNormal = document.getElementById('id_laboratorio');
+    const labLibre  = document.getElementById('id_laboratorio_libre');
+    if (labNormal) labNormal.disabled = esLibre;
+    if (labLibre)  labLibre.disabled  = !esLibre;
+}
+
+document.querySelectorAll('input[name="modo_reserva"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        aplicarModo(this.value === 'libre');
+    });
+});
+
+// Aplicar estado inicial
+const modoLibreRadio = document.getElementById('modo_libre');
+aplicarModo(modoLibreRadio && modoLibreRadio.checked);
+
+// ─── Validación de cédula (solo números) ──────────────────────────────────
 document.getElementById('id_cedula').addEventListener('input', function(e) {
     const valor = e.target.value;
     const soloNumeros = valor.replace(/[^0-9]/g, '');
@@ -226,7 +345,6 @@ document.getElementById('id_cedula').addEventListener('input', function(e) {
         e.target.classList.remove('is-invalid');
     }
 
-    // Cargar cursos cuando se cambien nombre o cédula
     cargarCursosPorProfesor();
 });
 
@@ -236,11 +354,10 @@ function cargarCursosPorProfesor() {
     const nombre = document.getElementById('id_nombre').value;
     const cedula = document.getElementById('id_cedula').value;
 
-    const cargando = document.getElementById('curso_cargando');
+    const cargando   = document.getElementById('curso_cargando');
     const sinProfesor = document.getElementById('curso_sin_profesor');
     const cursoSelect = document.getElementById('id_curso');
 
-    // Si no hay nombre, deshabilitar y mostrar mensaje
     if (!nombre || !cedula) {
         cursoSelect.disabled = true;
         cursoSelect.innerHTML = '<option value="">-- Selecciona un curso --</option>';
@@ -249,7 +366,6 @@ function cargarCursosPorProfesor() {
         return;
     }
 
-    // Mostrar que se está cargando
     cargando.classList.remove('d-none');
     sinProfesor.classList.add('d-none');
 
@@ -259,7 +375,6 @@ function cargarCursosPorProfesor() {
             cargando.classList.add('d-none');
 
             if (data.error) {
-                // Error: deshabilitar y mostrar mensaje
                 cursoSelect.disabled = true;
                 cursoSelect.innerHTML = '<option value="">-- Profesor no encontrado --</option>';
                 sinProfesor.textContent = data.error;
@@ -268,7 +383,6 @@ function cargarCursosPorProfesor() {
                 return;
             }
 
-            // Éxito: habilitar select y mostrar cursos
             cursoSelect.disabled = false;
             cursoSelect.innerHTML = '<option value="">-- Selecciona un curso --</option>';
 
@@ -281,7 +395,6 @@ function cargarCursosPorProfesor() {
                 });
                 sinProfesor.classList.add('d-none');
             } else {
-                // Profesor encontrado pero sin cursos
                 const option = document.createElement('option');
                 option.value = '';
                 option.textContent = '-- Este profesor no tiene cursos registrados --';
@@ -303,7 +416,7 @@ function cargarCursosPorProfesor() {
         });
 }
 
-// Buscador de insumos (igual que en estudiante)
+// ─── Buscador de insumos ──────────────────────────────────────────────────
 const buscarInputProf = document.getElementById('insumo_buscar_prof');
 const dropdownDivProf = document.getElementById('insumo_dropdown_prof');
 let insumosCacheProf = null;
@@ -333,11 +446,7 @@ function mostrarInsumosProf() {
 
 function buscarInsumosProf(e) {
     const query = e.target.value;
-    if (query === '') {
-        mostrarInsumosProf();
-        return;
-    }
-
+    if (query === '') { mostrarInsumosProf(); return; }
     fetch(`/solicitudes/buscar-insumos/?q=${encodeURIComponent(query)}`)
         .then(r => r.json())
         .then(data => {
@@ -359,12 +468,8 @@ function renderDropdownProf(insumos) {
             btn.style.color = '#999';
             btn.style.backgroundColor = '#f5f5f5';
         } else {
-            btn.onclick = (e) => {
-                e.preventDefault();
-                seleccionarInsumoProf(insumo);
-            };
+            btn.onclick = (e) => { e.preventDefault(); seleccionarInsumoProf(insumo); };
         }
-
         dropdownDivProf.appendChild(btn);
     });
 }
@@ -376,14 +481,11 @@ function seleccionarInsumoProf(insumo) {
 }
 
 document.getElementById('agregar_insumo_btn_prof').addEventListener('click', function() {
-    const buscar = document.getElementById('insumo_buscar_prof');
+    const buscar   = document.getElementById('insumo_buscar_prof');
     const insumoId = buscar.dataset.insumoId;
     const cantidad = parseInt(document.getElementById('insumo_cantidad_prof').value) || 1;
 
-    if (!insumoId) {
-        alert('Selecciona un insumo de la lista');
-        return;
-    }
+    if (!insumoId) { alert('Selecciona un insumo de la lista'); return; }
 
     const texto = buscar.value;
 
@@ -409,12 +511,11 @@ function eliminarInsumoProf(insumoId) {
 }
 
 function actualizarListaInsumosProf() {
-    const lista = document.getElementById('insumos_items_prof');
+    const lista         = document.getElementById('insumos_items_prof');
     const listContainer = document.getElementById('insumos_lista_prof');
 
     lista.innerHTML = '';
-    const ids = [];
-    const cantidades = [];
+    const ids = [], cantidades = [];
 
     Object.values(insumosSeleccionadosProf).forEach(insumo => {
         const item = document.createElement('div');
@@ -433,22 +534,21 @@ function actualizarListaInsumosProf() {
         cantidades.push(insumo.cantidad);
     });
 
-    document.getElementById('id_insumos_ids_prof').value = ids.join(',');
+    document.getElementById('id_insumos_ids_prof').value       = ids.join(',');
     document.getElementById('id_insumos_cantidades_prof').value = cantidades.join(',');
     listContainer.style.display = Object.keys(insumosSeleccionadosProf).length ? 'block' : 'none';
 }
 
-// Validación de fecha - parsear manualmente para evitar problema de zona horaria
+// ─── Validación de fecha ──────────────────────────────────────────────────
 const fechaInputProf = document.getElementById('id_fecha_reserva');
 
 function validarFechaProf() {
     const fechaValue = fechaInputProf.value;
     if (!fechaValue) return;
 
-    // Parsear manualmente YYYY-MM-DD para evitar conversión UTC
     const partes = fechaValue.split('-');
     const fecha = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
-    const diaSemana = fecha.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+    const diaSemana = fecha.getDay();
 
     const errorDiv = document.getElementById('fecha_error_prof');
 
@@ -466,7 +566,7 @@ function validarFechaProf() {
 
 if (fechaInputProf) {
     fechaInputProf.addEventListener('change', validarFechaProf);
-    const hoy = new Date();
+    const hoy    = new Date();
     const manana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
     const y = manana.getFullYear();
     const m = String(manana.getMonth() + 1).padStart(2, '0');
@@ -474,35 +574,29 @@ if (fechaInputProf) {
     fechaInputProf.min = `${y}-${m}-${d}`;
 }
 
-// Generador de horas cada 30 minutos (06:00 - 18:00)
+// ─── Selectores de hora ───────────────────────────────────────────────────
 function generarHorasProf() {
     const horas = [];
     for (let h = 6; h <= 18; h++) {
         for (let m of [0, 30]) {
-            const hora = String(h).padStart(2, '0');
-            const min = String(m).padStart(2, '0');
-            horas.push(`${hora}:${min}`);
+            horas.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
         }
     }
     return horas;
 }
 
-const horasTotalesProf = generarHorasProf();
+const horasTotalesProf     = generarHorasProf();
 const horaInicioSelectProf = document.getElementById('hora_inicio_select_prof');
-const horaFinSelectProf = document.getElementById('hora_fin_select_prof');
-const horaInicioInputProf = document.getElementById('id_hora_inicio');
-const horaFinInputProf = document.getElementById('id_hora_fin');
-const errorDuracionProf = document.getElementById('error_duracion_prof');
+const horaFinSelectProf    = document.getElementById('hora_fin_select_prof');
+const horaInicioInputProf  = document.getElementById('id_hora_inicio');
+const horaFinInputProf     = document.getElementById('id_hora_fin');
 
-// Llenar dropdown de hora inicio
 horasTotalesProf.forEach(hora => {
     const option = document.createElement('option');
-    option.value = hora;
-    option.textContent = hora;
+    option.value = hora; option.textContent = hora;
     horaInicioSelectProf.appendChild(option);
 });
 
-// Actualizar hora fin cuando cambia hora inicio
 horaInicioSelectProf.addEventListener('change', function() {
     horaFinSelectProf.innerHTML = '<option value="">-- Selecciona hora fin --</option>';
     horaFinSelectProf.disabled = false;
@@ -513,29 +607,21 @@ horaInicioSelectProf.addEventListener('change', function() {
         return;
     }
 
-    // Parsear hora inicio
     const [horaIni, minIni] = this.value.split(':').map(Number);
-    const minutoIni = horaIni * 60 + minIni;
-    const minutoFin2h = minutoIni + 120;  // +2 horas
-    const minutoFin8h = minutoIni + 480;  // +8 horas
+    const minutoIni   = horaIni * 60 + minIni;
+    const minutoFin2h = minutoIni + 120;
+    const minutoFin8h = minutoIni + 480;
 
-    // Generar opciones de hora fin
     horasTotalesProf.forEach(hora => {
         const [horaFin, minFin] = hora.split(':').map(Number);
         const minutoTotal = horaFin * 60 + minFin;
-
-        // Mostrar si está entre 2h y 8h después de inicio
         if (minutoTotal > minutoFin2h && minutoTotal <= minutoFin8h) {
             const option = document.createElement('option');
-            option.value = hora;
-            option.textContent = hora;
+            option.value = hora; option.textContent = hora;
             horaFinSelectProf.appendChild(option);
         }
     });
-});
 
-// Sincronizar con los inputs hidden
-horaInicioSelectProf.addEventListener('change', function() {
     horaInicioInputProf.value = this.value;
 });
 

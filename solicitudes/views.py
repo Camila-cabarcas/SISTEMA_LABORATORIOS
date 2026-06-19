@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.core.exceptions import ValidationError
 from users.models import Usuario
 from inventario.models import Insumo
-from .models import SolicitudReserva, Curso
+from .models import SolicitudReserva, Curso, SolicitudInsumo
 from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm
 
 
@@ -32,17 +32,129 @@ def solicitud_estudiante(request):
 
 def solicitud_profesor(request):
     if request.method == 'POST':
-        form = ProfesorSolicitudForm(request.POST)
-        if form.is_valid():
-            try:
-                solicitud = form.save()
+        es_libre = request.POST.get('reserva_libre') == '1'
+
+        if es_libre:
+            from laboratorio.models import Laboratorio, Modulo
+            from datetime import datetime as dt
+
+            nombre          = request.POST.get('nombre', '').strip()
+            cedula          = request.POST.get('cedula', '').strip()
+            nombre_grupo    = request.POST.get('nombre_grupo', '').strip()
+            cantidad_str    = request.POST.get('cantidad_asistentes', '').strip()
+            descripcion     = request.POST.get('descripcion_actividad', '').strip()
+            lab_id          = request.POST.get('laboratorio', '')
+            fecha_str       = request.POST.get('fecha_reserva', '')
+            hora_ini_str    = request.POST.get('hora_inicio', '')
+            hora_fin_str    = request.POST.get('hora_fin', '')
+            observaciones   = request.POST.get('observaciones', '')
+            necesita_modulo = request.POST.get('necesita_modulo') == 'on'
+
+            errores_libres = []
+
+            if not nombre:
+                errores_libres.append('El nombre del profesor es requerido.')
+            if not cedula or not cedula.isdigit():
+                errores_libres.append('La cédula es requerida y debe contener solo números.')
+            if not nombre_grupo:
+                errores_libres.append('El nombre del grupo o actividad es requerido.')
+            if not cantidad_str or not cantidad_str.isdigit() or int(cantidad_str) < 1:
+                errores_libres.append('La cantidad de asistentes debe ser un número positivo.')
+            if not descripcion:
+                errores_libres.append('La descripción de la actividad es requerida.')
+            if not lab_id:
+                errores_libres.append('Selecciona un laboratorio.')
+            if not fecha_str:
+                errores_libres.append('Selecciona una fecha.')
+            if not hora_ini_str:
+                errores_libres.append('Selecciona la hora de inicio.')
+            if not hora_fin_str:
+                errores_libres.append('Selecciona la hora de fin.')
+
+            if not errores_libres:
                 try:
-                    reserva = solicitud.crear_reserva()
+                    laboratorio     = Laboratorio.objects.get(id=int(lab_id))
+                    fecha_dt        = dt.strptime(fecha_str, '%Y-%m-%d')
+                    hora_inicio_obj = dt.strptime(hora_ini_str, '%H:%M').time()
+                    hora_fin_obj    = dt.strptime(hora_fin_str, '%H:%M').time()
+                    cantidad        = int(cantidad_str)
+
+                    from django.db.models import Q
+                    partes = nombre.split()
+                    query = Q()
+                    for p in partes:
+                        query |= (Q(first_name__icontains=p) |
+                                  Q(last_name__icontains=p)  |
+                                  Q(username__icontains=p))
+                    usuario = Usuario.objects.filter(query, rol__nombre='Docente').first()
+
+                    solicitud = SolicitudReserva(
+                        tipo_solicitante='profesor',
+                        nombre=nombre,
+                        cedula=cedula,
+                        programa=nombre_grupo,
+                        reserva_libre=True,
+                        descripcion_actividad=descripcion,
+                        cantidad_asistentes_libre=cantidad,
+                        laboratorio=laboratorio,
+                        fecha_reserva=fecha_dt,
+                        hora_inicio=hora_inicio_obj,
+                        hora_fin=hora_fin_obj,
+                        necesita_modulo=necesita_modulo,
+                        observaciones=observaciones,
+                        usuario=usuario,
+                    )
+                    solicitud.save()
+
+                    if necesita_modulo:
+                        modulos = Modulo.objects.filter(
+                            laboratorio=laboratorio,
+                            disponible=True
+                        )[:cantidad]
+                        solicitud.modulos_asignados.set(modulos)
+
+                    ids_str       = request.POST.get('insumos_ids', '')
+                    cantidades_str = request.POST.get('insumos_cantidades', '')
+                    if ids_str:
+                        from inventario.models import Insumo as InsumoModel
+                        ids       = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
+                        cantidades = [int(x) for x in cantidades_str.split(',') if x.strip().isdigit()]
+                        for insumo_id, cant in zip(ids, cantidades):
+                            try:
+                                insumo_obj = InsumoModel.objects.get(id=insumo_id)
+                                SolicitudInsumo.objects.create(
+                                    solicitud=solicitud,
+                                    insumo=insumo_obj,
+                                    cantidad=cant
+                                )
+                            except InsumoModel.DoesNotExist:
+                                pass
+
+                    solicitud.crear_reserva()
+                    return redirect('/solicitudes/exitosa/?tipo=profesor')
+
                 except Exception as e:
-                    print(f"ERROR crear_reserva profesor: {e}")
-                return redirect('/solicitudes/exitosa/?tipo=profesor')
-            except ValidationError as e:
-                form.add_error(None, e.message if hasattr(e, 'message') else str(e))
+                    errores_libres.append(f'Error al procesar la solicitud: {e}')
+
+            return render(request, 'solicitudes/profesor.html', {
+                'form': ProfesorSolicitudForm(),
+                'errores_libres': errores_libres,
+                'post_data': request.POST,
+            })
+
+        else:
+            # Flujo normal — sin cambios
+            form = ProfesorSolicitudForm(request.POST)
+            if form.is_valid():
+                try:
+                    solicitud = form.save()
+                    try:
+                        solicitud.crear_reserva()
+                    except Exception as e:
+                        print(f"ERROR crear_reserva profesor: {e}")
+                    return redirect('/solicitudes/exitosa/?tipo=profesor')
+                except ValidationError as e:
+                    form.add_error(None, e.message if hasattr(e, 'message') else str(e))
     else:
         form = ProfesorSolicitudForm()
 

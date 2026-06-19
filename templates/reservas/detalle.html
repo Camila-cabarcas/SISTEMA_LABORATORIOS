@@ -29,14 +29,29 @@
                     {% else %}
                         <span class="badge bg-info text-dark">Estudiante</span>
                     {% endif %}
+                    {% if solicitante.reserva_libre %}
+                        <span class="badge bg-primary ms-1">Reserva libre</span>
+                    {% endif %}
                 </p>
                 <p><strong>Solicitante:</strong> {{ solicitante.nombre }}</p>
                 <p><strong>Cédula/ID:</strong> {{ solicitante.cedula|default:"No registrada" }}</p>
-                {% if solicitante.programa %}
-                    <p><strong>Programa/Carrera:</strong> {{ solicitante.programa }}</p>
-                {% endif %}
-                {% if solicitante.curso %}
-                    <p><strong>Curso:</strong> {{ solicitante.curso }}</p>
+                {% if solicitante.reserva_libre %}
+                    {% if solicitante.programa %}
+                        <p><strong>Grupo / Actividad:</strong> {{ solicitante.programa }}</p>
+                    {% endif %}
+                    {% if solicitante.descripcion_actividad %}
+                        <p><strong>Descripción de actividad:</strong> {{ solicitante.descripcion_actividad }}</p>
+                    {% endif %}
+                    {% if solicitante.cantidad_asistentes_libre %}
+                        <p><strong>Asistentes:</strong> {{ solicitante.cantidad_asistentes_libre }}</p>
+                    {% endif %}
+                {% else %}
+                    {% if solicitante.programa %}
+                        <p><strong>Programa/Carrera:</strong> {{ solicitante.programa }}</p>
+                    {% endif %}
+                    {% if solicitante.curso %}
+                        <p><strong>Curso:</strong> {{ solicitante.curso }}</p>
+                    {% endif %}
                 {% endif %}
             {% elif reserva.usuario %}
                 <p><strong>Solicitante:</strong> {{ reserva.usuario.get_full_name|default:reserva.usuario.username }}</p>
@@ -135,11 +150,21 @@
 
     {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Encargado' %}
         {% if reserva.estado.nombre == 'Pendiente' %}
-        <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/" class="mt-3">
-            {% csrf_token %}
-            <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2">Aprobar</button>
-            <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
-        </form>
+            {% if solicitante.reserva_libre and user.rol.nombre == 'Encargado' %}
+            <div class="alert alert-warning mt-3" role="alert">
+                <strong>Atención:</strong> Solo el Administrador puede aprobar esta reserva libre.
+            </div>
+            <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/" class="mt-2">
+                {% csrf_token %}
+                <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
+            </form>
+            {% else %}
+            <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/" class="mt-3">
+                {% csrf_token %}
+                <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2">Aprobar</button>
+                <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
+            </form>
+            {% endif %}
         {% endif %}
     {% endif %}
 

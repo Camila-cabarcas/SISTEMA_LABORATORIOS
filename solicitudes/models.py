@@ -69,6 +69,10 @@ class SolicitudReserva(models.Model):
 
     observaciones = models.TextField(blank=True)
 
+    reserva_libre = models.BooleanField(default=False)
+    descripcion_actividad = models.CharField(max_length=500, blank=True, default='')
+    cantidad_asistentes_libre = models.PositiveIntegerField(null=True, blank=True)
+
     modulos_asignados = models.ManyToManyField(
         Modulo,
         blank=True,
@@ -276,6 +280,8 @@ class SolicitudReserva(models.Model):
 
     def __str__(self):
         if self.tipo_solicitante == 'profesor':
+            if self.reserva_libre:
+                return f"Solicitud Libre - {self.nombre} ({self.programa or 'Sin grupo'})"
             return f"Solicitud Profesor - {self.nombre} ({self.curso})"
         if self.usuario:
             return f"Solicitud Estudiante - {self.usuario.username}"

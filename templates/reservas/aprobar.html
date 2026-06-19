@@ -20,10 +20,23 @@
         {% endfor %}
     </ul>
 
+    {% if error_libre %}
+    <div class="alert alert-danger mt-4" role="alert">
+        <strong>Permiso denegado:</strong> {{ error_libre }}
+    </div>
+    {% endif %}
+
+    {% if es_libre and user.rol.nombre == 'Encargado' %}
+    <div class="alert alert-warning mt-4" role="alert">
+        <strong>Atención:</strong> Solo el Administrador puede aprobar esta reserva libre.
+    </div>
+    {% endif %}
+
     <form method="POST" class="mt-4">
 
         {% csrf_token %}
 
+        {% if not es_libre or user.rol.nombre == 'Administrador' %}
         <button
             type="submit"
             name="accion"
@@ -32,6 +45,7 @@
         >
             Aprobar
         </button>
+        {% endif %}
 
         <button
             type="submit"

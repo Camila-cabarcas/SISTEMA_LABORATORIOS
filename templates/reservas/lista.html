@@ -80,6 +80,9 @@
                         {% else %}
                             Sin usuario
                         {% endif %}
+                        {% if reserva.solicitud.all.0.reserva_libre %}
+                            <span class="badge bg-primary ms-1">Reserva libre</span>
+                        {% endif %}
                     </td>
                     <td>{{ reserva.fecha_creacion|date:"d/m/Y H:i" }}</td>
                     <td>{{ reserva.fecha_reserva|date:"d/m/Y H:i" }}</td>

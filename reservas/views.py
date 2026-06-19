@@ -224,10 +224,20 @@ def cancelar_reserva(request, id):
 
 @rol_requerido('Administrador', 'Encargado')
 def aprobar_reserva(request, id):
-    reserva = get_object_or_404(Reserva, id=id)
+    reserva    = get_object_or_404(Reserva, id=id)
+    solicitud  = reserva.solicitud.all().first()
+    es_libre   = bool(solicitud and solicitud.reserva_libre)
 
     if request.method == 'POST':
         accion = request.POST.get('accion')
+
+        if accion == 'aprobar' and es_libre and request.user.rol.nombre != 'Administrador':
+            return render(request, 'reservas/aprobar.html', {
+                'reserva':     reserva,
+                'es_libre':    es_libre,
+                'error_libre': 'Esta reserva libre solo puede ser aprobada por un Administrador.',
+            })
+
         if accion == 'aprobar':
             reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
         elif accion == 'cancelar':
@@ -235,7 +245,10 @@ def aprobar_reserva(request, id):
         reserva.save()
         return redirect('detalle_reserva', id=reserva.pk)
 
-    return render(request, 'reservas/aprobar.html', {'reserva': reserva})
+    return render(request, 'reservas/aprobar.html', {
+        'reserva':  reserva,
+        'es_libre': es_libre,
+    })
 
 
 @rol_requerido('Administrador', 'Encargado')
