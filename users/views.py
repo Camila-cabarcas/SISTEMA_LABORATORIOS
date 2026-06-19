@@ -127,12 +127,30 @@ def lista_profesores(request):
 
 @rol_requerido('Administrador', 'Encargado')
 def crear_profesor(request):
+    import secrets
+    import string
+
     if request.method == 'POST':
         form = ProfesorForm(request.POST)
         if form.is_valid():
             profesor = form.save(commit=False)
-            profesor.set_password(form.cleaned_data['password'])
-            profesor.rol = Rol.objects.filter(nombre='Docente').first()
+
+            # Username automático: "doc_<cedula>", con sufijo si ya existe
+            cedula = form.cleaned_data['codigo']
+            base   = f"doc_{cedula}"
+            username = base
+            counter  = 2
+            while Usuario.objects.filter(username=username).exists():
+                username = f"{base}_{counter}"
+                counter += 1
+            profesor.username = username
+
+            # Contraseña aleatoria — el profesor no usa el sistema
+            alphabet = string.ascii_letters + string.digits
+            profesor.set_password(''.join(secrets.choice(alphabet) for _ in range(16)))
+
+            profesor.rol       = Rol.objects.filter(nombre='Docente').first()
+            profesor.is_active = True
             profesor.save()
             return redirect('lista_profesores')
     else:

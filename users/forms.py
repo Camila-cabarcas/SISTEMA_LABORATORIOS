@@ -87,63 +87,21 @@ class UsuarioForm(forms.ModelForm):
 
 class ProfesorForm(forms.ModelForm):
 
-    password = forms.CharField(
-        label='Contraseña temporal',
-        widget=forms.PasswordInput(
-            attrs={
-                'class': 'form-control',
-                'placeholder': 'Contraseña temporal'
-            }
-        )
-    )
-
     class Meta:
         model = Usuario
-        fields = [
-            'username',
-            'first_name',
-            'last_name',
-            'email',
-            'codigo',
-            'programa',
-            'password',
-        ]
+        fields = ['first_name', 'last_name', 'codigo', 'programa']
         widgets = {
-            'username': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Nombre de usuario'
-                }
-            ),
             'first_name': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Nombre'
-                }
+                attrs={'class': 'form-control', 'placeholder': 'Nombre'}
             ),
             'last_name': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Apellido'
-                }
-            ),
-            'email': forms.EmailInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Correo electrónico'
-                }
+                attrs={'class': 'form-control', 'placeholder': 'Apellido'}
             ),
             'codigo': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Cédula'
-                }
+                attrs={'class': 'form-control', 'placeholder': 'Cédula'}
             ),
             'programa': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Programa académico'
-                }
+                attrs={'class': 'form-control', 'placeholder': 'Programa académico'}
             ),
         }
 
@@ -152,29 +110,12 @@ class EditarProfesorForm(forms.ModelForm):
 
     class Meta:
         model = Usuario
-        fields = [
-            'first_name',
-            'last_name',
-            'email',
-            'codigo',
-            'programa',
-        ]
+        fields = ['first_name', 'last_name', 'codigo', 'programa']
         widgets = {
-            'first_name': forms.TextInput(
-                attrs={'class': 'form-control'}
-            ),
-            'last_name': forms.TextInput(
-                attrs={'class': 'form-control'}
-            ),
-            'email': forms.EmailInput(
-                attrs={'class': 'form-control'}
-            ),
-            'codigo': forms.TextInput(
-                attrs={'class': 'form-control'}
-            ),
-            'programa': forms.TextInput(
-                attrs={'class': 'form-control'}
-            ),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name':  forms.TextInput(attrs={'class': 'form-control'}),
+            'codigo':     forms.TextInput(attrs={'class': 'form-control'}),
+            'programa':   forms.TextInput(attrs={'class': 'form-control'}),
         }
 
 

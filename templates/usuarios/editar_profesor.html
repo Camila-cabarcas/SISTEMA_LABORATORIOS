@@ -4,7 +4,7 @@
 
 <h1 class="mb-4">Editar Profesor — {{ profesor.first_name }} {{ profesor.last_name }}</h1>
 
-<div class="card p-4" style="max-width: 680px;">
+<div class="card p-4" style="max-width: 620px;">
     <form method="POST">
         {% csrf_token %}
 
@@ -42,20 +42,12 @@
                 {% endif %}
             </div>
             <div class="col-md-6 mb-3">
-                <label class="form-label">Correo electrónico</label>
-                {{ form.email }}
-                {% if form.email.errors %}
-                    <div class="invalid-feedback d-block">{{ form.email.errors }}</div>
+                <label class="form-label">Programa académico</label>
+                {{ form.programa }}
+                {% if form.programa.errors %}
+                    <div class="invalid-feedback d-block">{{ form.programa.errors }}</div>
                 {% endif %}
             </div>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Programa académico</label>
-            {{ form.programa }}
-            {% if form.programa.errors %}
-                <div class="invalid-feedback d-block">{{ form.programa.errors }}</div>
-            {% endif %}
         </div>
 
         <div class="d-flex gap-2 mt-2">
