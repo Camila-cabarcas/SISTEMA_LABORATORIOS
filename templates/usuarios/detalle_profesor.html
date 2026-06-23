@@ -3,9 +3,17 @@
 {% block contenido %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="mb-0">{{ profesor.first_name }} {{ profesor.last_name }}</h1>
+    <h1 class="mb-0">{{ profesor.get_full_name|default:profesor.username }}</h1>
     <div class="d-flex gap-2">
         <a href="/usuarios/profesores/{{ profesor.id }}/editar/" class="btn btn-warning">Editar</a>
+        <form method="POST" action="/usuarios/profesores/{{ profesor.id }}/toggle/" style="display:inline;">
+            {% csrf_token %}
+            {% if profesor.is_active %}
+                <button type="submit" class="btn btn-danger">Desactivar</button>
+            {% else %}
+                <button type="submit" class="btn btn-success">Activar</button>
+            {% endif %}
+        </form>
         <a href="/usuarios/profesores/" class="btn btn-secondary">Volver</a>
     </div>
 </div>
@@ -14,8 +22,7 @@
     <h5 class="mb-3">Información del Profesor</h5>
     <div class="row">
         <div class="col-md-6">
-            <p><strong>Nombre completo:</strong> {{ profesor.first_name }} {{ profesor.last_name }}</p>
-            <p><strong>Usuario:</strong> {{ profesor.username }}</p>
+            <p><strong>Nombre completo:</strong> {{ profesor.get_full_name|default:profesor.username }}</p>
             <p><strong>Cédula:</strong> {{ profesor.codigo|default:"No registrada" }}</p>
         </div>
         <div class="col-md-6">
@@ -36,7 +43,7 @@
 <div class="card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">Cursos asignados</h5>
-        <a href="/solicitudes/cursos/crear/" class="btn btn-primary btn-sm">+ Nuevo Curso</a>
+        <a href="/solicitudes/cursos/crear/?profesor_id={{ profesor.id }}" class="btn btn-primary btn-sm">+ Nuevo Curso</a>
     </div>
 
     {% if cursos %}

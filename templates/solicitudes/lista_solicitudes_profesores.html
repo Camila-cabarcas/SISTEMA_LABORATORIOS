@@ -1,0 +1,59 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Solicitudes de Registro de Profesores</h1>
+
+<div class="card p-4">
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Cédula</th>
+                    <th>Correo</th>
+                    <th>Programa</th>
+                    <th>Cursos</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for solicitud in solicitudes %}
+                <tr>
+                    <td>{{ solicitud.nombre }} {{ solicitud.apellido }}</td>
+                    <td>{{ solicitud.cedula }}</td>
+                    <td>{{ solicitud.correo|default:"—" }}</td>
+                    <td>{{ solicitud.programa|default:"—" }}</td>
+                    <td>
+                        <span class="badge bg-secondary">{{ solicitud.cursos_solicitados.count }}</span>
+                    </td>
+                    <td>
+                        {% if solicitud.estado == 'pendiente' %}
+                            <span class="badge bg-warning text-dark">Pendiente</span>
+                        {% elif solicitud.estado == 'aprobada' %}
+                            <span class="badge bg-success">Aprobada</span>
+                        {% else %}
+                            <span class="badge bg-danger">Rechazada</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <a href="/solicitudes/solicitudes-profesores/{{ solicitud.id }}/"
+                           class="btn btn-info btn-sm">Ver detalle</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-3">
+                        No hay solicitudes de registro.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

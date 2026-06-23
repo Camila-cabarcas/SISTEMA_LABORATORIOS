@@ -5,6 +5,16 @@
     <div class="col-md-6 text-center">
         <div class="card p-5 shadow-sm">
             <div class="mb-3" style="font-size: 3rem;">✅</div>
+            {% if tipo == 'registro_profesor' %}
+            <h2 class="mb-2">¡Solicitud enviada!</h2>
+            <p class="text-muted mb-4">
+                Tu solicitud de registro ha sido enviada.<br>
+                El administrador la revisará y te contactará por correo cuando sea aprobada.
+            </p>
+            <a href="{% url 'registro_profesor_publico' %}" class="btn btn-primary">
+                Nueva solicitud
+            </a>
+            {% else %}
             <h2 class="mb-2">¡Solicitud enviada!</h2>
             <p class="text-muted mb-4">
                 Tu solicitud de reserva fue recibida correctamente.<br>
@@ -18,6 +28,7 @@
                 <a href="{% url 'solicitud_estudiante' %}" class="btn btn-primary">
                     Nueva solicitud
                 </a>
+            {% endif %}
             {% endif %}
         </div>
     </div>

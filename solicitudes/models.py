@@ -288,6 +288,53 @@ class SolicitudReserva(models.Model):
         return f"Solicitud Estudiante Anónimo - ID {self.id}"
 
 
+ESTADO_SOLICITUD_REGISTRO = [
+    ('pendiente', 'Pendiente'),
+    ('aprobada', 'Aprobada'),
+    ('rechazada', 'Rechazada'),
+]
+
+
+class SolicitudRegistroProfesor(models.Model):
+    nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100)
+    cedula = models.CharField(max_length=20, unique=True)
+    correo = models.EmailField(blank=True, default='')
+    programa = models.CharField(max_length=200, blank=True, default='')
+    estado = models.CharField(
+        max_length=20, choices=ESTADO_SOLICITUD_REGISTRO, default='pendiente'
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    usuario_creado = models.ForeignKey(
+        'users.Usuario', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='solicitud_registro'
+    )
+
+    def __str__(self):
+        return f"{self.nombre} {self.apellido} ({self.cedula})"
+
+
+class SolicitudRegistroCurso(models.Model):
+    solicitud_profesor = models.ForeignKey(
+        SolicitudRegistroProfesor,
+        on_delete=models.CASCADE,
+        related_name='cursos_solicitados'
+    )
+    nombre = models.CharField(max_length=200)
+    codigo = models.CharField(max_length=50)
+    cantidad_estudiantes = models.PositiveIntegerField()
+    estado = models.CharField(
+        max_length=20, choices=ESTADO_SOLICITUD_REGISTRO, default='pendiente'
+    )
+    curso_creado = models.ForeignKey(
+        'solicitudes.Curso', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='solicitud_origen'
+    )
+
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
+
+
 class SolicitudInsumo(models.Model):
     solicitud = models.ForeignKey(
         SolicitudReserva,

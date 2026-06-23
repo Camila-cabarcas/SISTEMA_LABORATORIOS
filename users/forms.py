@@ -89,13 +89,16 @@ class ProfesorForm(forms.ModelForm):
 
     class Meta:
         model = Usuario
-        fields = ['first_name', 'last_name', 'codigo', 'programa']
+        fields = ['first_name', 'last_name', 'email', 'codigo', 'programa']
         widgets = {
             'first_name': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Nombre'}
             ),
             'last_name': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Apellido'}
+            ),
+            'email': forms.EmailInput(
+                attrs={'class': 'form-control', 'placeholder': 'Correo electrónico'}
             ),
             'codigo': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Cédula'}
@@ -110,10 +113,11 @@ class EditarProfesorForm(forms.ModelForm):
 
     class Meta:
         model = Usuario
-        fields = ['first_name', 'last_name', 'codigo', 'programa']
+        fields = ['first_name', 'last_name', 'email', 'codigo', 'programa']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name':  forms.TextInput(attrs={'class': 'form-control'}),
+            'email':      forms.EmailInput(attrs={'class': 'form-control'}),
             'codigo':     forms.TextInput(attrs={'class': 'form-control'}),
             'programa':   forms.TextInput(attrs={'class': 'form-control'}),
         }

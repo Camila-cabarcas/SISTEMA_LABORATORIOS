@@ -23,7 +23,6 @@
             <thead>
                 <tr>
                     <th>Nombre</th>
-                    <th>Usuario</th>
                     <th>Cédula</th>
                     <th>Correo</th>
                     <th>Programa</th>
@@ -34,8 +33,7 @@
             <tbody>
                 {% for profesor in profesores %}
                 <tr>
-                    <td>{{ profesor.first_name }} {{ profesor.last_name }}</td>
-                    <td>{{ profesor.username }}</td>
+                    <td>{{ profesor.get_full_name|default:profesor.username }}</td>
                     <td>{{ profesor.codigo|default:"—" }}</td>
                     <td>{{ profesor.email|default:"—" }}</td>
                     <td>{{ profesor.programa|default:"—" }}</td>
@@ -51,7 +49,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-3">
+                    <td colspan="6" class="text-center text-muted py-3">
                         No se encontraron profesores{% if q %} con "{{ q }}"{% endif %}.
                     </td>
                 </tr>

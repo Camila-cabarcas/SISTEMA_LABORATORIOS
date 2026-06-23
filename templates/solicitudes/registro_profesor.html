@@ -1,0 +1,142 @@
+{% extends 'base_publica.html' %}
+
+{% block titulo %}Registro de Profesor — Sistema de Laboratorios{% endblock %}
+
+{% block contenido %}
+<h1 class="mb-4">Registro de Profesor</h1>
+
+{% if errores %}
+<div class="alert alert-danger">
+    {% for error in errores %}
+    <div>{{ error }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="POST">
+    {% csrf_token %}
+
+    <div class="card p-4 mb-4">
+        <h5 class="mb-3">Datos del Profesor</h5>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Nombre *</label>
+                <input type="text" name="nombre" class="form-control"
+                       value="{{ post_data.nombre }}" placeholder="Nombre" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Apellido *</label>
+                <input type="text" name="apellido" class="form-control"
+                       value="{{ post_data.apellido }}" placeholder="Apellido" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Cédula *</label>
+                <input type="text" name="cedula" class="form-control"
+                       value="{{ post_data.cedula }}" placeholder="Número de cédula" required>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Correo electrónico</label>
+                <input type="email" name="correo" class="form-control"
+                       value="{{ post_data.correo }}" placeholder="correo@ejemplo.com">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Programa académico</label>
+                <input type="text" name="programa" class="form-control"
+                       value="{{ post_data.programa }}" placeholder="Programa">
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Cursos</h5>
+            <button type="button" id="btn-agregar-curso" class="btn btn-outline-primary btn-sm">
+                + Agregar curso
+            </button>
+        </div>
+
+        <div class="row fw-semibold mb-2 d-none d-md-flex text-muted small">
+            <div class="col-md-5">Nombre del curso *</div>
+            <div class="col-md-3">Código *</div>
+            <div class="col-md-3">N.° estudiantes *</div>
+            <div class="col-md-1"></div>
+        </div>
+
+        <div id="filas-cursos">
+            <div class="fila-curso row mb-2">
+                <div class="col-md-5 mb-2 mb-md-0">
+                    <input type="text" name="curso_nombre" class="form-control"
+                           placeholder="Nombre del curso">
+                </div>
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <input type="text" name="curso_codigo" class="form-control"
+                           placeholder="Código">
+                </div>
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <input type="number" name="curso_cantidad" class="form-control"
+                           placeholder="Estudiantes" min="1">
+                </div>
+                <div class="col-md-1 d-flex align-items-center">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-eliminar" disabled>✕</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-5">
+        <button type="submit" class="btn btn-primary">Enviar solicitud</button>
+        <a href="/" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const filasContainer = document.getElementById('filas-cursos');
+const btnAgregar = document.getElementById('btn-agregar-curso');
+
+function actualizarBotones() {
+    const filas = filasContainer.querySelectorAll('.fila-curso');
+    filas.forEach(f => {
+        f.querySelector('.btn-eliminar').disabled = filas.length === 1;
+    });
+}
+
+function crearFila() {
+    const div = document.createElement('div');
+    div.className = 'fila-curso row mb-2';
+    div.innerHTML = `
+        <div class="col-md-5 mb-2 mb-md-0">
+            <input type="text" name="curso_nombre" class="form-control" placeholder="Nombre del curso">
+        </div>
+        <div class="col-md-3 mb-2 mb-md-0">
+            <input type="text" name="curso_codigo" class="form-control" placeholder="Código">
+        </div>
+        <div class="col-md-3 mb-2 mb-md-0">
+            <input type="number" name="curso_cantidad" class="form-control" placeholder="Estudiantes" min="1">
+        </div>
+        <div class="col-md-1 d-flex align-items-center">
+            <button type="button" class="btn btn-outline-danger btn-sm btn-eliminar">✕</button>
+        </div>
+    `;
+    div.querySelector('.btn-eliminar').addEventListener('click', () => {
+        div.remove();
+        actualizarBotones();
+    });
+    return div;
+}
+
+btnAgregar.addEventListener('click', () => {
+    filasContainer.appendChild(crearFila());
+    actualizarBotones();
+});
+
+// Activar botón de la fila inicial
+document.querySelector('.btn-eliminar').addEventListener('click', function () {
+    this.closest('.fila-curso').remove();
+    actualizarBotones();
+});
+</script>
+{% endblock %}

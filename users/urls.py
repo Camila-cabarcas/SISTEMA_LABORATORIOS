@@ -13,6 +13,7 @@ from .views import (
     crear_profesor,
     detalle_profesor,
     editar_profesor,
+    toggle_profesor,
 )
 
 urlpatterns = [
@@ -26,4 +27,5 @@ urlpatterns = [
     path('profesores/crear/', crear_profesor, name='crear_profesor'),
     path('profesores/<int:id>/', detalle_profesor, name='detalle_profesor'),
     path('profesores/<int:id>/editar/', editar_profesor, name='editar_profesor'),
+    path('profesores/<int:id>/toggle/', toggle_profesor, name='toggle_profesor'),
 ]

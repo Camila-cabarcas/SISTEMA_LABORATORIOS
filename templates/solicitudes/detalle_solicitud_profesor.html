@@ -1,0 +1,119 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Solicitud — {{ solicitud.nombre }} {{ solicitud.apellido }}</h1>
+    <a href="/solicitudes/solicitudes-profesores/" class="btn btn-secondary">Volver</a>
+</div>
+
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Datos del Solicitante</h5>
+    <div class="row">
+        <div class="col-md-6">
+            <p><strong>Nombre:</strong> {{ solicitud.nombre }} {{ solicitud.apellido }}</p>
+            <p><strong>Cédula:</strong> {{ solicitud.cedula }}</p>
+            <p><strong>Correo:</strong> {{ solicitud.correo|default:"—" }}</p>
+        </div>
+        <div class="col-md-6">
+            <p><strong>Programa:</strong> {{ solicitud.programa|default:"—" }}</p>
+            <p><strong>Fecha de solicitud:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</p>
+            <p>
+                <strong>Estado:</strong>
+                {% if solicitud.estado == 'pendiente' %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                {% elif solicitud.estado == 'aprobada' %}
+                    <span class="badge bg-success">Aprobada</span>
+                {% else %}
+                    <span class="badge bg-danger">Rechazada</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    {% if solicitud.estado == 'pendiente' %}
+    <div class="d-flex gap-2 mt-3">
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="aprobar_profesor">
+            <button type="submit" class="btn btn-success">Aprobar profesor</button>
+        </form>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="rechazar_profesor">
+            <button type="submit" class="btn btn-danger">Rechazar profesor</button>
+        </form>
+    </div>
+    {% elif solicitud.estado == 'aprobada' and solicitud.usuario_creado %}
+    <p class="mt-3 mb-0 text-muted">
+        Profesor creado:
+        <strong>{{ solicitud.usuario_creado.get_full_name }}</strong>
+        ({{ solicitud.usuario_creado.username }})
+    </p>
+    {% endif %}
+</div>
+
+<div class="card p-4">
+    <h5 class="mb-3">Cursos Solicitados</h5>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Código</th>
+                    <th>Estudiantes</th>
+                    <th>Estado</th>
+                    {% if solicitud.estado == 'aprobada' %}<th>Acciones</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for curso in cursos %}
+                <tr>
+                    <td>{{ curso.nombre }}</td>
+                    <td>{{ curso.codigo }}</td>
+                    <td>{{ curso.cantidad_estudiantes }}</td>
+                    <td>
+                        {% if curso.estado == 'pendiente' %}
+                            <span class="badge bg-warning text-dark">Pendiente</span>
+                        {% elif curso.estado == 'aprobada' %}
+                            <span class="badge bg-success">Aprobado</span>
+                        {% else %}
+                            <span class="badge bg-danger">Rechazado</span>
+                        {% endif %}
+                    </td>
+                    {% if solicitud.estado == 'aprobada' %}
+                    <td>
+                        {% if curso.estado == 'pendiente' %}
+                        <div class="d-flex gap-1">
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="accion" value="aprobar_curso">
+                                <input type="hidden" name="curso_id" value="{{ curso.id }}">
+                                <button type="submit" class="btn btn-success btn-sm">Aprobar</button>
+                            </form>
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="accion" value="rechazar_curso">
+                                <input type="hidden" name="curso_id" value="{{ curso.id }}">
+                                <button type="submit" class="btn btn-danger btn-sm">Rechazar</button>
+                            </form>
+                        </div>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-3">
+                        No hay cursos en esta solicitud.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

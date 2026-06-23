@@ -144,6 +144,7 @@ def crear_profesor(request):
                 username = f"{base}_{counter}"
                 counter += 1
             profesor.username = username
+            profesor.email = form.cleaned_data.get('email', '')
 
             # Contraseña aleatoria — el profesor no usa el sistema
             alphabet = string.ascii_letters + string.digits
@@ -183,3 +184,12 @@ def editar_profesor(request, id):
         'form': form,
         'profesor': profesor,
     })
+
+
+@rol_requerido('Administrador')
+def toggle_profesor(request, id):
+    profesor = get_object_or_404(Usuario, id=id, rol__nombre='Docente')
+    if request.method == 'POST':
+        profesor.is_active = not profesor.is_active
+        profesor.save()
+    return redirect('detalle_profesor', id=id)

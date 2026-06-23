@@ -7,6 +7,9 @@
 <div class="card p-4" style="max-width: 620px;">
     <form method="POST">
         {% csrf_token %}
+        {% if profesor_id %}
+            <input type="hidden" name="profesor_id" value="{{ profesor_id }}">
+        {% endif %}
 
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
@@ -35,9 +38,17 @@
 
         <div class="mb-3">
             <label class="form-label">Profesor *</label>
-            {{ form.profesor }}
-            {% if form.profesor.errors %}
-                <div class="invalid-feedback d-block">{{ form.profesor.errors }}</div>
+            {% if profesor_preseleccionado %}
+                <input type="hidden" name="profesor" value="{{ profesor_preseleccionado.id }}">
+                <p class="form-control-plaintext fw-semibold">
+                    {{ profesor_preseleccionado.get_full_name|default:profesor_preseleccionado.username }}
+                    {% if profesor_preseleccionado.codigo %}— {{ profesor_preseleccionado.codigo }}{% endif %}
+                </p>
+            {% else %}
+                {{ form.profesor }}
+                {% if form.profesor.errors %}
+                    <div class="invalid-feedback d-block">{{ form.profesor.errors }}</div>
+                {% endif %}
             {% endif %}
         </div>
 

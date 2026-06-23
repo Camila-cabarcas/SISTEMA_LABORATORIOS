@@ -15,6 +15,9 @@ from .views import (
     crear_curso,
     editar_curso,
     eliminar_curso,
+    registro_profesor_publico,
+    lista_solicitudes_profesores,
+    detalle_solicitud_profesor,
 )
 
 urlpatterns = [
@@ -30,4 +33,8 @@ urlpatterns = [
     path('cursos/crear/', crear_curso, name='crear_curso'),
     path('cursos/<int:id>/editar/', editar_curso, name='editar_curso'),
     path('cursos/<int:id>/eliminar/', eliminar_curso, name='eliminar_curso'),
+    # Registro público de profesores
+    path('registro-profesor/', registro_profesor_publico, name='registro_profesor_publico'),
+    path('solicitudes-profesores/', lista_solicitudes_profesores, name='lista_solicitudes_profesores'),
+    path('solicitudes-profesores/<int:id>/', detalle_solicitud_profesor, name='detalle_solicitud_profesor'),
 ]

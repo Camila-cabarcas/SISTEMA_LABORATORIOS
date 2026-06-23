@@ -284,6 +284,8 @@ class CursoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from users.models import Usuario
-        self.fields['profesor'].queryset = (
-            Usuario.objects.filter(rol__nombre='Docente').order_by('last_name', 'first_name')
-        )
+        self.fields['profesor'].queryset = Usuario.objects.filter(
+            rol__nombre='Docente', is_active=True
+        ).order_by('last_name', 'first_name')
+        self.fields['profesor'].label_from_instance = lambda obj: \
+            f"{obj.get_full_name() or obj.username} — {obj.codigo or 'Sin cédula'}"
