@@ -25,12 +25,16 @@
         <a class="nav-link" href="/prestamos/">Préstamos</a>
         <a class="nav-link" href="/reservas/">Reservas</a>
         <a class="nav-link" href="/usuarios/">Usuarios</a>
+        <a class="nav-link {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">Profesores</a>
+        <a class="nav-link {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">Cursos</a>
         <a class="nav-link" href="/laboratorio/">Laboratorio</a>
     {% elif user.rol.nombre == 'Encargado' %}
         <a class="nav-link" href="/inventario/items/">Items</a>
         <a class="nav-link" href="/inventario/movimientos/">Movimientos</a>
         <a class="nav-link" href="/prestamos/">Préstamos</a>
         <a class="nav-link" href="/reservas/">Reservas</a>
+        <a class="nav-link {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">Profesores</a>
+        <a class="nav-link {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">Cursos</a>
         <a class="nav-link" href="/laboratorio/">Laboratorio</a>
     {% endif %}
 </div>
