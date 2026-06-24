@@ -4,9 +4,11 @@
 
 <h1 class="mb-4">Laboratorios</h1>
 
+{% if is_admin %}
 <a href="/laboratorio/crear/" class="btn btn-primary mb-4">
     Nuevo Laboratorio
 </a>
+{% endif %}
 
 <div class="card p-4">
 
@@ -17,7 +19,7 @@
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Ubicación</th>
-                <th>Encargado</th>
+                <th>Encargados</th>
                 <th>Programa</th>
                 <th>Acciones</th>
             </tr>
@@ -29,7 +31,13 @@
                 <td>{{ lab.id }}</td>
                 <td>{{ lab.nombre }}</td>
                 <td>{{ lab.ubicacion }}</td>
-                <td>{{ lab.encargado }}</td>
+                <td>
+                    {% for enc in lab.encargados.all %}
+                        <span class="badge bg-secondary">{{ enc.get_full_name|default:enc.username }}</span>
+                    {% empty %}
+                        <span class="text-muted">Sin encargado</span>
+                    {% endfor %}
+                </td>
                 <td>{{ lab.programa }}</td>
                 <td>
                     <a href="/laboratorio/{{ lab.id }}/"
@@ -38,8 +46,9 @@
                     </a>
                     <a href="/laboratorio/{{ lab.id }}/mapa/"
                     class="btn btn-primary btn-sm">
-                        🗺️ Mapa
+                        Mapa
                     </a>
+                    {% if is_admin %}
                     <a href="/laboratorio/{{ lab.id }}/editar/"
                     class="btn btn-warning btn-sm">
                         Editar
@@ -48,7 +57,12 @@
                     class="btn btn-danger btn-sm">
                         Eliminar
                     </a>
+                    {% endif %}
                 </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted">No hay laboratorios asignados.</td>
             </tr>
             {% endfor %}
         </tbody>

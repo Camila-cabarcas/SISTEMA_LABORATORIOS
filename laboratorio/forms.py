@@ -15,7 +15,6 @@ class LaboratorioForm(forms.ModelForm):
         fields = [
             'nombre',
             'ubicacion',
-            'encargado',
             'programa',
         ]
 
@@ -32,12 +31,6 @@ class LaboratorioForm(forms.ModelForm):
                 attrs={
                     'class': 'form-control',
                     'placeholder': 'Ubicación'
-                }
-            ),
-
-            'encargado': forms.Select(
-                attrs={
-                    'class': 'form-select'
                 }
             ),
 

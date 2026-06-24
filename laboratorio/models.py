@@ -10,11 +10,12 @@ class Laboratorio(models.Model):
     nombre = models.CharField(max_length=100)
     ubicacion = models.CharField(max_length=200)
 
-    encargado = models.ForeignKey(
+    encargados = models.ManyToManyField(
         'users.Usuario',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
+        blank=True,
+        limit_choices_to={'rol__nombre': 'Encargado'},
+        related_name='laboratorios_asignados',
+        verbose_name='Encargados',
     )
 
     programa = models.CharField(max_length=100, blank=True)

@@ -19,6 +19,7 @@ from .views import (
     toggle_modulo,
     estado_modulos_api,
     modulos_disponibles_api,
+    gestionar_encargados,
 )
 
 urlpatterns = [
@@ -37,4 +38,5 @@ urlpatterns = [
     path('<int:lab_id>/modulo/<int:mod_id>/toggle/', toggle_modulo, name='toggle_modulo'),
     path('<int:id>/modulos/estado/', estado_modulos_api, name='estado_modulos_api'),
     path('<int:id>/modulos/disponibles/', modulos_disponibles_api, name='modulos_disponibles_api'),
+    path('<int:lab_id>/encargados/', gestionar_encargados, name='gestionar_encargados'),
 ]

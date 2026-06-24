@@ -4,7 +4,9 @@ Vistas para gestionar laboratorios, eventos, mapa visual de módulos y APIs de e
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
+from django.core.exceptions import PermissionDenied
 from users.decorators import rol_requerido
+from users.models import Usuario
 from .models import Laboratorio, EventoLaboratorio
 from .forms import LaboratorioForm
 from inventario.models import ItemInventario
@@ -12,114 +14,87 @@ from reservas.models import ReservaInsumo
 from prestamos.models import PrestamoItem
 
 
-@rol_requerido('Administrador')
+def _check_lab_access(request, laboratorio):
+    """403 si el Encargado no tiene este laboratorio asignado."""
+    if request.user.rol.nombre == 'Encargado':
+        if not laboratorio.encargados.filter(id=request.user.id).exists():
+            raise PermissionDenied
+
+
+@rol_requerido('Administrador', 'Encargado')
 def lista_laboratorios(request):
+    if request.user.rol.nombre == 'Administrador':
+        laboratorios = Laboratorio.objects.all()
+    else:
+        laboratorios = request.user.laboratorios_asignados.all()
 
-    laboratorios = Laboratorio.objects.all()
-
-    return render(
-        request,
-        'laboratorio/lista.html',
-        {
-            'laboratorios': laboratorios
-        }
-    )
+    return render(request, 'laboratorio/lista.html', {
+        'laboratorios': laboratorios,
+        'is_admin': request.user.rol.nombre == 'Administrador',
+    })
 
 
 @rol_requerido('Administrador')
 def crear_laboratorio(request):
-
     if request.method == 'POST':
-
         form = LaboratorioForm(request.POST)
-
         if form.is_valid():
-
             form.save()
-
             return redirect('lista_laboratorios')
-
     else:
-
         form = LaboratorioForm()
 
-    return render(
-        request,
-        'laboratorio/crear.html',
-        {
-            'form': form
-        }
-    )
+    return render(request, 'laboratorio/crear.html', {'form': form})
 
 
 @rol_requerido('Administrador', 'Encargado')
 def detalle_laboratorio(request, id):
-
     laboratorio = get_object_or_404(Laboratorio, id=id)
+    _check_lab_access(request, laboratorio)
     items = ItemInventario.objects.filter(laboratorio=laboratorio)
+    is_admin = request.user.rol.nombre == 'Administrador'
 
-    return render(
-        request,
-        'laboratorio/detalle.html',
-        {
-            'laboratorio': laboratorio,
-            'items': items
-        }
-    )
+    return render(request, 'laboratorio/detalle.html', {
+        'laboratorio': laboratorio,
+        'items':       items,
+        'is_admin':    is_admin,
+        'encargados':  laboratorio.encargados.all(),
+    })
 
 
 @rol_requerido('Administrador')
 def editar_laboratorio(request, id):
-
     laboratorio = get_object_or_404(Laboratorio, id=id)
 
     if request.method == 'POST':
-
         form = LaboratorioForm(request.POST, instance=laboratorio)
-
         if form.is_valid():
-
             form.save()
-
             return redirect('lista_laboratorios')
-
     else:
-
         form = LaboratorioForm(instance=laboratorio)
 
-    return render(
-        request,
-        'laboratorio/editar.html',
-        {
-            'form': form,
-            'laboratorio': laboratorio
-        }
-    )
+    return render(request, 'laboratorio/editar.html', {
+        'form': form,
+        'laboratorio': laboratorio,
+    })
 
 
 @rol_requerido('Administrador')
 def eliminar_laboratorio(request, id):
-
     laboratorio = get_object_or_404(Laboratorio, id=id)
 
     if request.method == 'POST':
-
         laboratorio.delete()
         return redirect('lista_laboratorios')
 
-    return render(
-        request,
-        'laboratorio/eliminar.html',
-        {
-            'laboratorio': laboratorio
-        }
-    )
+    return render(request, 'laboratorio/eliminar.html', {'laboratorio': laboratorio})
 
 
 @rol_requerido('Administrador', 'Encargado')
 def reservas_laboratorio(request, id):
-
     laboratorio = get_object_or_404(Laboratorio, id=id)
+    _check_lab_access(request, laboratorio)
 
     reservas_insumos = ReservaInsumo.objects.filter(
         insumo__items__laboratorio=laboratorio
@@ -129,20 +104,16 @@ def reservas_laboratorio(request, id):
     for ri in reservas_insumos:
         reservas.add(ri.reserva)
 
-    return render(
-        request,
-        'laboratorio/reservas.html',
-        {
-            'laboratorio': laboratorio,
-            'reservas': list(reservas)
-        }
-    )
+    return render(request, 'laboratorio/reservas.html', {
+        'laboratorio': laboratorio,
+        'reservas':    list(reservas),
+    })
 
 
 @rol_requerido('Administrador', 'Encargado')
 def prestamos_laboratorio(request, id):
-
     laboratorio = get_object_or_404(Laboratorio, id=id)
+    _check_lab_access(request, laboratorio)
 
     prestamos_items = PrestamoItem.objects.filter(
         item_inventario__laboratorio=laboratorio
@@ -152,44 +123,34 @@ def prestamos_laboratorio(request, id):
     for pi in prestamos_items:
         prestamos.add(pi.prestamo)
 
-    return render(
-        request,
-        'laboratorio/prestamos.html',
-        {
-            'laboratorio': laboratorio,
-            'prestamos': list(prestamos)
-        }
-    )
+    return render(request, 'laboratorio/prestamos.html', {
+        'laboratorio': laboratorio,
+        'prestamos':   list(prestamos),
+    })
 
 
 @rol_requerido('Administrador', 'Encargado')
 def disponibilidad_laboratorio(request, id):
-
     laboratorio = get_object_or_404(Laboratorio, id=id)
+    _check_lab_access(request, laboratorio)
 
-    return render(
-        request,
-        'laboratorio/disponibilidad.html',
-        {
-            'laboratorio': laboratorio
-        }
-    )
+    return render(request, 'laboratorio/disponibilidad.html', {'laboratorio': laboratorio})
 
 
 @rol_requerido('Administrador', 'Encargado')
 def eventos_laboratorio(request, id):
-
     laboratorio = get_object_or_404(Laboratorio, id=id)
+    _check_lab_access(request, laboratorio)
     eventos = EventoLaboratorio.objects.filter(laboratorio=laboratorio)
 
     data = []
     for evento in eventos:
         data.append({
-            'id': evento.id,
-            'title': evento.titulo,
-            'start': evento.inicio.strftime('%Y-%m-%dT%H:%M:%S'),
-            'end': evento.fin.strftime('%Y-%m-%dT%H:%M:%S'),
-            'color': '#dc3545' if evento.bloqueado else '#28a745',
+            'id':       evento.id,
+            'title':    evento.titulo,
+            'start':    evento.inicio.strftime('%Y-%m-%dT%H:%M:%S'),
+            'end':      evento.fin.strftime('%Y-%m-%dT%H:%M:%S'),
+            'color':    '#dc3545' if evento.bloqueado else '#28a745',
             'bloqueado': evento.bloqueado,
         })
 
@@ -198,14 +159,13 @@ def eventos_laboratorio(request, id):
 
 @rol_requerido('Administrador', 'Encargado')
 def crear_evento(request, id):
-
     laboratorio = get_object_or_404(Laboratorio, id=id)
+    _check_lab_access(request, laboratorio)
 
     if request.method == 'POST':
-
-        titulo = request.POST.get('titulo')
-        inicio = request.POST.get('inicio')
-        fin = request.POST.get('fin')
+        titulo    = request.POST.get('titulo')
+        inicio    = request.POST.get('inicio')
+        fin       = request.POST.get('fin')
         bloqueado = request.POST.get('bloqueado') == 'true'
 
         EventoLaboratorio.objects.create(
@@ -214,9 +174,8 @@ def crear_evento(request, id):
             inicio=inicio,
             fin=fin,
             bloqueado=bloqueado,
-            creado_por=request.user
+            creado_por=request.user,
         )
-
         return JsonResponse({'status': 'ok'})
 
     return JsonResponse({'status': 'error'}, status=400)
@@ -224,8 +183,8 @@ def crear_evento(request, id):
 
 @rol_requerido('Administrador', 'Encargado')
 def eliminar_evento(request, id):
-
     evento = get_object_or_404(EventoLaboratorio, id=id)
+    _check_lab_access(request, evento.laboratorio)
 
     if request.method == 'POST':
         evento.delete()
@@ -240,6 +199,7 @@ def mapa_laboratorio(request, id):
     from solicitudes.models import SolicitudReserva
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
+    _check_lab_access(request, laboratorio)
 
     fecha_str       = request.GET.get('fecha', '')
     hora_inicio_str = request.GET.get('hora_inicio', '')
@@ -248,13 +208,11 @@ def mapa_laboratorio(request, id):
     filtro_valido = True
     error_filtro  = ''
 
-    # Validar que los tres parámetros estén presentes
     if not (fecha_str and hora_inicio_str and hora_fin_str):
         filtro_valido = False
         if fecha_str or hora_inicio_str or hora_fin_str:
             error_filtro = "Debes seleccionar fecha, hora de inicio y hora de fin para ver el mapa."
 
-    # Parsear fecha
     fecha = date.today()
     if fecha_str:
         try:
@@ -263,7 +221,6 @@ def mapa_laboratorio(request, id):
             filtro_valido = False
             error_filtro  = "Formato de fecha inválido."
 
-    # Parsear horas
     hora_inicio_filtro = None
     hora_fin_filtro    = None
     if filtro_valido:
@@ -278,7 +235,6 @@ def mapa_laboratorio(request, id):
             filtro_valido = False
             error_filtro  = "Formato de hora inválido."
 
-    # Validar hora_fin > hora_inicio
     if filtro_valido and hora_inicio_filtro and hora_fin_filtro:
         if hora_fin_filtro <= hora_inicio_filtro:
             filtro_valido = False
@@ -396,16 +352,19 @@ def mapa_laboratorio(request, id):
         'error_filtro':       error_filtro,
     })
 
+
 @rol_requerido('Administrador', 'Encargado')
 def toggle_modulo(request, lab_id, mod_id):
     from .models import Modulo
-    modulo = get_object_or_404(Modulo, id=mod_id, laboratorio__id=lab_id)
+    laboratorio = get_object_or_404(Laboratorio, id=lab_id)
+    _check_lab_access(request, laboratorio)
+    modulo = get_object_or_404(Modulo, id=mod_id, laboratorio=laboratorio)
 
     if request.method == 'POST':
         disponible = request.POST.get('disponible') == 'true'
         motivo     = request.POST.get('motivo', '').strip()
-        modulo.disponible            = disponible
-        modulo.motivo_no_disponible  = '' if disponible else motivo
+        modulo.disponible           = disponible
+        modulo.motivo_no_disponible = '' if disponible else motivo
         modulo.save()
         return JsonResponse({
             'status':     'ok',
@@ -423,6 +382,8 @@ def estado_modulos_api(request, id):
     from solicitudes.models import SolicitudReserva
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
+    _check_lab_access(request, laboratorio)
+
     fecha_str = request.GET.get('fecha', '')
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
@@ -465,7 +426,7 @@ def estado_modulos_api(request, id):
         for modulo in sol.modulos_asignados.all():
             modulo_solicitudes.setdefault(modulo.id, []).append(sol)
 
-    es_hoy = (fecha == date.today())
+    es_hoy      = (fecha == date.today())
     hora_actual = timezone.now().time()
 
     resultado = {}
@@ -492,13 +453,13 @@ def estado_modulos_api(request, id):
 
         color_map = {
             'disponible': 'success',
-            'ocupado': 'danger',
-            'reservado': 'warning',
-            'inactivo': 'secondary',
+            'ocupado':    'danger',
+            'reservado':  'warning',
+            'inactivo':   'secondary',
         }
         resultado[modulo.id] = {
             'estado': estado,
-            'color': color_map[estado],
+            'color':  color_map[estado],
         }
 
     return JsonResponse(resultado)
@@ -510,6 +471,8 @@ def modulos_disponibles_api(request, id):
     from solicitudes.models import SolicitudReserva
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
+    _check_lab_access(request, laboratorio)
+
     fecha_str = request.GET.get('fecha', '')
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
@@ -539,16 +502,44 @@ def modulos_disponibles_api(request, id):
 
         color_map = {
             'disponible': 'success',
-            'reservado': 'warning',
-            'inactivo': 'secondary',
+            'reservado':  'warning',
+            'inactivo':   'secondary',
         }
         modulos.append({
-            'id': modulo.id,
-            'nombre': modulo.nombre,
-            'capacidad': modulo.capacidad,
-            'estado': estado,
-            'color': color_map.get(estado, 'secondary'),
+            'id':          modulo.id,
+            'nombre':      modulo.nombre,
+            'capacidad':   modulo.capacidad,
+            'estado':      estado,
+            'color':       color_map.get(estado, 'secondary'),
             'seleccionable': estado == 'disponible',
         })
 
     return JsonResponse({'modulos': modulos})
+
+
+@rol_requerido('Administrador')
+def gestionar_encargados(request, lab_id):
+    laboratorio = get_object_or_404(Laboratorio, id=lab_id)
+
+    if request.method == 'POST':
+        accion       = request.POST.get('accion')
+        encargado_id = request.POST.get('encargado_id')
+        encargado    = get_object_or_404(Usuario, id=encargado_id, rol__nombre='Encargado')
+
+        if accion == 'asignar':
+            laboratorio.encargados.add(encargado)
+        elif accion == 'desasignar':
+            laboratorio.encargados.remove(encargado)
+
+        return redirect('detalle_laboratorio', id=lab_id)
+
+    encargados_actuales    = laboratorio.encargados.all()
+    encargados_disponibles = Usuario.objects.filter(
+        rol__nombre='Encargado'
+    ).exclude(id__in=encargados_actuales.values_list('id', flat=True))
+
+    return render(request, 'laboratorio/gestionar_encargados.html', {
+        'laboratorio':           laboratorio,
+        'encargados_actuales':   encargados_actuales,
+        'encargados_disponibles': encargados_disponibles,
+    })

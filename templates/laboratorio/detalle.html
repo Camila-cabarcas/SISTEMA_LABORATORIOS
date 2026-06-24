@@ -9,36 +9,36 @@
     <h5>Información del laboratorio</h5>
 
     <p><strong>Ubicación:</strong> {{ laboratorio.ubicacion }}</p>
-    <p><strong>Encargado:</strong> {{ laboratorio.encargado }}</p>
     <p><strong>Programa:</strong> {{ laboratorio.programa }}</p>
 
-    <a
-        href="/laboratorio/{{ laboratorio.id }}/editar/"
-        class="btn btn-warning btn-sm"
-    >
-        Editar
-    </a>
+    <p>
+        <strong>Encargados:</strong>
+        {% for enc in encargados %}
+            <span class="badge bg-secondary ms-1">{{ enc.get_full_name|default:enc.username }}</span>
+        {% empty %}
+            <span class="text-muted">Sin encargados asignados</span>
+        {% endfor %}
+    </p>
 
-    <a
-        href="/laboratorio/{{ laboratorio.id }}/reservas/"
-        class="btn btn-info btn-sm"
-    >
-        Ver Reservas
-    </a>
-
-    <a
-        href="/laboratorio/{{ laboratorio.id }}/prestamos/"
-        class="btn btn-info btn-sm"
-    >
-        Ver Préstamos
-    </a>
-
-    <a
-        href="/laboratorio/{{ laboratorio.id }}/eliminar/"
-        class="btn btn-danger btn-sm"
-    >
-        Eliminar
-    </a>
+    <div class="d-flex flex-wrap gap-2 mt-3">
+        {% if is_admin %}
+        <a href="/laboratorio/{{ laboratorio.id }}/editar/" class="btn btn-warning btn-sm">
+            Editar
+        </a>
+        <a href="/laboratorio/{{ laboratorio.id }}/encargados/" class="btn btn-secondary btn-sm">
+            Gestionar encargados
+        </a>
+        <a href="/laboratorio/{{ laboratorio.id }}/eliminar/" class="btn btn-danger btn-sm">
+            Eliminar
+        </a>
+        {% endif %}
+        <a href="/laboratorio/{{ laboratorio.id }}/reservas/" class="btn btn-info btn-sm">
+            Ver Reservas
+        </a>
+        <a href="/laboratorio/{{ laboratorio.id }}/prestamos/" class="btn btn-info btn-sm">
+            Ver Préstamos
+        </a>
+    </div>
 
 </div>
 
