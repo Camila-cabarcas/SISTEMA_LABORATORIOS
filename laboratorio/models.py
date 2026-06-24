@@ -105,11 +105,22 @@ class Modulo(models.Model):
 
 
 class Laboratorista(models.Model):
+    RESPONSABILIDADES_CHOICES = [
+        ('prestamos',     'Gestión de préstamos'),
+        ('atencion',      'Atención a estudiantes y profesores'),
+        ('inventario',    'Control de inventario'),
+        ('mantenimiento', 'Mantenimiento de equipos'),
+        ('apertura',      'Apertura y cierre del laboratorio'),
+        ('movimientos',   'Registro de movimientos'),
+        ('supervision',   'Supervisión de prácticas'),
+    ]
+
     nombre    = models.CharField(max_length=100)
     apellido  = models.CharField(max_length=100)
     cedula    = models.CharField(max_length=20, unique=True)
     correo    = models.EmailField(blank=True, default='')
     programa  = models.CharField(max_length=200, blank=True, default='')
+    responsabilidades = models.JSONField(default=list, blank=True)
     laboratorios = models.ManyToManyField(
         Laboratorio,
         blank=True,

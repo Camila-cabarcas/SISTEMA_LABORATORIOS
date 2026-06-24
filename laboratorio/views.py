@@ -566,20 +566,26 @@ def lista_laboratoristas(request):
 
 @rol_requerido('Administrador')
 def crear_laboratorista(request):
+    import json
     from users.models import ProgramaAcademico
-    errores = []
-    datos   = {}
+    errores          = []
+    datos            = {}
+    resp_sel         = ['prestamos', 'atencion', 'inventario']
+    labs_asignados_j = json.dumps([])
 
     if request.method == 'POST':
-        nombre    = request.POST.get('nombre', '').strip()
-        apellido  = request.POST.get('apellido', '').strip()
-        cedula    = request.POST.get('cedula', '').strip()
-        correo    = request.POST.get('correo', '').strip()
-        programa  = request.POST.get('programa', '').strip()
-        lab_ids   = request.POST.getlist('laboratorios')
+        nombre            = request.POST.get('nombre', '').strip()
+        apellido          = request.POST.get('apellido', '').strip()
+        cedula            = request.POST.get('cedula', '').strip()
+        correo            = request.POST.get('correo', '').strip()
+        programa          = request.POST.get('programa', '').strip()
+        lab_ids           = request.POST.getlist('laboratorios')
+        responsabilidades = request.POST.getlist('responsabilidades')
+        resp_sel          = responsabilidades
+        labs_asignados_j  = json.dumps([int(x) for x in lab_ids if x.isdigit()])
         datos = {
             'nombre': nombre, 'apellido': apellido, 'cedula': cedula,
-            'correo': correo, 'programa': programa, 'lab_ids': lab_ids,
+            'correo': correo, 'programa': programa,
         }
 
         if not nombre:
@@ -595,31 +601,41 @@ def crear_laboratorista(request):
             lab = Laboratorista.objects.create(
                 nombre=nombre, apellido=apellido, cedula=cedula,
                 correo=correo, programa=programa,
+                responsabilidades=responsabilidades,
             )
             lab.laboratorios.set(Laboratorio.objects.filter(id__in=lab_ids))
             return redirect('lista_laboratoristas')
 
     return render(request, 'laboratorio/crear_laboratorista.html', {
-        'programas':    ProgramaAcademico.objects.filter(activo=True),
-        'laboratorios': Laboratorio.objects.all(),
-        'errores':      errores,
-        'datos':        datos,
+        'programas':              ProgramaAcademico.objects.filter(activo=True),
+        'laboratorios':           Laboratorio.objects.all(),
+        'errores':                errores,
+        'datos':                  datos,
+        'responsabilidades_choices': Laboratorista.RESPONSABILIDADES_CHOICES,
+        'responsabilidades_sel':  resp_sel,
+        'labs_asignados_json':    labs_asignados_j,
     })
 
 
 @rol_requerido('Administrador')
 def editar_laboratorista(request, id):
+    import json
     from users.models import ProgramaAcademico
-    laboratorista = get_object_or_404(Laboratorista, id=id)
-    errores       = []
+    laboratorista    = get_object_or_404(Laboratorista, id=id)
+    errores          = []
+    resp_sel         = laboratorista.responsabilidades
+    labs_asignados_j = json.dumps(list(laboratorista.laboratorios.values_list('id', flat=True)))
 
     if request.method == 'POST':
-        nombre   = request.POST.get('nombre', '').strip()
-        apellido = request.POST.get('apellido', '').strip()
-        cedula   = request.POST.get('cedula', '').strip()
-        correo   = request.POST.get('correo', '').strip()
-        programa = request.POST.get('programa', '').strip()
-        lab_ids  = request.POST.getlist('laboratorios')
+        nombre            = request.POST.get('nombre', '').strip()
+        apellido          = request.POST.get('apellido', '').strip()
+        cedula            = request.POST.get('cedula', '').strip()
+        correo            = request.POST.get('correo', '').strip()
+        programa          = request.POST.get('programa', '').strip()
+        lab_ids           = request.POST.getlist('laboratorios')
+        responsabilidades = request.POST.getlist('responsabilidades')
+        resp_sel          = responsabilidades
+        labs_asignados_j  = json.dumps([int(x) for x in lab_ids if x.isdigit()])
 
         if not nombre:
             errores.append('El nombre es requerido.')
@@ -631,21 +647,24 @@ def editar_laboratorista(request, id):
             errores.append('Ya existe un laboratorista con esa cédula.')
 
         if not errores:
-            laboratorista.nombre   = nombre
-            laboratorista.apellido = apellido
-            laboratorista.cedula   = cedula
-            laboratorista.correo   = correo
-            laboratorista.programa = programa
+            laboratorista.nombre              = nombre
+            laboratorista.apellido            = apellido
+            laboratorista.cedula              = cedula
+            laboratorista.correo              = correo
+            laboratorista.programa            = programa
+            laboratorista.responsabilidades   = responsabilidades
             laboratorista.save()
             laboratorista.laboratorios.set(Laboratorio.objects.filter(id__in=lab_ids))
             return redirect('lista_laboratoristas')
 
     return render(request, 'laboratorio/editar_laboratorista.html', {
-        'laboratorista': laboratorista,
-        'programas':     ProgramaAcademico.objects.filter(activo=True),
-        'laboratorios':  Laboratorio.objects.all(),
-        'labs_asignados': list(laboratorista.laboratorios.values_list('id', flat=True)),
-        'errores':       errores,
+        'laboratorista':          laboratorista,
+        'programas':              ProgramaAcademico.objects.filter(activo=True),
+        'laboratorios':           Laboratorio.objects.all(),
+        'errores':                errores,
+        'responsabilidades_choices': Laboratorista.RESPONSABILIDADES_CHOICES,
+        'responsabilidades_sel':  resp_sel,
+        'labs_asignados_json':    labs_asignados_j,
     })
 
 
