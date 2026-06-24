@@ -80,4 +80,37 @@
 
 </div>
 
+<div class="card p-4 mt-4">
+
+    <h5>Laboratoristas asignados</h5>
+
+    {% if laboratorio.laboratoristas.all %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Correo</th>
+                <th>Programa</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in laboratorio.laboratoristas.all %}
+            {% if l.activo %}
+            <tr>
+                <td>{{ l }}</td>
+                <td>{{ l.cedula }}</td>
+                <td>{{ l.correo|default:"—" }}</td>
+                <td>{{ l.programa|default:"—" }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">No hay laboratoristas asignados a este laboratorio.</p>
+    {% endif %}
+
+</div>
+
 {% endblock %}

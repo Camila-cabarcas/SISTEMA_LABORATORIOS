@@ -1,0 +1,65 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Laboratoristas</h1>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="/laboratorio/laboratoristas/crear/" class="btn btn-primary">
+        Nuevo Laboratorista
+    </a>
+    <form method="GET" class="d-flex gap-2">
+        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+               placeholder="Buscar por nombre o cédula..." style="width:260px;">
+        <button type="submit" class="btn btn-dark btn-sm">Buscar</button>
+        {% if q %}
+        <a href="/laboratorio/laboratoristas/" class="btn btn-secondary btn-sm">Limpiar</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card p-4">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Correo</th>
+                <th>Programa</th>
+                <th>Laboratorios</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lab in laboratoristas %}
+            <tr>
+                <td>{{ lab }}</td>
+                <td>{{ lab.cedula }}</td>
+                <td>{{ lab.correo|default:"—" }}</td>
+                <td>{{ lab.programa|default:"—" }}</td>
+                <td>
+                    {% for l in lab.laboratorios.all %}
+                        <span class="badge bg-secondary">{{ l.nombre }}</span>
+                    {% empty %}
+                        <span class="text-muted">Sin asignar</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    <a href="/laboratorio/laboratoristas/{{ lab.id }}/editar/"
+                       class="btn btn-warning btn-sm">Editar</a>
+                    <a href="/laboratorio/laboratoristas/{{ lab.id }}/eliminar/"
+                       class="btn btn-danger btn-sm">Eliminar</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    No se encontraron laboratoristas.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

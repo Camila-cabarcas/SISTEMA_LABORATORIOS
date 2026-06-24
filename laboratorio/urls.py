@@ -20,11 +20,19 @@ from .views import (
     estado_modulos_api,
     modulos_disponibles_api,
     gestionar_encargados,
+    lista_laboratoristas,
+    crear_laboratorista,
+    editar_laboratorista,
+    eliminar_laboratorista,
 )
 
 urlpatterns = [
     path('', lista_laboratorios, name='lista_laboratorios'),
     path('crear/', crear_laboratorio, name='crear_laboratorio'),
+    path('laboratoristas/', lista_laboratoristas, name='lista_laboratoristas'),
+    path('laboratoristas/crear/', crear_laboratorista, name='crear_laboratorista'),
+    path('laboratoristas/<int:id>/editar/', editar_laboratorista, name='editar_laboratorista'),
+    path('laboratoristas/<int:id>/eliminar/', eliminar_laboratorista, name='eliminar_laboratorista'),
     path('<int:id>/', detalle_laboratorio, name='detalle_laboratorio'),
     path('<int:id>/editar/', editar_laboratorio, name='editar_laboratorio'),
     path('<int:id>/eliminar/', eliminar_laboratorio, name='eliminar_laboratorio'),

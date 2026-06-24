@@ -1,0 +1,84 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Editar Laboratorista</h1>
+
+{% if errores %}
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        {% for e in errores %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="card p-4">
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Nombre *</label>
+                <input type="text" name="nombre" class="form-control"
+                       value="{{ laboratorista.nombre }}" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Apellido *</label>
+                <input type="text" name="apellido" class="form-control"
+                       value="{{ laboratorista.apellido }}" required>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Cédula *</label>
+                <input type="text" name="cedula" class="form-control"
+                       value="{{ laboratorista.cedula }}" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Correo</label>
+                <input type="email" name="correo" class="form-control"
+                       value="{{ laboratorista.correo }}">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Programa académico</label>
+            <select name="programa" class="form-select">
+                <option value="">--- Sin programa ---</option>
+                {% for p in programas %}
+                <option value="{{ p.nombre }}"
+                    {% if laboratorista.programa == p.nombre %}selected{% endif %}>
+                    {{ p.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Laboratorios asignados</label>
+            <div class="row">
+                {% for lab in laboratorios %}
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox"
+                               name="laboratorios" value="{{ lab.id }}"
+                               id="lab_{{ lab.id }}"
+                               {% if lab.id in labs_asignados %}checked{% endif %}>
+                        <label class="form-check-label" for="lab_{{ lab.id }}">
+                            {{ lab.nombre }}
+                        </label>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            <a href="/laboratorio/laboratoristas/" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

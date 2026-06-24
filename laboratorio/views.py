@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.core.exceptions import PermissionDenied
 from users.decorators import rol_requerido
 from users.models import Usuario
-from .models import Laboratorio, EventoLaboratorio
+from .models import Laboratorio, EventoLaboratorio, Laboratorista
 from .forms import LaboratorioForm
 from inventario.models import ItemInventario
 from reservas.models import ReservaInsumo
@@ -542,4 +542,121 @@ def gestionar_encargados(request, lab_id):
         'laboratorio':           laboratorio,
         'encargados_actuales':   encargados_actuales,
         'encargados_disponibles': encargados_disponibles,
+    })
+
+
+# ── Laboratoristas ─────────────────────────────────────────────
+
+@rol_requerido('Administrador')
+def lista_laboratoristas(request):
+    from django.db.models import Q
+    q = request.GET.get('q', '').strip()
+    qs = Laboratorista.objects.prefetch_related('laboratorios')
+    if q:
+        qs = qs.filter(
+            Q(nombre__icontains=q) |
+            Q(apellido__icontains=q) |
+            Q(cedula__icontains=q)
+        )
+    return render(request, 'laboratorio/lista_laboratoristas.html', {
+        'laboratoristas': qs,
+        'q': q,
+    })
+
+
+@rol_requerido('Administrador')
+def crear_laboratorista(request):
+    from users.models import ProgramaAcademico
+    errores = []
+    datos   = {}
+
+    if request.method == 'POST':
+        nombre    = request.POST.get('nombre', '').strip()
+        apellido  = request.POST.get('apellido', '').strip()
+        cedula    = request.POST.get('cedula', '').strip()
+        correo    = request.POST.get('correo', '').strip()
+        programa  = request.POST.get('programa', '').strip()
+        lab_ids   = request.POST.getlist('laboratorios')
+        datos = {
+            'nombre': nombre, 'apellido': apellido, 'cedula': cedula,
+            'correo': correo, 'programa': programa, 'lab_ids': lab_ids,
+        }
+
+        if not nombre:
+            errores.append('El nombre es requerido.')
+        if not apellido:
+            errores.append('El apellido es requerido.')
+        if not cedula:
+            errores.append('La cédula es requerida.')
+        elif Laboratorista.objects.filter(cedula=cedula).exists():
+            errores.append('Ya existe un laboratorista con esa cédula.')
+
+        if not errores:
+            lab = Laboratorista.objects.create(
+                nombre=nombre, apellido=apellido, cedula=cedula,
+                correo=correo, programa=programa,
+            )
+            lab.laboratorios.set(Laboratorio.objects.filter(id__in=lab_ids))
+            return redirect('lista_laboratoristas')
+
+    return render(request, 'laboratorio/crear_laboratorista.html', {
+        'programas':    ProgramaAcademico.objects.filter(activo=True),
+        'laboratorios': Laboratorio.objects.all(),
+        'errores':      errores,
+        'datos':        datos,
+    })
+
+
+@rol_requerido('Administrador')
+def editar_laboratorista(request, id):
+    from users.models import ProgramaAcademico
+    laboratorista = get_object_or_404(Laboratorista, id=id)
+    errores       = []
+
+    if request.method == 'POST':
+        nombre   = request.POST.get('nombre', '').strip()
+        apellido = request.POST.get('apellido', '').strip()
+        cedula   = request.POST.get('cedula', '').strip()
+        correo   = request.POST.get('correo', '').strip()
+        programa = request.POST.get('programa', '').strip()
+        lab_ids  = request.POST.getlist('laboratorios')
+
+        if not nombre:
+            errores.append('El nombre es requerido.')
+        if not apellido:
+            errores.append('El apellido es requerido.')
+        if not cedula:
+            errores.append('La cédula es requerida.')
+        elif Laboratorista.objects.filter(cedula=cedula).exclude(id=id).exists():
+            errores.append('Ya existe un laboratorista con esa cédula.')
+
+        if not errores:
+            laboratorista.nombre   = nombre
+            laboratorista.apellido = apellido
+            laboratorista.cedula   = cedula
+            laboratorista.correo   = correo
+            laboratorista.programa = programa
+            laboratorista.save()
+            laboratorista.laboratorios.set(Laboratorio.objects.filter(id__in=lab_ids))
+            return redirect('lista_laboratoristas')
+
+    return render(request, 'laboratorio/editar_laboratorista.html', {
+        'laboratorista': laboratorista,
+        'programas':     ProgramaAcademico.objects.filter(activo=True),
+        'laboratorios':  Laboratorio.objects.all(),
+        'labs_asignados': list(laboratorista.laboratorios.values_list('id', flat=True)),
+        'errores':       errores,
+    })
+
+
+@rol_requerido('Administrador')
+def eliminar_laboratorista(request, id):
+    laboratorista = get_object_or_404(Laboratorista, id=id)
+
+    if request.method == 'POST':
+        laboratorista.delete()
+        return redirect('lista_laboratoristas')
+
+    return render(request, 'laboratorio/confirmar_eliminar_laboratorista.html', {
+        'laboratorista': laboratorista,
     })
