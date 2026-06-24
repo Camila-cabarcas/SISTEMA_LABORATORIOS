@@ -6,8 +6,8 @@ y gestión completa de profesores (Administrador o Encargado).
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
 from users.decorators import rol_requerido
-from .models import Usuario, Rol
-from .forms import UsuarioForm, EditarUsuarioForm, ProfesorForm, EditarProfesorForm
+from .models import Usuario, Rol, ProgramaAcademico
+from .forms import UsuarioForm, EditarUsuarioForm, ProfesorForm, EditarProfesorForm, ProgramaAcademicoForm
 
 
 @rol_requerido('Administrador')
@@ -156,7 +156,8 @@ def crear_profesor(request):
             return redirect('lista_profesores')
     else:
         form = ProfesorForm()
-    return render(request, 'usuarios/crear_profesor.html', {'form': form})
+    programas = ProgramaAcademico.objects.filter(activo=True)
+    return render(request, 'usuarios/crear_profesor.html', {'form': form, 'programas': programas})
 
 
 @rol_requerido('Administrador', 'Encargado')
@@ -180,9 +181,11 @@ def editar_profesor(request, id):
             return redirect('detalle_profesor', id=profesor.id)
     else:
         form = EditarProfesorForm(instance=profesor)
+    programas = ProgramaAcademico.objects.filter(activo=True)
     return render(request, 'usuarios/editar_profesor.html', {
         'form': form,
         'profesor': profesor,
+        'programas': programas,
     })
 
 
@@ -193,3 +196,58 @@ def toggle_profesor(request, id):
         profesor.is_active = not profesor.is_active
         profesor.save()
     return redirect('detalle_profesor', id=id)
+
+
+# ── Gestión de programas académicos ─────────────────────────────────────────
+
+@rol_requerido('Administrador')
+def lista_programas(request):
+    programas = ProgramaAcademico.objects.all()
+    return render(request, 'usuarios/lista_programas.html', {'programas': programas})
+
+
+@rol_requerido('Administrador')
+def crear_programa(request):
+    if request.method == 'POST':
+        form = ProgramaAcademicoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('lista_programas')
+    else:
+        form = ProgramaAcademicoForm()
+    return render(request, 'usuarios/crear_programa.html', {'form': form})
+
+
+@rol_requerido('Administrador')
+def editar_programa(request, id):
+    programa = get_object_or_404(ProgramaAcademico, id=id)
+    if request.method == 'POST':
+        form = ProgramaAcademicoForm(request.POST, instance=programa)
+        if form.is_valid():
+            form.save()
+            return redirect('lista_programas')
+    else:
+        form = ProgramaAcademicoForm(instance=programa)
+    return render(request, 'usuarios/editar_programa.html', {
+        'form': form,
+        'programa': programa,
+    })
+
+
+@rol_requerido('Administrador')
+def eliminar_programa(request, id):
+    from solicitudes.models import SolicitudReserva, SolicitudRegistroProfesor
+    programa = get_object_or_404(ProgramaAcademico, id=id)
+    error = None
+    if request.method == 'POST':
+        if (Usuario.objects.filter(programa=programa.nombre).exists() or
+                SolicitudReserva.objects.filter(programa=programa.nombre).exists() or
+                SolicitudRegistroProfesor.objects.filter(programa=programa.nombre).exists()):
+            error = 'No se puede eliminar: hay registros vinculados a este programa.'
+        else:
+            programa.delete()
+            return redirect('lista_programas')
+    return render(request, 'usuarios/confirmar_eliminar_programa.html', {
+        'programa': programa,
+        'error': error,
+    })

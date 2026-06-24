@@ -1,10 +1,10 @@
 """
 forms.py — users
 Formularios para crear y editar usuarios del sistema (UsuarioForm, EditarUsuarioForm,
-ProfesorForm y EditarProfesorForm).
+ProfesorForm y EditarProfesorForm) y gestión de ProgramaAcademico.
 """
 from django import forms
-from .models import Usuario
+from .models import Usuario, ProgramaAcademico
 
 
 class UsuarioForm(forms.ModelForm):
@@ -87,6 +87,13 @@ class UsuarioForm(forms.ModelForm):
 
 class ProfesorForm(forms.ModelForm):
 
+    programa = forms.ModelChoiceField(
+        queryset=ProgramaAcademico.objects.filter(activo=True),
+        required=False,
+        empty_label='-- Selecciona un programa --',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
     class Meta:
         model = Usuario
         fields = ['first_name', 'last_name', 'email', 'codigo', 'programa']
@@ -103,13 +110,21 @@ class ProfesorForm(forms.ModelForm):
             'codigo': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Cédula'}
             ),
-            'programa': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Programa académico'}
-            ),
         }
+
+    def clean_programa(self):
+        programa = self.cleaned_data.get('programa')
+        return programa.nombre if programa else ''
 
 
 class EditarProfesorForm(forms.ModelForm):
+
+    programa = forms.ModelChoiceField(
+        queryset=ProgramaAcademico.objects.filter(activo=True),
+        required=False,
+        empty_label='-- Selecciona un programa --',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
 
     class Meta:
         model = Usuario
@@ -119,8 +134,20 @@ class EditarProfesorForm(forms.ModelForm):
             'last_name':  forms.TextInput(attrs={'class': 'form-control'}),
             'email':      forms.EmailInput(attrs={'class': 'form-control'}),
             'codigo':     forms.TextInput(attrs={'class': 'form-control'}),
-            'programa':   forms.TextInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.programa:
+            prog = ProgramaAcademico.objects.filter(
+                nombre=self.instance.programa
+            ).first()
+            if prog:
+                self.initial['programa'] = prog.pk
+
+    def clean_programa(self):
+        programa = self.cleaned_data.get('programa')
+        return programa.nombre if programa else ''
 
 
 class EditarUsuarioForm(forms.ModelForm):
@@ -175,4 +202,17 @@ class EditarUsuarioForm(forms.ModelForm):
                     'class': 'form-select'
                 }
             ),
+        }
+
+
+class ProgramaAcademicoForm(forms.ModelForm):
+
+    class Meta:
+        model = ProgramaAcademico
+        fields = ['nombre', 'activo']
+        widgets = {
+            'nombre': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Nombre del programa'}
+            ),
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }

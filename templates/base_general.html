@@ -25,6 +25,7 @@
         <a class="nav-link" href="/prestamos/">Préstamos</a>
         <a class="nav-link" href="/reservas/">Reservas</a>
         <a class="nav-link" href="/usuarios/">Usuarios</a>
+        <a class="nav-link {% if '/usuarios/programas' in request.path %}active{% endif %}" href="/usuarios/programas/">Programas</a>
         <a class="nav-link {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">
             Profesores
             {% if notif_profesores > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}

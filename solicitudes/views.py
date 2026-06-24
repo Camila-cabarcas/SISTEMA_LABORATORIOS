@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from users.models import Usuario
+from users.models import Usuario, ProgramaAcademico
 from users.decorators import rol_requerido
 from inventario.models import Insumo
 from .models import SolicitudReserva, Curso, SolicitudInsumo, SolicitudRegistroProfesor, SolicitudRegistroCurso
@@ -29,7 +29,8 @@ def solicitud_estudiante(request):
     else:
         form = EstudianteSolicitudForm(None)
 
-    return render(request, 'solicitudes/estudiante.html', {'form': form})
+    programas = ProgramaAcademico.objects.filter(activo=True)
+    return render(request, 'solicitudes/estudiante.html', {'form': form, 'programas': programas})
 
 
 def solicitud_profesor(request):
@@ -303,9 +304,11 @@ def registro_profesor_publico(request):
                 )
             return redirect('/solicitudes/exitosa/?tipo=registro_profesor')
 
+    programas = ProgramaAcademico.objects.filter(activo=True)
     return render(request, 'solicitudes/registro_profesor.html', {
         'errores': errores,
         'post_data': post_data,
+        'programas': programas,
     })
 
 

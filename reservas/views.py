@@ -79,7 +79,9 @@ def crear_reserva(request):
     from users.models import Usuario
     from django.db.models import Q
 
+    from users.models import ProgramaAcademico
     laboratorios = Laboratorio.objects.all()
+    programas = ProgramaAcademico.objects.filter(activo=True)
 
     if request.method == 'POST':
         tipo          = request.POST.get('tipo_solicitante', 'estudiante')
@@ -180,11 +182,13 @@ def crear_reserva(request):
         return render(request, 'reservas/crear.html', {
             'errors': errors,
             'laboratorios': laboratorios,
+            'programas': programas,
             'post_data': request.POST,
         })
 
     return render(request, 'reservas/crear.html', {
         'laboratorios': laboratorios,
+        'programas': programas,
     })
 
 

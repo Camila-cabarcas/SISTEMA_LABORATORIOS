@@ -14,6 +14,10 @@ from .views import (
     detalle_profesor,
     editar_profesor,
     toggle_profesor,
+    lista_programas,
+    crear_programa,
+    editar_programa,
+    eliminar_programa,
 )
 
 urlpatterns = [
@@ -28,4 +32,9 @@ urlpatterns = [
     path('profesores/<int:id>/', detalle_profesor, name='detalle_profesor'),
     path('profesores/<int:id>/editar/', editar_profesor, name='editar_profesor'),
     path('profesores/<int:id>/toggle/', toggle_profesor, name='toggle_profesor'),
+    # Programas académicos
+    path('programas/', lista_programas, name='lista_programas'),
+    path('programas/crear/', crear_programa, name='crear_programa'),
+    path('programas/<int:id>/editar/', editar_programa, name='editar_programa'),
+    path('programas/<int:id>/eliminar/', eliminar_programa, name='eliminar_programa'),
 ]

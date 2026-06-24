@@ -13,6 +13,19 @@ class Rol(models.Model):
         return self.nombre
 
 
+class ProgramaAcademico(models.Model):
+    nombre = models.CharField(max_length=200, unique=True)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['nombre']
+        verbose_name = 'Programa académico'
+        verbose_name_plural = 'Programas académicos'
+
+    def __str__(self):
+        return self.nombre
+
+
 class Usuario(AbstractUser):
     codigo = models.CharField(max_length=50, unique=True, blank=True)
     programa = models.CharField(max_length=100, blank=True)

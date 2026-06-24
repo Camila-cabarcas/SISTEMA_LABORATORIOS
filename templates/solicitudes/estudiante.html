@@ -51,7 +51,15 @@
 
         <div class="mb-3">
             <label for="id_programa" class="form-label">Programa/Carrera *</label>
-            {{ form.programa }}
+            <select name="programa" id="id_programa" class="form-select" required>
+                <option value="">--- Selecciona un programa ---</option>
+                {% for p in programas %}
+                <option value="{{ p.nombre }}"
+                    {% if form.data.programa == p.nombre %}selected{% endif %}>
+                    {{ p.nombre }}
+                </option>
+                {% endfor %}
+            </select>
             {% if form.programa.errors %}
                 <div class="invalid-feedback d-block">{{ form.programa.errors }}</div>
             {% endif %}

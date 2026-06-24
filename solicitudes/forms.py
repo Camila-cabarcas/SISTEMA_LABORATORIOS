@@ -90,6 +90,13 @@ class EstudianteSolicitudForm(forms.ModelForm):
         if user and user.is_authenticated:
             self.instance.usuario = user
 
+        # Cargar programas desde la base de datos
+        from users.models import ProgramaAcademico
+        self.fields['programa'].choices = (
+            [('', '--- Selecciona un programa ---')] +
+            [(p.nombre, p.nombre) for p in ProgramaAcademico.objects.filter(activo=True)]
+        )
+
         # Hacer campos requeridos de forma segura
         campos_requeridos = ['nombre', 'cedula', 'programa', 'laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin']
         for campo in campos_requeridos:

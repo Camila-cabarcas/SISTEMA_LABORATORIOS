@@ -1,0 +1,50 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Programas Académicos</h1>
+    <a href="/usuarios/programas/crear/" class="btn btn-primary">+ Nuevo Programa</a>
+</div>
+
+<div class="card p-4">
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for programa in programas %}
+                <tr>
+                    <td>{{ programa.nombre }}</td>
+                    <td>
+                        {% if programa.activo %}
+                            <span class="badge bg-success">Activo</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="d-flex gap-1">
+                        <a href="/usuarios/programas/{{ programa.id }}/editar/"
+                           class="btn btn-warning btn-sm">Editar</a>
+                        <a href="/usuarios/programas/{{ programa.id }}/eliminar/"
+                           class="btn btn-danger btn-sm">Eliminar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center text-muted py-3">
+                        No hay programas registrados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
