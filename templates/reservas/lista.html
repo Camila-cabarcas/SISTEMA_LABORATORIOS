@@ -16,9 +16,10 @@
 </div>
 
 <form method="GET" class="card p-3 mb-4" id="filtro-form">
-    <input type="hidden" name="estado"       id="estado-hidden"       value="{{ estado_filtro }}">
-    <input type="hidden" name="fecha_inicio" id="fecha_inicio_hidden" value="{{ fecha_inicio }}">
-    <input type="hidden" name="fecha_fin"    id="fecha_fin_hidden"    value="{{ fecha_fin }}">
+    <input type="hidden" name="estado"        id="estado-hidden"        value="{{ estado_filtro }}">
+    <input type="hidden" name="fecha_inicio"  id="fecha_inicio_hidden"  value="{{ fecha_inicio }}">
+    <input type="hidden" name="fecha_fin"     id="fecha_fin_hidden"     value="{{ fecha_fin }}">
+    <input type="hidden" name="reserva_libre" id="reserva_libre_hidden" value="{{ reserva_libre }}">
 
     <div class="row g-2 align-items-end">
         <div class="col-md-2">
@@ -43,6 +44,11 @@
         <div class="col-md-3 d-flex gap-2">
             <button class="btn btn-dark btn-sm" type="submit">Buscar</button>
             <a href="/reservas/" class="btn btn-secondary btn-sm">Limpiar</a>
+        </div>
+        <div class="col-auto ms-auto">
+            <button type="button" class="btn btn-primary btn-sm estado-btn-libre" data-libre="1">
+                Reservas libres
+            </button>
         </div>
     </div>
 </form>
@@ -167,6 +173,20 @@ document.querySelectorAll('.estado-btn').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
         e.preventDefault();
         document.getElementById('estado-hidden').value = this.dataset.estado;
+        document.getElementById('reserva_libre_hidden').value = '';
+        document.getElementById('filtro-form').submit();
+    });
+});
+
+document.querySelectorAll('.estado-btn-libre').forEach(function(btn) {
+    if ("{{ reserva_libre }}" === '1') {
+        btn.style.outline = '2px solid rgba(255,255,255,0.6)';
+        btn.style.outlineOffset = '2px';
+    }
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('estado-hidden').value = '';
+        document.getElementById('reserva_libre_hidden').value = '1';
         document.getElementById('filtro-form').submit();
     });
 });

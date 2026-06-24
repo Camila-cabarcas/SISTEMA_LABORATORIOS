@@ -33,6 +33,7 @@ def lista_reservas(request):
     tipo_filtro   = request.GET.get('tipo', '')
     fecha_inicio  = request.GET.get('fecha_inicio', '')
     fecha_fin     = request.GET.get('fecha_fin', '')
+    reserva_libre = request.GET.get('reserva_libre', '')
 
     reservas = Reserva.objects.all().order_by('-fecha_reserva')
 
@@ -56,6 +57,9 @@ def lista_reservas(request):
     if fecha_fin:
         reservas = reservas.filter(fecha_reserva__date__lte=fecha_fin)
 
+    if reserva_libre == '1':
+        reservas = reservas.filter(solicitud__reserva_libre=True)
+
     paginator   = Paginator(reservas, 15)
     page_number = request.GET.get('page', 1)
     page_obj    = paginator.get_page(page_number)
@@ -69,6 +73,7 @@ def lista_reservas(request):
         'tipo_filtro':   tipo_filtro,
         'fecha_inicio':  fecha_inicio,
         'fecha_fin':     fecha_fin,
+        'reserva_libre': reserva_libre,
     })
 
 
