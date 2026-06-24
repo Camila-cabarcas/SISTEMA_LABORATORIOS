@@ -22,8 +22,10 @@ from .views import (
     gestionar_encargados,
     lista_laboratoristas,
     crear_laboratorista,
+    detalle_laboratorista,
     editar_laboratorista,
     eliminar_laboratorista,
+    toggle_laboratorista,
 )
 
 urlpatterns = [
@@ -31,8 +33,10 @@ urlpatterns = [
     path('crear/', crear_laboratorio, name='crear_laboratorio'),
     path('laboratoristas/', lista_laboratoristas, name='lista_laboratoristas'),
     path('laboratoristas/crear/', crear_laboratorista, name='crear_laboratorista'),
+    path('laboratoristas/<int:id>/', detalle_laboratorista, name='detalle_laboratorista'),
     path('laboratoristas/<int:id>/editar/', editar_laboratorista, name='editar_laboratorista'),
     path('laboratoristas/<int:id>/eliminar/', eliminar_laboratorista, name='eliminar_laboratorista'),
+    path('laboratoristas/<int:id>/toggle/', toggle_laboratorista, name='toggle_laboratorista'),
     path('<int:id>/', detalle_laboratorio, name='detalle_laboratorio'),
     path('<int:id>/editar/', editar_laboratorio, name='editar_laboratorio'),
     path('<int:id>/eliminar/', eliminar_laboratorio, name='eliminar_laboratorio'),

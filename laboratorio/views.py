@@ -679,3 +679,21 @@ def eliminar_laboratorista(request, id):
     return render(request, 'laboratorio/confirmar_eliminar_laboratorista.html', {
         'laboratorista': laboratorista,
     })
+
+
+@rol_requerido('Administrador')
+def detalle_laboratorista(request, id):
+    laboratorista = get_object_or_404(Laboratorista, id=id)
+    return render(request, 'laboratorio/detalle_laboratorista.html', {
+        'laboratorista':             laboratorista,
+        'responsabilidades_choices': Laboratorista.RESPONSABILIDADES_CHOICES,
+    })
+
+
+@rol_requerido('Administrador')
+def toggle_laboratorista(request, id):
+    laboratorista = get_object_or_404(Laboratorista, id=id)
+    if request.method == 'POST':
+        laboratorista.activo = not laboratorista.activo
+        laboratorista.save()
+    return redirect('detalle_laboratorista', id=id)
