@@ -139,10 +139,12 @@ def solicitud_profesor(request):
                 except Exception as e:
                     errores_libres.append(f'Error al procesar la solicitud: {e}')
 
+            programas = ProgramaAcademico.objects.filter(activo=True)
             return render(request, 'solicitudes/profesor.html', {
                 'form': ProfesorSolicitudForm(),
                 'errores_libres': errores_libres,
                 'post_data': request.POST,
+                'programas': programas,
             })
 
         else:
@@ -161,7 +163,8 @@ def solicitud_profesor(request):
     else:
         form = ProfesorSolicitudForm()
 
-    return render(request, 'solicitudes/profesor.html', {'form': form})
+    programas = ProgramaAcademico.objects.filter(activo=True)
+    return render(request, 'solicitudes/profesor.html', {'form': form, 'programas': programas})
 
 
 def cursos_profesor(request):

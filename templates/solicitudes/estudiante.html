@@ -15,7 +15,6 @@
 {% endif %}
 
 <div class="card p-4">
-
     <form method="POST" id="solicitud-form">
         {% csrf_token %}
 
@@ -29,19 +28,11 @@
                     <div class="invalid-feedback d-block">{{ form.nombre.errors }}</div>
                 {% endif %}
             </div>
-
             <div class="col-md-6 mb-3">
                 <label for="id_cedula" class="form-label">Cédula/ID *</label>
-                <input
-                    type="text"
-                    name="cedula"
-                    id="id_cedula"
-                    class="form-control"
-                    placeholder="Número de identificación"
-                    inputmode="numeric"
-                    pattern="[0-9]*"
-                    maxlength="20"
-                >
+                <input type="text" name="cedula" id="id_cedula" class="form-control"
+                       placeholder="Número de identificación" inputmode="numeric"
+                       pattern="[0-9]*" maxlength="20">
                 <div id="cedula_error" class="invalid-feedback d-none"></div>
                 {% if form.cedula.errors %}
                     <div class="invalid-feedback d-block">{{ form.cedula.errors }}</div>
@@ -76,7 +67,6 @@
                     <div class="invalid-feedback d-block">{{ form.laboratorio.errors }}</div>
                 {% endif %}
             </div>
-
             <div class="col-md-6 mb-3">
                 <label for="id_fecha_reserva" class="form-label">Fecha *</label>
                 {{ form.fecha_reserva }}
@@ -87,32 +77,71 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="hora_inicio_select" class="form-label">Hora Inicio *</label>
-                <select id="hora_inicio_select" class="form-select" required>
-                    <option value="">-- Selecciona hora inicio --</option>
-                </select>
-                <small class="text-muted d-block mt-1">Disponible: 06:00 - 18:00</small>
-                {% if form.hora_inicio.errors %}
-                    <div class="invalid-feedback d-block">{{ form.hora_inicio.errors }}</div>
-                {% endif %}
-            </div>
+        <!-- Time Range Picker -->
+        <div class="mb-3">
+            <label class="form-label">
+                Horario *
+                <small class="text-muted">(mín. 2 horas, máx. 4 horas)</small>
+            </label>
 
-            <div class="col-md-6 mb-3">
-                <label for="hora_fin_select" class="form-label">Hora Fin (máx. 4 horas) *</label>
-                <select id="hora_fin_select" class="form-select" required disabled>
-                    <option value="">-- Selecciona primero la hora inicio --</option>
-                </select>
-                <div id="error_duracion" class="invalid-feedback d-none"></div>
-                {% if form.hora_fin.errors %}
-                    <div class="invalid-feedback d-block">{{ form.hora_fin.errors }}</div>
-                {% endif %}
+            <input type="hidden" name="hora_inicio" id="id_hora_inicio" value="">
+            <input type="hidden" name="hora_fin"    id="id_hora_fin"    value="">
+
+            <input type="text" id="horario-display-est" class="form-control" readonly
+                   placeholder="Selecciona el horario..."
+                   style="cursor:pointer; max-width:300px;">
+
+            <div id="time-range-panel-est" style="
+                display: none;
+                position: absolute;
+                z-index: 9999;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                padding: 20px;
+                width: 340px;
+                margin-top: 4px;
+            ">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold" style="font-size:1.1rem;">Horario</span>
+                    <button type="button" id="btn-reset-time-est"
+                            style="background:none; border:1px solid #e0d6cc; border-radius:6px;
+                                   padding:2px 10px; color:#c07a50; cursor:pointer; font-size:.85rem;">
+                        Reset
+                    </button>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
+                        <small style="color:#999; font-size:.7rem;">Desde</small>
+                        <div id="display-desde-est" style="font-weight:600; color:#333;">--:--</div>
+                    </div>
+                    <span style="color:#999;">→</span>
+                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
+                        <small style="color:#999; font-size:.7rem;">Hasta</small>
+                        <div id="display-hasta-est" style="font-weight:600; color:#333;">--:--</div>
+                    </div>
+                </div>
+                <div id="time-slots-est" style="
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 6px;
+                    max-height: 220px;
+                    overflow-y: auto;
+                "></div>
+                <div id="time-error-est" class="text-danger small mt-2 d-none"></div>
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" id="btn-close-time-est"
+                            style="background:none; border:none; color:#999; cursor:pointer;">
+                        Cerrar
+                    </button>
+                    <button type="button" id="btn-confirm-time-est"
+                            style="background:none; border:none; color:#c07a50;
+                                   font-weight:600; cursor:pointer;">
+                        Confirmar
+                    </button>
+                </div>
             </div>
         </div>
-
-        {{ form.hora_inicio }}
-        {{ form.hora_fin }}
 
         <div class="mb-3">
             <div class="form-check">
@@ -130,18 +159,15 @@
             <div class="col-md-8 mb-3">
                 <label for="insumo_buscar" class="form-label">Buscar Insumo</label>
                 <div style="position: relative;">
-                    <input
-                        type="text"
-                        id="insumo_buscar"
-                        class="form-control"
-                        placeholder="Escribe para buscar o haz clic para ver todos..."
-                        autocomplete="off"
-                    >
-                    <div id="insumo_dropdown" class="list-group mt-2" style="position: absolute; width: 100%; z-index: 1000; max-height: 250px; overflow-y: auto; display: none; top: 100%;">
+                    <input type="text" id="insumo_buscar" class="form-control"
+                           placeholder="Escribe para buscar o haz clic para ver todos..."
+                           autocomplete="off">
+                    <div id="insumo_dropdown" class="list-group mt-2"
+                         style="position: absolute; width: 100%; z-index: 1000;
+                                max-height: 250px; overflow-y: auto; display: none; top: 100%;">
                     </div>
                 </div>
             </div>
-
             <div class="col-md-4 mb-3">
                 <label for="insumo_cantidad" class="form-label">Cantidad</label>
                 <input type="number" id="insumo_cantidad" class="form-control" min="1" value="1">
@@ -175,121 +201,151 @@
     </form>
 </div>
 
+<style>
+.time-slot {
+    padding: 6px 4px; border-radius: 6px; text-align: center;
+    font-size: .8rem; cursor: pointer; background: #f8f5f2;
+    color: #333; border: none; transition: background .15s;
+}
+.time-slot:hover { background: #f0e8e0; }
+.time-slot.slot-start, .time-slot.slot-end {
+    background: #c07a50; color: white; border-radius: 50px;
+}
+.time-slot.slot-range { background: #f0e0d0; color: #333; border-radius: 0; }
+.time-slot.slot-disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
+</style>
+
 <script>
 let insumosSeleccionados = {};
+let slotInicioEst = null;
+let slotFinEst    = null;
+const MAX_HORAS_EST = 4;
 
-// Validación de fecha - parsear manualmente para evitar problema de zona horaria
-const fechaInput = document.getElementById('id_fecha_reserva');
-
-function validarFecha() {
-    const fechaValue = fechaInput.value;
-    if (!fechaValue) return;
-
-    // Parsear manualmente YYYY-MM-DD para evitar conversión UTC
-    const partes = fechaValue.split('-');
-    const anio = parseInt(partes[0]);
-    const mes = parseInt(partes[1]) - 1;
-    const dia = parseInt(partes[2]);
-    const fecha = new Date(anio, mes, dia); // Sin UTC
-    const diaSemana = fecha.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
-
-    const errorDiv = document.getElementById('fecha_error');
-
-    if (diaSemana === 0 || diaSemana === 6) {
-        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-        errorDiv.textContent = `El laboratorio solo está disponible de lunes a viernes. ${diasSemana[diaSemana]} no está disponible.`;
-        errorDiv.classList.remove('d-none');
-        fechaInput.classList.add('is-invalid');
-        fechaInput.value = '';
-    } else {
-        errorDiv.classList.add('d-none');
-        fechaInput.classList.remove('is-invalid');
-    }
+function strToMinEst(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
 }
 
-if (fechaInput) {
-    fechaInput.addEventListener('change', validarFecha);
-    const hoy = new Date();
-    const manana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
-    const y = manana.getFullYear();
-    const m = String(manana.getMonth() + 1).padStart(2, '0');
-    const d = String(manana.getDate()).padStart(2, '0');
-    fechaInput.min = `${y}-${m}-${d}`;
-}
-
-// Generador de horas cada 30 minutos (06:00 - 18:00)
-function generarHoras() {
-    const horas = [];
-    for (let h = 6; h <= 18; h++) {
+// ── Time Range Picker ──────────────────────────────────────────
+function generarSlotsEst() {
+    const slots = [];
+    for (let h = 6; h <= 18; h++)
         for (let m of [0, 30]) {
-            const hora = String(h).padStart(2, '0');
-            const min = String(m).padStart(2, '0');
-            horas.push(`${hora}:${min}`);
+            if (h === 18 && m === 30) continue;
+            slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
         }
-    }
-    return horas;
+    return slots;
+}
+const SLOTS_EST = generarSlotsEst();
+
+function renderSlotsEst() {
+    const container = document.getElementById('time-slots-est');
+    container.innerHTML = '';
+    SLOTS_EST.forEach(slot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'time-slot';
+        btn.textContent = slot;
+        const minSlot = strToMinEst(slot);
+
+        if (!slotInicioEst) {
+            if (minSlot > strToMinEst('18:00') - 120) btn.classList.add('slot-disabled');
+        } else {
+            const minInicio = strToMinEst(slotInicioEst);
+            const minMin = minInicio + 120;
+            const minMax = minInicio + MAX_HORAS_EST * 60;
+            if (slot === slotInicioEst) btn.classList.add('slot-start');
+            else if (slotFinEst && slot === slotFinEst) btn.classList.add('slot-end');
+            else if (slotFinEst && minSlot > minInicio && minSlot < strToMinEst(slotFinEst)) btn.classList.add('slot-range');
+            else if (minSlot < minMin || minSlot > minMax || minSlot > strToMinEst('18:00')) btn.classList.add('slot-disabled');
+        }
+        btn.addEventListener('click', e => { e.stopPropagation(); onSlotClickEst(slot); });
+        container.appendChild(btn);
+    });
 }
 
-const horasTotales = generarHoras();
-const horaInicioSelect = document.getElementById('hora_inicio_select');
-const horaFinSelect = document.getElementById('hora_fin_select');
-const horaInicioInput = document.getElementById('id_hora_inicio');
-const horaFinInput = document.getElementById('id_hora_fin');
+function onSlotClickEst(slot) {
+    document.getElementById('time-error-est').classList.add('d-none');
+    if (!slotInicioEst) {
+        slotInicioEst = slot; slotFinEst = null;
+        document.getElementById('display-desde-est').textContent = slot;
+        document.getElementById('display-hasta-est').textContent = '--:--';
+    } else if (!slotFinEst) {
+        const diff = strToMinEst(slot) - strToMinEst(slotInicioEst);
+        if (diff < 120) { showTimeErrorEst('Mínimo 2 horas.'); return; }
+        if (diff > MAX_HORAS_EST * 60) { showTimeErrorEst('Máximo 4 horas.'); return; }
+        slotFinEst = slot;
+        document.getElementById('display-hasta-est').textContent = slot;
+    } else {
+        slotInicioEst = slot; slotFinEst = null;
+        document.getElementById('display-desde-est').textContent = slot;
+        document.getElementById('display-hasta-est').textContent = '--:--';
+    }
+    renderSlotsEst();
+}
 
-// Llenar dropdown de hora inicio
-horasTotales.forEach(hora => {
-    const option = document.createElement('option');
-    option.value = hora;
-    option.textContent = hora;
-    horaInicioSelect.appendChild(option);
+function showTimeErrorEst(msg) {
+    const el = document.getElementById('time-error-est');
+    el.textContent = msg; el.classList.remove('d-none');
+}
+
+function resetTimeEst() {
+    slotInicioEst = null; slotFinEst = null;
+    document.getElementById('display-desde-est').textContent = '--:--';
+    document.getElementById('display-hasta-est').textContent = '--:--';
+    document.getElementById('time-error-est').classList.add('d-none');
+    renderSlotsEst();
+}
+
+document.getElementById('horario-display-est').addEventListener('click', function(e) {
+    e.stopPropagation();
+    const panel = document.getElementById('time-range-panel-est');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'block') renderSlotsEst();
+});
+document.getElementById('time-range-panel-est').addEventListener('click', e => e.stopPropagation());
+document.getElementById('btn-reset-time-est').addEventListener('click', resetTimeEst);
+document.getElementById('btn-close-time-est').addEventListener('click', () => {
+    document.getElementById('time-range-panel-est').style.display = 'none';
+});
+document.getElementById('btn-confirm-time-est').addEventListener('click', function() {
+    if (!slotInicioEst || !slotFinEst) { showTimeErrorEst('Selecciona inicio y fin.'); return; }
+    document.getElementById('id_hora_inicio').value = slotInicioEst;
+    document.getElementById('id_hora_fin').value    = slotFinEst;
+    document.getElementById('horario-display-est').value = `${slotInicioEst} → ${slotFinEst}`;
+    document.getElementById('time-range-panel-est').style.display = 'none';
+});
+document.addEventListener('click', () => {
+    document.getElementById('time-range-panel-est').style.display = 'none';
 });
 
-// Actualizar hora fin cuando cambia hora inicio
-horaInicioSelect.addEventListener('change', function() {
-    horaFinSelect.innerHTML = '<option value="">-- Selecciona hora fin --</option>';
-    horaFinSelect.disabled = false;
-
-    if (!this.value) {
-        horaFinSelect.disabled = true;
-        horaFinSelect.innerHTML = '<option value="">-- Selecciona primero la hora inicio --</option>';
-        return;
-    }
-
-    // Parsear hora inicio
-    const [horaIni, minIni] = this.value.split(':').map(Number);
-    const minutoIni = horaIni * 60 + minIni;
-    const minutoFin2h = minutoIni + 120;  // +2 horas
-    const minutoFin4h = minutoIni + 240;  // +4 horas
-
-    // Generar opciones de hora fin
-    horasTotales.forEach(hora => {
-        const [horaFin, minFin] = hora.split(':').map(Number);
-        const minutoTotal = horaFin * 60 + minFin;
-
-        // Mostrar si está entre 2h y 4h después de inicio
-        if (minutoTotal > minutoFin2h && minutoTotal <= minutoFin4h) {
-            const option = document.createElement('option');
-            option.value = hora;
-            option.textContent = hora;
-            horaFinSelect.appendChild(option);
+// ── Validación de fecha ────────────────────────────────────────
+const fechaInput = document.getElementById('id_fecha_reserva');
+if (fechaInput) {
+    fechaInput.addEventListener('change', function() {
+        const partes = this.value.split('-');
+        const fecha = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+        const dia = fecha.getDay();
+        const errorDiv = document.getElementById('fecha_error');
+        if (dia === 0 || dia === 6) {
+            const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+            errorDiv.textContent = `Solo lunes a viernes. ${dias[dia]} no está disponible.`;
+            errorDiv.classList.remove('d-none');
+            this.classList.add('is-invalid');
+            this.value = '';
+        } else {
+            errorDiv.classList.add('d-none');
+            this.classList.remove('is-invalid');
         }
     });
-});
+    const hoy = new Date();
+    fechaInput.min = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+}
 
-// Sincronizar con los inputs hidden
-horaInicioSelect.addEventListener('change', function() {
-    horaInicioInput.value = this.value;
-});
-
-horaFinSelect.addEventListener('change', function() {
-    horaFinInput.value = this.value;
-});
-
-// Validación de cédula (solo números)
+// ── Validación cédula ──────────────────────────────────────────
 document.getElementById('id_cedula').addEventListener('input', function(e) {
-    const valor = e.target.value;
-    const soloNumeros = valor.replace(/[^0-9]/g, '');
-    if (valor !== soloNumeros) {
+    const soloNumeros = e.target.value.replace(/[^0-9]/g, '');
+    if (e.target.value !== soloNumeros) {
         e.target.value = soloNumeros;
         const errorDiv = document.getElementById('cedula_error');
         errorDiv.textContent = 'Solo números permitidos';
@@ -301,17 +357,16 @@ document.getElementById('id_cedula').addEventListener('input', function(e) {
     }
 });
 
-// Buscador de insumos
+// ── Buscador de insumos ────────────────────────────────────────
 const buscarInput = document.getElementById('insumo_buscar');
 const dropdownDiv = document.getElementById('insumo_dropdown');
-let insumosCache = null;
+let insumosCache  = null;
 
 buscarInput.addEventListener('click', mostrarInsumos);
 buscarInput.addEventListener('input', buscarInsumos);
 document.addEventListener('click', function(e) {
-    if (e.target !== buscarInput && !dropdownDiv.contains(e.target)) {
+    if (e.target !== buscarInput && !dropdownDiv.contains(e.target))
         dropdownDiv.style.display = 'none';
-    }
 });
 
 function mostrarInsumos() {
@@ -334,10 +389,7 @@ function buscarInsumos(e) {
     if (query === '') { mostrarInsumos(); return; }
     fetch(`/solicitudes/buscar-insumos/?q=${encodeURIComponent(query)}`)
         .then(r => r.json())
-        .then(data => {
-            renderDropdown(data.results);
-            dropdownDiv.style.display = 'block';
-        });
+        .then(data => { renderDropdown(data.results); dropdownDiv.style.display = 'block'; });
 }
 
 function renderDropdown(insumos) {
@@ -352,7 +404,7 @@ function renderDropdown(insumos) {
             btn.style.color = '#999';
             btn.style.backgroundColor = '#f5f5f5';
         } else {
-            btn.onclick = (e) => { e.preventDefault(); seleccionarInsumo(insumo); };
+            btn.onclick = e => { e.preventDefault(); seleccionarInsumo(insumo); };
         }
         dropdownDiv.appendChild(btn);
     });
@@ -372,7 +424,7 @@ document.getElementById('agregar_insumo_btn').addEventListener('click', function
     if (insumosSeleccionados[insumoId]) {
         insumosSeleccionados[insumoId].cantidad += cantidad;
     } else {
-        insumosSeleccionados[insumoId] = { id: insumoId, nombre: texto.split('(')[0].trim(), cantidad: cantidad };
+        insumosSeleccionados[insumoId] = { id: insumoId, nombre: texto.split('(')[0].trim(), cantidad };
     }
     actualizarListaInsumos();
     buscarInput.value = '';
@@ -386,7 +438,7 @@ function eliminarInsumo(insumoId) {
 }
 
 function actualizarListaInsumos() {
-    const lista = document.getElementById('insumos_items');
+    const lista         = document.getElementById('insumos_items');
     const listContainer = document.getElementById('insumos_lista');
     lista.innerHTML = '';
     const ids = [], cantidades = [];
@@ -398,46 +450,15 @@ function actualizarListaInsumos() {
                 <strong>${insumo.nombre}</strong>
                 <span class="badge bg-primary ms-2">${insumo.cantidad}</span>
             </div>
-            <button type="button" class="btn btn-sm btn-danger" onclick="eliminarInsumo(${insumo.id})">Eliminar</button>
-        `;
+            <button type="button" class="btn btn-sm btn-danger"
+                    onclick="eliminarInsumo(${insumo.id})">Eliminar</button>`;
         lista.appendChild(item);
         ids.push(insumo.id);
         cantidades.push(insumo.cantidad);
     });
-    document.getElementById('id_insumos_ids').value = ids.join(',');
+    document.getElementById('id_insumos_ids').value       = ids.join(',');
     document.getElementById('id_insumos_cantidades').value = cantidades.join(',');
     listContainer.style.display = Object.keys(insumosSeleccionados).length ? 'block' : 'none';
-}
-
-// Validación de duración
-const horaInicio = document.getElementById('id_hora_inicio');
-const horaFin = document.getElementById('id_hora_fin');
-const errorDuracion = document.getElementById('error_duracion');
-
-horaInicio.addEventListener('change', function() { if (horaFin.value) validarDuracion(); });
-horaFin.addEventListener('change', validarDuracion);
-
-function validarDuracion() {
-    if (!horaInicio.value || !horaFin.value) {
-        errorDuracion.classList.add('d-none');
-        horaFin.classList.remove('is-invalid');
-        return;
-    }
-    const inicio = new Date(`2000-01-01T${horaInicio.value}`);
-    const fin = new Date(`2000-01-01T${horaFin.value}`);
-    const minutos = (fin - inicio) / (1000 * 60);
-    if (minutos < 120) {
-        horaFin.classList.add('is-invalid');
-        errorDuracion.textContent = 'Mínimo 2 horas de diferencia';
-        errorDuracion.classList.remove('d-none');
-    } else if (minutos > 240) {
-        horaFin.classList.add('is-invalid');
-        errorDuracion.textContent = 'Máximo 4 horas de diferencia';
-        errorDuracion.classList.remove('d-none');
-    } else {
-        horaFin.classList.remove('is-invalid');
-        errorDuracion.classList.add('d-none');
-    }
 }
 </script>
 
