@@ -8,7 +8,7 @@ from .models import Prestamo, PrestamoItem, EstadoPrestamo
 from .forms import PrestamoForm, CambiarEstadoPrestamoForm, PrestamoItemForm
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def lista_prestamos(request):
 
     estado_filtro = request.GET.get('estado')
@@ -26,7 +26,7 @@ def lista_prestamos(request):
     )
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def crear_prestamo(request, reserva_id):
 
     from reservas.models import Reserva, ReservaInsumo
@@ -89,7 +89,7 @@ def crear_prestamo(request, reserva_id):
     )
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def detalle_prestamo(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
@@ -130,7 +130,7 @@ def detalle_prestamo(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def cambiar_estado_prestamo(request, id):
 
     from datetime import datetime
@@ -166,7 +166,7 @@ def cambiar_estado_prestamo(request, id):
         }
     )
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def marcar_devuelto(request, id):
 
     from datetime import datetime

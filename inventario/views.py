@@ -96,7 +96,7 @@ def editar_insumo(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def items_inventario(request):
 
     if request.method == 'POST':
@@ -126,7 +126,7 @@ def items_inventario(request):
     )
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def movimientos_inventario(request):
 
     if request.method == 'POST':
@@ -156,7 +156,7 @@ def movimientos_inventario(request):
     )
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def editar_item(request, id):
 
     item = ItemInventario.objects.get(id=id)
@@ -186,7 +186,7 @@ def editar_item(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def historial_item(request, id):
 
     item = ItemInventario.objects.get(id=id)

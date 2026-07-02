@@ -14,6 +14,7 @@
                 <tr>
                     <th>Nombre</th>
                     <th>Estado</th>
+                    <th>Laboratorios</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -28,6 +29,13 @@
                             <span class="badge bg-secondary">Inactivo</span>
                         {% endif %}
                     </td>
+                    <td>
+                        {% for lab in programa.labs %}
+                            <span class="badge bg-info text-dark me-1">{{ lab.nombre }}</span>
+                        {% empty %}
+                            <span class="text-muted small">Sin laboratorios</span>
+                        {% endfor %}
+                    </td>
                     <td class="d-flex gap-1">
                         <a href="/usuarios/programas/{{ programa.id }}/editar/"
                            class="btn btn-warning btn-sm">Editar</a>
@@ -37,7 +45,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3" class="text-center text-muted py-3">
+                    <td colspan="4" class="text-center text-muted py-3">
                         No hay programas registrados.
                     </td>
                 </tr>

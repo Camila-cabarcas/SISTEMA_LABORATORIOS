@@ -433,7 +433,7 @@ def buscar_insumos(request):
 
 # ── Gestión de cursos ────────────────────────────────────────────────────────
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def lista_cursos(request):
     q = request.GET.get('q', '').strip()
     cursos = Curso.objects.select_related('profesor').order_by('codigo')
@@ -450,7 +450,7 @@ def lista_cursos(request):
     })
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def crear_curso(request):
     profesor_id = request.GET.get('profesor_id') or request.POST.get('profesor_id')
 
@@ -476,7 +476,7 @@ def crear_curso(request):
     })
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def editar_curso(request, id):
     curso = get_object_or_404(Curso, id=id)
     if request.method == 'POST':
@@ -492,7 +492,7 @@ def editar_curso(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def eliminar_curso(request, id):
     curso = get_object_or_404(Curso, id=id)
     if request.method == 'POST':

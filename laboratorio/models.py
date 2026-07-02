@@ -105,6 +105,11 @@ class Modulo(models.Model):
 
 
 class Laboratorista(models.Model):
+    TIPO_CHOICES = [
+        ('laboratorista', 'Laboratorista'),
+        ('encargado', 'Encargado'),
+    ]
+
     RESPONSABILIDADES_CHOICES = [
         ('prestamos',     'Gestión de préstamos'),
         ('atencion',      'Atención a estudiantes y profesores'),
@@ -120,6 +125,11 @@ class Laboratorista(models.Model):
     cedula    = models.CharField(max_length=20, unique=True)
     correo    = models.EmailField(blank=True, default='')
     programa  = models.CharField(max_length=200, blank=True, default='')
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        default='laboratorista'
+    )
     responsabilidades = models.JSONField(default=list, blank=True)
     laboratorios = models.ManyToManyField(
         Laboratorio,

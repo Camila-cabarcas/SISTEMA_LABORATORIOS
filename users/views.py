@@ -13,7 +13,7 @@ from .forms import UsuarioForm, EditarUsuarioForm, ProfesorForm, EditarProfesorF
 @rol_requerido('Administrador')
 def lista_usuarios(request):
 
-    usuarios = Usuario.objects.all().order_by('username')
+    usuarios = Usuario.objects.exclude(username__startswith='lab_').order_by('username')
 
     return render(
         request,
@@ -108,7 +108,7 @@ def sin_permiso(request):
 
 # ── Gestión de profesores ────────────────────────────────────────────────────
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def lista_profesores(request):
     q = request.GET.get('q', '').strip()
     profesores = Usuario.objects.filter(rol__nombre='Docente').order_by('last_name', 'first_name')
@@ -125,7 +125,7 @@ def lista_profesores(request):
     })
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def crear_profesor(request):
     import secrets
     import string
@@ -160,7 +160,7 @@ def crear_profesor(request):
     return render(request, 'profesores/crear_profesor.html', {'form': form, 'programas': programas})
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def detalle_profesor(request, id):
     from solicitudes.models import Curso
     profesor = get_object_or_404(Usuario, id=id, rol__nombre='Docente')
@@ -171,7 +171,7 @@ def detalle_profesor(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def editar_profesor(request, id):
     profesor = get_object_or_404(Usuario, id=id, rol__nombre='Docente')
     if request.method == 'POST':
@@ -202,7 +202,10 @@ def toggle_profesor(request, id):
 
 @rol_requerido('Administrador')
 def lista_programas(request):
+    from laboratorio.models import Laboratorio
     programas = ProgramaAcademico.objects.all()
+    for p in programas:
+        p.labs = Laboratorio.objects.filter(programa=p.nombre)
     return render(request, 'programas/lista_programas.html', {'programas': programas})
 
 

@@ -23,7 +23,7 @@ def dashboard(request):
             if insumo.stock_minimo_alcanzado()
         ]
 
-    elif rol == 'Encargado':
+    elif rol == 'Laboratorio':
         context['prestamos_activos'] = Prestamo.objects.filter(estado__nombre='Activo').count()
         context['reservas_pendientes'] = Reserva.objects.filter(estado__nombre='Pendiente').count()
 

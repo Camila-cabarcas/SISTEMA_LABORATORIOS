@@ -10,14 +10,14 @@
 
     <p><strong>Ubicación:</strong> {{ laboratorio.ubicacion }}</p>
     <p><strong>Programa:</strong> {{ laboratorio.programa }}</p>
-
-    <p>
-        <strong>Encargados:</strong>
-        {% for enc in encargados %}
-            <span class="badge bg-secondary ms-1">{{ enc.get_full_name|default:enc.username }}</span>
-        {% empty %}
-            <span class="text-muted">Sin encargados asignados</span>
-        {% endfor %}
+    <p><strong>Cuenta de acceso:</strong>
+        {% with cuenta=laboratorio.encargados.all.0 %}
+            {% if cuenta %}
+                <code>{{ cuenta.username }}</code>
+            {% else %}
+                <span class="text-muted">Sin cuenta asignada</span>
+            {% endif %}
+        {% endwith %}
     </p>
 
     <div class="d-flex flex-wrap gap-2 mt-3">
@@ -89,6 +89,7 @@
         <thead>
             <tr>
                 <th>Nombre</th>
+                <th>Tipo</th>
                 <th>Cédula</th>
                 <th>Correo</th>
                 <th>Programa</th>
@@ -100,6 +101,13 @@
             {% if l.activo %}
             <tr>
                 <td>{{ l }}</td>
+                <td>
+                    {% if l.tipo == 'encargado' %}
+                        <span class="badge bg-warning text-dark">Encargado</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Laboratorista</span>
+                    {% endif %}
+                </td>
                 <td>{{ l.cedula }}</td>
                 <td>{{ l.correo|default:"—" }}</td>
                 <td>{{ l.programa|default:"—" }}</td>

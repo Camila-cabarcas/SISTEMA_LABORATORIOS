@@ -13,7 +13,7 @@ from django.core.paginator import Paginator
 from datetime import datetime, timedelta, date
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def lista_reservas(request):
     from django.utils import timezone
     from django.db.models import Q
@@ -77,7 +77,7 @@ def lista_reservas(request):
     })
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def crear_reserva(request):
     from solicitudes.models import SolicitudReserva, Curso
     from laboratorio.models import Laboratorio
@@ -197,7 +197,7 @@ def crear_reserva(request):
     })
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def detalle_reserva(request, id):
     reserva = get_object_or_404(Reserva, id=id)
     insumos = ReservaInsumo.objects.filter(reserva=reserva)
@@ -219,7 +219,7 @@ def detalle_reserva(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def cancelar_reserva(request, id):
     reserva = get_object_or_404(Reserva, id=id)
 
@@ -231,7 +231,7 @@ def cancelar_reserva(request, id):
     return render(request, 'reservas/cancelar.html', {'reserva': reserva})
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def aprobar_reserva(request, id):
     reserva    = get_object_or_404(Reserva, id=id)
     solicitud  = reserva.solicitud.all().first()
@@ -260,7 +260,7 @@ def aprobar_reserva(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def reservas_para_prestamo(request):
     ahora = datetime.now()
     reservas = Reserva.objects.filter(
@@ -273,7 +273,7 @@ def reservas_para_prestamo(request):
     return render(request, 'reservas/para_prestamo.html', {'reservas': reservas})
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def horarios_disponibles(request):
     slots = []
     hoy   = datetime.now()
@@ -307,7 +307,7 @@ def horarios_disponibles(request):
     return JsonResponse(slots, safe=False)
 
 
-@rol_requerido('Administrador', 'Encargado')
+@rol_requerido('Administrador', 'Laboratorio')
 def eliminar_insumo_reserva(request, reserva_id, insumo_id):
     reserva = get_object_or_404(Reserva, id=reserva_id)
     insumo  = get_object_or_404(ReservaInsumo, id=insumo_id, reserva=reserva)

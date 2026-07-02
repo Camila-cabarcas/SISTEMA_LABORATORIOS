@@ -5,7 +5,7 @@ def notificaciones_admin(request):
         rol = request.user.rol.nombre
     except Exception:
         return {}
-    if rol not in ('Administrador', 'Encargado'):
+    if rol not in ('Administrador', 'Laboratorio'):
         return {}
     from solicitudes.models import SolicitudRegistroProfesor, SolicitudRegistroCurso
     return {

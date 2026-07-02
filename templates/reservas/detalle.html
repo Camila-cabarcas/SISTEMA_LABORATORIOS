@@ -148,9 +148,9 @@
     </table>
     {% endif %}
 
-    {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Encargado' %}
+    {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Laboratorio' %}
         {% if reserva.estado.nombre == 'Pendiente' %}
-            {% if solicitante.reserva_libre and user.rol.nombre == 'Encargado' %}
+            {% if solicitante.reserva_libre and user.rol.nombre == 'Laboratorio' %}
             <div class="alert alert-warning mt-3" role="alert">
                 <strong>Atención:</strong> Solo el Administrador puede aprobar esta reserva libre.
             </div>
