@@ -119,7 +119,7 @@ def lista_profesores(request):
             Q(codigo__icontains=q)     |
             Q(username__icontains=q)
         )
-    return render(request, 'usuarios/lista_profesores.html', {
+    return render(request, 'profesores/lista_profesores.html', {
         'profesores': profesores,
         'q': q,
     })
@@ -157,7 +157,7 @@ def crear_profesor(request):
     else:
         form = ProfesorForm()
     programas = ProgramaAcademico.objects.filter(activo=True)
-    return render(request, 'usuarios/crear_profesor.html', {'form': form, 'programas': programas})
+    return render(request, 'profesores/crear_profesor.html', {'form': form, 'programas': programas})
 
 
 @rol_requerido('Administrador', 'Encargado')
@@ -165,7 +165,7 @@ def detalle_profesor(request, id):
     from solicitudes.models import Curso
     profesor = get_object_or_404(Usuario, id=id, rol__nombre='Docente')
     cursos = Curso.objects.filter(profesor=profesor).order_by('codigo')
-    return render(request, 'usuarios/detalle_profesor.html', {
+    return render(request, 'profesores/detalle_profesor.html', {
         'profesor': profesor,
         'cursos': cursos,
     })
@@ -182,7 +182,7 @@ def editar_profesor(request, id):
     else:
         form = EditarProfesorForm(instance=profesor)
     programas = ProgramaAcademico.objects.filter(activo=True)
-    return render(request, 'usuarios/editar_profesor.html', {
+    return render(request, 'profesores/editar_profesor.html', {
         'form': form,
         'profesor': profesor,
         'programas': programas,
@@ -203,7 +203,7 @@ def toggle_profesor(request, id):
 @rol_requerido('Administrador')
 def lista_programas(request):
     programas = ProgramaAcademico.objects.all()
-    return render(request, 'usuarios/lista_programas.html', {'programas': programas})
+    return render(request, 'programas/lista_programas.html', {'programas': programas})
 
 
 @rol_requerido('Administrador')
@@ -215,7 +215,7 @@ def crear_programa(request):
             return redirect('lista_programas')
     else:
         form = ProgramaAcademicoForm()
-    return render(request, 'usuarios/crear_programa.html', {'form': form})
+    return render(request, 'programas/crear_programa.html', {'form': form})
 
 
 @rol_requerido('Administrador')
@@ -228,7 +228,7 @@ def editar_programa(request, id):
             return redirect('lista_programas')
     else:
         form = ProgramaAcademicoForm(instance=programa)
-    return render(request, 'usuarios/editar_programa.html', {
+    return render(request, 'programas/editar_programa.html', {
         'form': form,
         'programa': programa,
     })
@@ -247,7 +247,7 @@ def eliminar_programa(request, id):
         else:
             programa.delete()
             return redirect('lista_programas')
-    return render(request, 'usuarios/confirmar_eliminar_programa.html', {
+    return render(request, 'programas/confirmar_eliminar_programa.html', {
         'programa': programa,
         'error': error,
     })

@@ -558,7 +558,7 @@ def lista_laboratoristas(request):
             Q(apellido__icontains=q) |
             Q(cedula__icontains=q)
         )
-    return render(request, 'laboratorio/lista_laboratoristas.html', {
+    return render(request, 'laboratorio/laboratoristas/lista_laboratoristas.html', {
         'laboratoristas': qs,
         'q': q,
     })
@@ -606,7 +606,7 @@ def crear_laboratorista(request):
             lab.laboratorios.set(Laboratorio.objects.filter(id__in=lab_ids))
             return redirect('lista_laboratoristas')
 
-    return render(request, 'laboratorio/crear_laboratorista.html', {
+    return render(request, 'laboratorio/laboratoristas/crear_laboratorista.html', {
         'programas':              ProgramaAcademico.objects.filter(activo=True),
         'laboratorios':           Laboratorio.objects.all(),
         'errores':                errores,
@@ -657,7 +657,7 @@ def editar_laboratorista(request, id):
             laboratorista.laboratorios.set(Laboratorio.objects.filter(id__in=lab_ids))
             return redirect('lista_laboratoristas')
 
-    return render(request, 'laboratorio/editar_laboratorista.html', {
+    return render(request, 'laboratorio/laboratoristas/editar_laboratorista.html', {
         'laboratorista':          laboratorista,
         'programas':              ProgramaAcademico.objects.filter(activo=True),
         'laboratorios':           Laboratorio.objects.all(),
@@ -676,7 +676,7 @@ def eliminar_laboratorista(request, id):
         laboratorista.delete()
         return redirect('lista_laboratoristas')
 
-    return render(request, 'laboratorio/confirmar_eliminar_laboratorista.html', {
+    return render(request, 'laboratorio/laboratoristas/confirmar_eliminar_laboratorista.html', {
         'laboratorista': laboratorista,
     })
 
@@ -684,7 +684,7 @@ def eliminar_laboratorista(request, id):
 @rol_requerido('Administrador')
 def detalle_laboratorista(request, id):
     laboratorista = get_object_or_404(Laboratorista, id=id)
-    return render(request, 'laboratorio/detalle_laboratorista.html', {
+    return render(request, 'laboratorio/laboratoristas/detalle_laboratorista.html', {
         'laboratorista':             laboratorista,
         'responsabilidades_choices': Laboratorista.RESPONSABILIDADES_CHOICES,
     })

@@ -17,62 +17,133 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
         <a class="navbar-brand" href="/">Sistema de Laboratorios</a>
-        <div class="navbar-nav">
-    {% if user.rol.nombre == 'Administrador' %}
-        <a class="nav-link" href="/inventario/">Insumos</a>
-        <a class="nav-link" href="/inventario/items/">Items</a>
-        <a class="nav-link" href="/inventario/movimientos/">Movimientos</a>
-        <a class="nav-link" href="/prestamos/">Préstamos</a>
-        <a class="nav-link" href="/reservas/">Reservas</a>
-        <a class="nav-link" href="/usuarios/">Usuarios</a>
-        <a class="nav-link {% if '/usuarios/programas' in request.path %}active{% endif %}" href="/usuarios/programas/">Programas</a>
-        <a class="nav-link {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">
-            Profesores
-            {% if notif_profesores > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
-        </a>
-        <a class="nav-link {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">
-            Cursos
-            {% if notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
-        </a>
-        <a class="nav-link {% if 'solicitudes-profesores' in request.path %}active{% endif %}" href="/solicitudes/solicitudes-profesores/">Solicitudes Registro</a>
-        <a class="nav-link" href="/laboratorio/">Laboratorio</a>
-        <a class="nav-link {% if '/laboratorio/laboratoristas' in request.path %}active{% endif %}" href="/laboratorio/laboratoristas/">Laboratoristas</a>
-    {% elif user.rol.nombre == 'Encargado' %}
-        <a class="nav-link" href="/inventario/items/">Items</a>
-        <a class="nav-link" href="/inventario/movimientos/">Movimientos</a>
-        <a class="nav-link" href="/prestamos/">Préstamos</a>
-        <a class="nav-link" href="/reservas/">Reservas</a>
-        <a class="nav-link {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">
-            Profesores
-            {% if notif_profesores > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
-        </a>
-        <a class="nav-link {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">
-            Cursos
-            {% if notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
-        </a>
-        <a class="nav-link" href="/laboratorio/">Laboratorio</a>
-    {% endif %}
-</div>
-        <div class="navbar-nav ms-auto">
-    {% if user.is_authenticated %}
-    <span class="nav-link text-light">{{ user.username }}</span>
-    <form method="POST" action="/logout/">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-link nav-link text-light">
-            Cerrar sesión
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMenu">
+            <span class="navbar-toggler-icon"></span>
         </button>
-    </form>
-    {% endif %}
-</div>
-</nav>
-    
+
+        <div class="collapse navbar-collapse" id="navbarMenu">
+        <ul class="navbar-nav">
+        {% if user.rol.nombre == 'Administrador' %}
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle {% if '/inventario/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">Inventario</a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="/inventario/">Insumos</a></li>
+                    <li><a class="dropdown-item" href="/inventario/items/">Items</a></li>
+                    <li><a class="dropdown-item" href="/inventario/movimientos/">Movimientos</a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle {% if '/prestamos/' in request.path or '/reservas/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">Actividad</a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="/prestamos/">Préstamos</a></li>
+                    <li><a class="dropdown-item" href="/reservas/">Reservas</a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle {% if '/laboratorio/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">Laboratorios</a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="/laboratorio/">Laboratorio</a></li>
+                    <li><a class="dropdown-item {% if '/laboratorio/laboratoristas' in request.path %}active{% endif %}" href="/laboratorio/laboratoristas/">Laboratoristas</a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle {% if '/usuarios/programas' in request.path or '/usuarios/profesores' in request.path or '/solicitudes/cursos' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                    Académico
+                    {% if notif_profesores > 0 or notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores|add:notif_cursos }}</span>{% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item {% if '/usuarios/programas' in request.path %}active{% endif %}" href="/usuarios/programas/">Programas</a></li>
+                    <li><a class="dropdown-item {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">
+                        Profesores
+                        {% if notif_profesores > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
+                    </a></li>
+                    <li><a class="dropdown-item {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">
+                        Cursos
+                        {% if notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
+                    </a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle {% if '/usuarios/' in request.path or 'solicitudes-profesores' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">Administración</a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="/usuarios/">Usuarios</a></li>
+                    <li><a class="dropdown-item {% if 'solicitudes-profesores' in request.path %}active{% endif %}" href="/solicitudes/solicitudes-profesores/">Solicitudes Registro</a></li>
+                </ul>
+            </li>
+
+        {% elif user.rol.nombre == 'Encargado' %}
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Inventario</a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="/inventario/items/">Items</a></li>
+                    <li><a class="dropdown-item" href="/inventario/movimientos/">Movimientos</a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Actividad</a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="/prestamos/">Préstamos</a></li>
+                    <li><a class="dropdown-item" href="/reservas/">Reservas</a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    Académico
+                    {% if notif_profesores > 0 or notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores|add:notif_cursos }}</span>{% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">
+                        Profesores
+                        {% if notif_profesores > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
+                    </a></li>
+                    <li><a class="dropdown-item {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">
+                        Cursos
+                        {% if notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
+                    </a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="/laboratorio/">Laboratorio</a>
+            </li>
+
+        {% endif %}
+        </ul>
+
+        <ul class="navbar-nav ms-auto">
+        {% if user.is_authenticated %}
+            <li class="nav-item"><span class="nav-link text-light">{{ user.username }}</span></li>
+            <li class="nav-item">
+                <form method="POST" action="/logout/">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link nav-link text-light">
+                        Cerrar sesión
+                    </button>
+                </form>
+            </li>
+        {% endif %}
+        </ul>
+        </div>
+    </div>
+    </nav>
+
 
     <div class="container mt-4">
         {% block contenido %}
         {% endblock %}
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 
 </html>
-
