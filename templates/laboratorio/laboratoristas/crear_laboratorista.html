@@ -4,6 +4,15 @@
 
 <h1 class="mb-4">Nuevo Laboratorista</h1>
 
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
 {% if errores %}
 <div class="alert alert-danger">
     <ul class="mb-0">
@@ -77,11 +86,90 @@
             </div>
         </div>
 
-        <div class="d-flex gap-2 mt-3">
+        <hr>
+
+        <!-- Laboratorios y rol -->
+        <h6 class="fw-semibold mb-2">Laboratorios asignados</h6>
+        <p class="text-muted small mb-3">
+            Selecciona los laboratorios donde trabajará y el rol que tendrá en cada uno.
+        </p>
+        <div id="labs-container">
+            {% for lab in laboratorios %}
+            <div class="lab-row d-flex align-items-center gap-3 mb-2 flex-wrap">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input lab-check"
+                           name="lab_ids" value="{{ lab.id }}"
+                           id="lab_{{ lab.id }}"
+                           {% if lab.id in lab_ids_sel %}checked{% endif %}>
+                    <label class="form-check-label" for="lab_{{ lab.id }}">
+                        {{ lab.nombre }}
+                    </label>
+                </div>
+                <select name="lab_tipo_{{ lab.id }}"
+                        class="form-select form-select-sm lab-tipo"
+                        style="width:180px; {% if lab.id not in lab_ids_sel %}display:none;{% endif %}">
+                    <option value="laboratorista"
+                        {% if lab.id not in encargado_ids_sel %}selected{% endif %}>
+                        Laboratorista
+                    </option>
+                    <option value="encargado"
+                        {% if lab.id in encargado_ids_sel %}selected{% endif %}>
+                        Encargado
+                    </option>
+                </select>
+                <span id="aviso_{{ lab.id }}"
+                      class="text-warning small fw-semibold"
+                      style="display:none;">
+                    ⚠️ Ya hay un encargado en este laboratorio.
+                    Se asignará como Laboratorista.
+                </span>
+            </div>
+            {% empty %}
+            <p class="text-muted small">No hay laboratorios registrados.</p>
+            {% endfor %}
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
             <button type="submit" class="btn btn-primary">Guardar</button>
             <a href="/laboratorio/laboratoristas/" class="btn btn-secondary">Cancelar</a>
         </div>
     </form>
 </div>
+
+<script>
+document.querySelectorAll('.lab-tipo').forEach(function(select) {
+    select.addEventListener('change', function() {
+        const labId = this.name.replace('lab_tipo_', '');
+        const avisoEl = document.getElementById('aviso_' + labId);
+        if (this.value === 'encargado') {
+            fetch('/laboratorio/' + labId + '/tiene-encargado/')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.tiene_encargado) {
+                        avisoEl.style.display = 'block';
+                        this.value = 'laboratorista';
+                    } else {
+                        avisoEl.style.display = 'none';
+                    }
+                });
+        } else {
+            avisoEl.style.display = 'none';
+        }
+    });
+});
+
+document.querySelectorAll('.lab-check').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        const labId = this.value;
+        const tipo = this.closest('.lab-row').querySelector('.lab-tipo');
+        const aviso = document.getElementById('aviso_' + labId);
+        tipo.style.display = this.checked ? 'inline-block' : 'none';
+        if (!this.checked) {
+            tipo.value = 'laboratorista';
+            aviso.style.display = 'none';
+        }
+    });
+});
+</script>
 
 {% endblock %}

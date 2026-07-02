@@ -28,6 +28,7 @@ from .views import (
     eliminar_laboratorista,
     toggle_laboratorista,
     toggle_tipo_laboratorista,
+    tiene_encargado_api,
 )
 
 urlpatterns = [
@@ -55,4 +56,5 @@ urlpatterns = [
     path('<int:id>/modulos/disponibles/', modulos_disponibles_api, name='modulos_disponibles_api'),
     path('<int:lab_id>/encargados/', gestionar_encargados, name='gestionar_encargados'),
     path('<int:lab_id>/laboratoristas/', asignar_laboratorista, name='asignar_laboratorista'),
+    path('<int:lab_id>/tiene-encargado/', tiene_encargado_api, name='tiene_encargado_api'),
 ]

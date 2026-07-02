@@ -11,20 +11,17 @@
 {% endif %}
 
 <div class="card p-4">
-
     <table class="table table-striped">
-
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Ubicación</th>
-                <th>Encargados</th>
+                <th>Encargado</th>
                 <th>Programa</th>
                 <th>Acciones</th>
             </tr>
         </thead>
-
         <tbody>
             {% for lab in laboratorios %}
             <tr>
@@ -32,29 +29,32 @@
                 <td>{{ lab.nombre }}</td>
                 <td>{{ lab.ubicacion }}</td>
                 <td>
-                    {% for enc in lab.encargados.all %}
-                        <span class="badge bg-secondary">{{ enc.get_full_name|default:enc.username }}</span>
-                    {% empty %}
-                        <span class="text-muted">Sin encargado</span>
-                    {% endfor %}
+                    {% if lab.encargado_principal %}
+                        <span class="badge bg-success">
+                            {{ lab.encargado_principal.laboratorista.nombre }}
+                            {{ lab.encargado_principal.laboratorista.apellido }}
+                        </span>
+                    {% else %}
+                        <span class="text-muted small">Sin encargado</span>
+                    {% endif %}
                 </td>
                 <td>{{ lab.programa }}</td>
                 <td>
                     <a href="/laboratorio/{{ lab.id }}/"
-                    class="btn btn-info btn-sm">
+                       class="btn btn-info btn-sm">
                         Ver detalle
                     </a>
                     <a href="/laboratorio/{{ lab.id }}/mapa/"
-                    class="btn btn-primary btn-sm">
+                       class="btn btn-primary btn-sm">
                         Mapa
                     </a>
                     {% if is_admin %}
                     <a href="/laboratorio/{{ lab.id }}/editar/"
-                    class="btn btn-warning btn-sm">
+                       class="btn btn-warning btn-sm">
                         Editar
                     </a>
                     <a href="/laboratorio/{{ lab.id }}/eliminar/"
-                    class="btn btn-danger btn-sm">
+                       class="btn btn-danger btn-sm">
                         Eliminar
                     </a>
                     {% endif %}
@@ -62,13 +62,13 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6" class="text-center text-muted">No hay laboratorios asignados.</td>
+                <td colspan="6" class="text-center text-muted">
+                    No hay laboratorios asignados.
+                </td>
             </tr>
             {% endfor %}
         </tbody>
-
     </table>
-
 </div>
 
 {% endblock %}
