@@ -105,10 +105,6 @@ class Modulo(models.Model):
 
 
 class Laboratorista(models.Model):
-    TIPO_CHOICES = [
-        ('laboratorista', 'Laboratorista'),
-        ('encargado', 'Encargado'),
-    ]
 
     RESPONSABILIDADES_CHOICES = [
         ('prestamos',     'Gestión de préstamos'),
@@ -125,21 +121,42 @@ class Laboratorista(models.Model):
     cedula    = models.CharField(max_length=20, unique=True)
     correo    = models.EmailField(blank=True, default='')
     programa  = models.CharField(max_length=200, blank=True, default='')
-    tipo = models.CharField(
-        max_length=20,
-        choices=TIPO_CHOICES,
-        default='laboratorista'
-    )
     responsabilidades = models.JSONField(default=list, blank=True)
-    laboratorios = models.ManyToManyField(
-        Laboratorio,
-        blank=True,
-        related_name='laboratoristas',
-    )
-    activo = models.BooleanField(default=True)
+    activo    = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['apellido', 'nombre']
 
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
+
+
+class LaboratoristaLab(models.Model):
+
+    TIPO_CHOICES = [
+        ('laboratorista', 'Laboratorista'),
+        ('encargado',     'Encargado'),
+    ]
+
+    laboratorista = models.ForeignKey(
+        Laboratorista,
+        on_delete=models.CASCADE,
+        related_name='asignaciones'
+    )
+    laboratorio = models.ForeignKey(
+        Laboratorio,
+        on_delete=models.CASCADE,
+        related_name='asignaciones'
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        default='laboratorista'
+    )
+
+    class Meta:
+        unique_together = ('laboratorista', 'laboratorio')
+        ordering = ['laboratorio', 'tipo']
+
+    def __str__(self):
+        return f"{self.laboratorista} — {self.laboratorio} ({self.tipo})"

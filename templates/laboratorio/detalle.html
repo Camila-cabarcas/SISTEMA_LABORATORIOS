@@ -4,29 +4,24 @@
 
 <h1 class="mb-4">{{ laboratorio.nombre }}</h1>
 
+{% if not encargado_principal %}
+<div class="alert alert-warning">
+    ⚠️ Este laboratorio no tiene encargado asignado.
+    <a href="{% url 'asignar_laboratorista' laboratorio.id %}">Asignar encargado</a>
+</div>
+{% endif %}
+
 <div class="card p-4 mb-4">
 
     <h5>Información del laboratorio</h5>
 
     <p><strong>Ubicación:</strong> {{ laboratorio.ubicacion }}</p>
     <p><strong>Programa:</strong> {{ laboratorio.programa }}</p>
-    <p><strong>Cuenta de acceso:</strong>
-        {% with cuenta=laboratorio.encargados.all.0 %}
-            {% if cuenta %}
-                <code>{{ cuenta.username }}</code>
-            {% else %}
-                <span class="text-muted">Sin cuenta asignada</span>
-            {% endif %}
-        {% endwith %}
-    </p>
 
     <div class="d-flex flex-wrap gap-2 mt-3">
         {% if is_admin %}
         <a href="/laboratorio/{{ laboratorio.id }}/editar/" class="btn btn-warning btn-sm">
             Editar
-        </a>
-        <a href="/laboratorio/{{ laboratorio.id }}/encargados/" class="btn btn-secondary btn-sm">
-            Gestionar encargados
         </a>
         <a href="/laboratorio/{{ laboratorio.id }}/eliminar/" class="btn btn-danger btn-sm">
             Eliminar
@@ -40,6 +35,16 @@
         </a>
     </div>
 
+</div>
+
+<div class="card p-3 mb-4">
+    <h5 class="mb-3">Cuenta de acceso</h5>
+    {% if cuenta_lab %}
+    <p><strong>Usuario:</strong> <code>{{ cuenta_lab.username }}</code></p>
+    <small class="text-muted">Para cambiar la contraseña hazlo desde el panel de administración.</small>
+    {% else %}
+    <p class="text-muted">Sin cuenta de acceso asignada.</p>
+    {% endif %}
 </div>
 
 <div class="card p-4">
@@ -82,38 +87,46 @@
 
 <div class="card p-4 mt-4">
 
-    <h5>Laboratoristas asignados</h5>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Laboratoristas asignados</h5>
+        {% if user.rol.nombre == 'Administrador' %}
+        <a href="{% url 'asignar_laboratorista' laboratorio.id %}"
+           class="btn btn-primary btn-sm">
+            + Asignar laboratorista
+        </a>
+        {% endif %}
+    </div>
 
-    {% if laboratorio.laboratoristas.all %}
+    {% if asignaciones_lab %}
     <table class="table table-striped align-middle">
         <thead>
             <tr>
                 <th>Nombre</th>
-                <th>Tipo</th>
                 <th>Cédula</th>
                 <th>Correo</th>
                 <th>Programa</th>
+                <th>Tipo</th>
                 <th>Responsabilidades</th>
             </tr>
         </thead>
         <tbody>
-            {% for l in laboratorio.laboratoristas.all %}
-            {% if l.activo %}
+            {% for asignacion in asignaciones_lab %}
+            {% if asignacion.laboratorista.activo %}
             <tr>
-                <td>{{ l }}</td>
+                <td>{{ asignacion.laboratorista }}</td>
+                <td>{{ asignacion.laboratorista.cedula }}</td>
+                <td>{{ asignacion.laboratorista.correo|default:"—" }}</td>
+                <td>{{ asignacion.laboratorista.programa|default:"—" }}</td>
                 <td>
-                    {% if l.tipo == 'encargado' %}
+                    {% if asignacion.tipo == 'encargado' %}
                         <span class="badge bg-warning text-dark">Encargado</span>
                     {% else %}
                         <span class="badge bg-secondary">Laboratorista</span>
                     {% endif %}
                 </td>
-                <td>{{ l.cedula }}</td>
-                <td>{{ l.correo|default:"—" }}</td>
-                <td>{{ l.programa|default:"—" }}</td>
                 <td>
-                    {% for r in l.responsabilidades %}
-                        <span class="badge bg-secondary me-1">{{ r }}</span>
+                    {% for r in asignacion.laboratorista.responsabilidades %}
+                        <span class="badge bg-light text-dark border me-1">{{ r }}</span>
                     {% empty %}
                         <span class="text-muted">—</span>
                     {% endfor %}

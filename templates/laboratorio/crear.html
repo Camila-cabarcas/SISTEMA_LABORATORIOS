@@ -4,13 +4,46 @@
 
 <h1 class="mb-4">Nuevo Laboratorio</h1>
 
+{% if errores %}
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        {% for e in errores %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 <div class="card p-4">
 
-    <form method="POST">
+    <form method="POST" id="crear-lab-form">
 
         {% csrf_token %}
 
         {{ form.as_p }}
+
+        <hr>
+        <h5 class="mb-3">Cuenta de acceso del laboratorio</h5>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Usuario *</label>
+                <input type="text" name="cuenta_username" class="form-control"
+                       placeholder="Ej: lab_electronica"
+                       value="{{ post_data.cuenta_username|default:'' }}" required>
+                <small class="text-muted">Solo letras, números y guiones bajos</small>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Contraseña *</label>
+                <input type="password" name="cuenta_password" class="form-control"
+                       placeholder="Contraseña" required>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Confirmar contraseña *</label>
+                <input type="password" name="cuenta_password2" class="form-control"
+                       placeholder="Repite la contraseña" required>
+            </div>
+        </div>
+        <div id="password-error" class="text-danger small mb-3 d-none">
+            Las contraseñas no coinciden.
+        </div>
 
         <button type="submit" class="btn btn-primary">
             Crear Laboratorio
@@ -23,5 +56,16 @@
     </form>
 
 </div>
+
+<script>
+document.getElementById('crear-lab-form').addEventListener('submit', function(e) {
+    const p1 = document.querySelector('[name="cuenta_password"]').value;
+    const p2 = document.querySelector('[name="cuenta_password2"]').value;
+    if (p1 !== p2) {
+        e.preventDefault();
+        document.getElementById('password-error').classList.remove('d-none');
+    }
+});
+</script>
 
 {% endblock %}

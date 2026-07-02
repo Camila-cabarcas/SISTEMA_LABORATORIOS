@@ -38,8 +38,16 @@
                 <td>{{ lab.correo|default:"—" }}</td>
                 <td>{{ lab.programa|default:"—" }}</td>
                 <td>
-                    {% for l in lab.laboratorios.all %}
-                        <span class="badge bg-secondary">{{ l.nombre }}</span>
+                    {% for asignacion in lab.asignaciones.all %}
+                        {% if asignacion.tipo == 'encargado' %}
+                            <span class="badge bg-warning text-dark me-1">
+                                Encargado — {{ asignacion.laboratorio.nombre }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary me-1">
+                                {{ asignacion.laboratorio.nombre }}
+                            </span>
+                        {% endif %}
                     {% empty %}
                         <span class="text-muted">Sin asignar</span>
                     {% endfor %}

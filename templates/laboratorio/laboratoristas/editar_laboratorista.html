@@ -13,7 +13,7 @@
 {% endif %}
 
 <div class="card p-4">
-    <form method="POST" id="lab-form">
+    <form method="POST">
         {% csrf_token %}
 
         <div class="row">
@@ -55,39 +55,6 @@
             </select>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Tipo *</label>
-            <select name="tipo" class="form-select">
-                <option value="laboratorista"
-                    {% if laboratorista.tipo == 'laboratorista' %}selected{% endif %}>
-                    Laboratorista
-                </option>
-                <option value="encargado"
-                    {% if laboratorista.tipo == 'encargado' %}selected{% endif %}>
-                    Encargado
-                </option>
-            </select>
-        </div>
-
-        <hr>
-
-        <!-- Laboratorios — pill selector -->
-        <div class="mb-4">
-            <label class="form-label fw-semibold">Laboratorios asignados</label>
-            <div id="lab-pills" class="d-flex flex-wrap gap-2 mt-1">
-                {% for lab in laboratorios %}
-                <button type="button"
-                        class="btn btn-sm btn-outline-primary lab-pill"
-                        data-id="{{ lab.id }}">
-                    {{ lab.nombre }}
-                </button>
-                {% empty %}
-                <span class="text-muted">No hay laboratorios registrados.</span>
-                {% endfor %}
-            </div>
-            <div id="labs-hidden"></div>
-        </div>
-
         <hr>
 
         <!-- Responsabilidades -->
@@ -116,44 +83,5 @@
         </div>
     </form>
 </div>
-
-<script>
-(function () {
-    const preSelected = {{ labs_asignados_json|safe }};
-    const hiddenContainer = document.getElementById('labs-hidden');
-
-    function setHiddens(ids) {
-        hiddenContainer.innerHTML = '';
-        ids.forEach(function (id) {
-            const inp = document.createElement('input');
-            inp.type = 'hidden';
-            inp.name = 'laboratorios';
-            inp.value = id;
-            hiddenContainer.appendChild(inp);
-        });
-    }
-
-    const selected = new Set(preSelected.map(Number));
-
-    document.querySelectorAll('.lab-pill').forEach(function (btn) {
-        const id = Number(btn.dataset.id);
-        if (selected.has(id)) {
-            btn.classList.replace('btn-outline-primary', 'btn-primary');
-        }
-        btn.addEventListener('click', function () {
-            if (selected.has(id)) {
-                selected.delete(id);
-                btn.classList.replace('btn-primary', 'btn-outline-primary');
-            } else {
-                selected.add(id);
-                btn.classList.replace('btn-outline-primary', 'btn-primary');
-            }
-            setHiddens(Array.from(selected));
-        });
-    });
-
-    setHiddens(Array.from(selected));
-})();
-</script>
 
 {% endblock %}

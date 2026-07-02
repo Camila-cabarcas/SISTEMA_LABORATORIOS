@@ -1,0 +1,117 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Laboratoristas — {{ laboratorio.nombre }}</h1>
+    <a href="/laboratorio/{{ laboratorio.id }}/" class="btn btn-secondary btn-sm">
+        Volver al detalle
+    </a>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Asignados actualmente -->
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Asignados actualmente</h5>
+    {% if asignados %}
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Tipo</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asignacion in asignados %}
+            <tr>
+                <td>{{ asignacion.laboratorista }}</td>
+                <td>{{ asignacion.laboratorista.cedula }}</td>
+                <td>
+                    {% if asignacion.tipo == 'encargado' %}
+                        <span class="badge bg-warning text-dark">Encargado</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Laboratorista</span>
+                    {% endif %}
+                </td>
+                <td class="d-flex gap-2">
+                    <!-- Cambiar tipo -->
+                    <form method="POST" class="m-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="cambiar_tipo">
+                        <input type="hidden" name="asignacion_id" value="{{ asignacion.id }}">
+                        {% if asignacion.tipo == 'encargado' %}
+                        <input type="hidden" name="nuevo_tipo" value="laboratorista">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                            Quitar como encargado
+                        </button>
+                        {% else %}
+                        <input type="hidden" name="nuevo_tipo" value="encargado">
+                        <button type="submit" class="btn btn-outline-warning btn-sm">
+                            Promover a encargado
+                        </button>
+                        {% endif %}
+                    </form>
+                    <!-- Desasignar -->
+                    {% if asignacion.tipo != 'encargado' %}
+                    <form method="POST" class="m-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="desasignar">
+                        <input type="hidden" name="asignacion_id" value="{{ asignacion.id }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Desasignar</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">No hay laboratoristas asignados a este laboratorio.</p>
+    {% endif %}
+</div>
+
+<!-- Agregar laboratorista -->
+{% if disponibles %}
+<div class="card p-4">
+    <h5 class="mb-3">Agregar laboratorista</h5>
+    <form method="POST" class="row g-3 align-items-end">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="asignar">
+        <div class="col-md-6">
+            <label class="form-label">Laboratorista</label>
+            <select name="laboratorista_id" class="form-select" required>
+                <option value="">— Seleccionar —</option>
+                {% for l in disponibles %}
+                <option value="{{ l.id }}">{{ l }} ({{ l.cedula }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Tipo</label>
+            <select name="tipo" class="form-select">
+                <option value="laboratorista">Laboratorista</option>
+                <option value="encargado">Encargado</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-success w-100">Asignar</button>
+        </div>
+    </form>
+</div>
+{% else %}
+<div class="card p-4">
+    <p class="text-muted mb-0">Todos los laboratoristas activos ya están asignados a este laboratorio.</p>
+</div>
+{% endif %}
+
+{% endblock %}

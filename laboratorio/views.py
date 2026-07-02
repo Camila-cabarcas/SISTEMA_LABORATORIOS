@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.core.exceptions import PermissionDenied
 from users.decorators import rol_requerido
 from users.models import Usuario
-from .models import Laboratorio, EventoLaboratorio, Laboratorista
+from .models import Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab
 from .forms import LaboratorioForm
 from inventario.models import ItemInventario
 from reservas.models import ReservaInsumo
@@ -38,24 +38,40 @@ def lista_laboratorios(request):
 def crear_laboratorio(request):
     if request.method == 'POST':
         form = LaboratorioForm(request.POST)
-        if form.is_valid():
+        cuenta_username  = request.POST.get('cuenta_username', '').strip()
+        cuenta_password  = request.POST.get('cuenta_password', '').strip()
+        cuenta_password2 = request.POST.get('cuenta_password2', '').strip()
+
+        errores = []
+        if not cuenta_username:
+            errores.append('El usuario de la cuenta es requerido.')
+        if not cuenta_password:
+            errores.append('La contraseña es requerida.')
+        if cuenta_password and cuenta_password != cuenta_password2:
+            errores.append('Las contraseñas no coinciden.')
+        if cuenta_username and Usuario.objects.filter(username=cuenta_username).exists():
+            errores.append('Ese nombre de usuario ya está en uso.')
+
+        if form.is_valid() and not errores:
             laboratorio = form.save()
-            import secrets
             from users.models import Rol
-            username = 'lab_' + laboratorio.nombre.lower().replace(' ', '_').replace('-', '_')
-            password = secrets.token_urlsafe(10)
             usuario_lab = Usuario.objects.create_user(
-                username=username,
-                password=password,
+                username=cuenta_username,
+                password=cuenta_password,
                 first_name=laboratorio.nombre,
                 rol=Rol.objects.get(nombre='Laboratorio'),
-                codigo=username,
+                codigo=cuenta_username,
             )
             laboratorio.encargados.add(usuario_lab)
             from django.contrib import messages
-            messages.success(request,
-                f"Laboratorio creado. Cuenta de acceso — usuario: {username} / contraseña: {password}")
+            messages.success(request, f"Laboratorio creado. Cuenta: {cuenta_username}")
             return redirect('detalle_laboratorio', id=laboratorio.id)
+
+        return render(request, 'laboratorio/crear.html', {
+            'form':      form,
+            'errores':   errores,
+            'post_data': request.POST,
+        })
     else:
         form = LaboratorioForm()
 
@@ -69,11 +85,20 @@ def detalle_laboratorio(request, id):
     items = ItemInventario.objects.filter(laboratorio=laboratorio)
     is_admin = request.user.rol.nombre == 'Administrador'
 
+    cuenta_lab          = laboratorio.encargados.filter(username__startswith='lab_').first()
+    encargado_principal = LaboratoristaLab.objects.filter(
+        laboratorio=laboratorio, tipo='encargado'
+    ).select_related('laboratorista').first()
+    asignaciones_lab = laboratorio.asignaciones.select_related('laboratorista').all()
+
     return render(request, 'laboratorio/detalle.html', {
-        'laboratorio': laboratorio,
-        'items':       items,
-        'is_admin':    is_admin,
-        'encargados':  laboratorio.encargados.all(),
+        'laboratorio':        laboratorio,
+        'items':              items,
+        'is_admin':           is_admin,
+        'encargados':         laboratorio.encargados.all(),
+        'cuenta_lab':         cuenta_lab,
+        'encargado_principal': encargado_principal,
+        'asignaciones_lab':   asignaciones_lab,
     })
 
 
@@ -543,13 +568,85 @@ def gestionar_encargados(request, lab_id):
     })
 
 
+@rol_requerido('Administrador')
+def asignar_laboratorista(request, lab_id):
+    from django.contrib import messages
+    laboratorio = get_object_or_404(Laboratorio, id=lab_id)
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+
+        if accion == 'asignar':
+            laboratorista_id = request.POST.get('laboratorista_id')
+            tipo             = request.POST.get('tipo', 'laboratorista')
+            laboratorista    = get_object_or_404(Laboratorista, id=laboratorista_id)
+
+            if tipo == 'encargado' and LaboratoristaLab.objects.filter(
+                laboratorio=laboratorio, tipo='encargado'
+            ).exists():
+                messages.error(request, "Este laboratorio ya tiene un encargado.")
+                return redirect('asignar_laboratorista', lab_id=lab_id)
+
+            LaboratoristaLab.objects.create(
+                laboratorista=laboratorista,
+                laboratorio=laboratorio,
+                tipo=tipo,
+            )
+            messages.success(request, "Laboratorista asignado correctamente.")
+
+        elif accion == 'desasignar':
+            asignacion_id = request.POST.get('asignacion_id')
+            asignacion    = get_object_or_404(LaboratoristaLab, id=asignacion_id)
+
+            if asignacion.tipo == 'encargado':
+                messages.error(request,
+                    "No puedes desasignar al encargado. "
+                    "Primero asigna otro encargado para reemplazarlo.")
+                return redirect('asignar_laboratorista', lab_id=lab_id)
+
+            asignacion.delete()
+            messages.success(request, "Laboratorista desasignado correctamente.")
+
+        elif accion == 'cambiar_tipo':
+            asignacion_id = request.POST.get('asignacion_id')
+            nuevo_tipo    = request.POST.get('nuevo_tipo')
+            asignacion    = get_object_or_404(LaboratoristaLab, id=asignacion_id)
+
+            if nuevo_tipo == 'encargado' and LaboratoristaLab.objects.filter(
+                laboratorio=laboratorio, tipo='encargado'
+            ).exclude(id=asignacion.id).exists():
+                messages.error(request, "Este laboratorio ya tiene un encargado.")
+                return redirect('asignar_laboratorista', lab_id=lab_id)
+
+            asignacion.tipo = nuevo_tipo
+            asignacion.save()
+            messages.success(request, "Tipo actualizado correctamente.")
+
+        return redirect('asignar_laboratorista', lab_id=lab_id)
+
+    disponibles = Laboratorista.objects.filter(activo=True).exclude(
+        asignaciones__laboratorio=laboratorio
+    )
+    asignados = LaboratoristaLab.objects.filter(
+        laboratorio=laboratorio
+    ).select_related('laboratorista')
+
+    return render(request, 'laboratorio/asignar_laboratorista.html', {
+        'laboratorio': laboratorio,
+        'disponibles': disponibles,
+        'asignados':   asignados,
+    })
+
+
 # ── Laboratoristas ─────────────────────────────────────────────
 
 @rol_requerido('Administrador')
 def lista_laboratoristas(request):
     from django.db.models import Q
     q = request.GET.get('q', '').strip()
-    qs = Laboratorista.objects.prefetch_related('laboratorios')
+    qs = Laboratorista.objects.filter(activo=True).prefetch_related(
+        'asignaciones__laboratorio'
+    )
     if q:
         qs = qs.filter(
             Q(nombre__icontains=q) |
@@ -564,12 +661,10 @@ def lista_laboratoristas(request):
 
 @rol_requerido('Administrador')
 def crear_laboratorista(request):
-    import json
     from users.models import ProgramaAcademico
-    errores          = []
-    datos            = {}
-    resp_sel         = ['prestamos', 'atencion', 'inventario']
-    labs_asignados_j = json.dumps([])
+    errores  = []
+    datos    = {}
+    resp_sel = ['prestamos', 'atencion', 'inventario']
 
     if request.method == 'POST':
         nombre            = request.POST.get('nombre', '').strip()
@@ -577,11 +672,8 @@ def crear_laboratorista(request):
         cedula            = request.POST.get('cedula', '').strip()
         correo            = request.POST.get('correo', '').strip()
         programa          = request.POST.get('programa', '').strip()
-        lab_ids           = request.POST.getlist('laboratorios')
         responsabilidades = request.POST.getlist('responsabilidades')
-        tipo              = request.POST.get('tipo', 'laboratorista')
         resp_sel          = responsabilidades
-        labs_asignados_j  = json.dumps([int(x) for x in lab_ids if x.isdigit()])
         datos = {
             'nombre': nombre, 'apellido': apellido, 'cedula': cedula,
             'correo': correo, 'programa': programa,
@@ -597,34 +689,28 @@ def crear_laboratorista(request):
             errores.append('Ya existe un laboratorista con esa cédula.')
 
         if not errores:
-            lab = Laboratorista.objects.create(
+            Laboratorista.objects.create(
                 nombre=nombre, apellido=apellido, cedula=cedula,
                 correo=correo, programa=programa,
-                tipo=tipo,
                 responsabilidades=responsabilidades,
             )
-            lab.laboratorios.set(Laboratorio.objects.filter(id__in=lab_ids))
             return redirect('lista_laboratoristas')
 
     return render(request, 'laboratorio/laboratoristas/crear_laboratorista.html', {
-        'programas':              ProgramaAcademico.objects.filter(activo=True),
-        'laboratorios':           Laboratorio.objects.all(),
-        'errores':                errores,
-        'datos':                  datos,
+        'programas':                 ProgramaAcademico.objects.filter(activo=True),
+        'errores':                   errores,
+        'datos':                     datos,
         'responsabilidades_choices': Laboratorista.RESPONSABILIDADES_CHOICES,
-        'responsabilidades_sel':  resp_sel,
-        'labs_asignados_json':    labs_asignados_j,
+        'responsabilidades_sel':     resp_sel,
     })
 
 
 @rol_requerido('Administrador')
 def editar_laboratorista(request, id):
-    import json
     from users.models import ProgramaAcademico
-    laboratorista    = get_object_or_404(Laboratorista, id=id)
-    errores          = []
-    resp_sel         = laboratorista.responsabilidades
-    labs_asignados_j = json.dumps(list(laboratorista.laboratorios.values_list('id', flat=True)))
+    laboratorista = get_object_or_404(Laboratorista, id=id)
+    errores       = []
+    resp_sel      = laboratorista.responsabilidades
 
     if request.method == 'POST':
         nombre            = request.POST.get('nombre', '').strip()
@@ -632,11 +718,8 @@ def editar_laboratorista(request, id):
         cedula            = request.POST.get('cedula', '').strip()
         correo            = request.POST.get('correo', '').strip()
         programa          = request.POST.get('programa', '').strip()
-        lab_ids           = request.POST.getlist('laboratorios')
         responsabilidades = request.POST.getlist('responsabilidades')
-        tipo              = request.POST.get('tipo', 'laboratorista')
         resp_sel          = responsabilidades
-        labs_asignados_j  = json.dumps([int(x) for x in lab_ids if x.isdigit()])
 
         if not nombre:
             errores.append('El nombre es requerido.')
@@ -648,25 +731,21 @@ def editar_laboratorista(request, id):
             errores.append('Ya existe un laboratorista con esa cédula.')
 
         if not errores:
-            laboratorista.nombre              = nombre
-            laboratorista.apellido            = apellido
-            laboratorista.cedula              = cedula
-            laboratorista.correo              = correo
-            laboratorista.programa            = programa
-            laboratorista.tipo                = tipo
-            laboratorista.responsabilidades   = responsabilidades
+            laboratorista.nombre            = nombre
+            laboratorista.apellido          = apellido
+            laboratorista.cedula            = cedula
+            laboratorista.correo            = correo
+            laboratorista.programa          = programa
+            laboratorista.responsabilidades = responsabilidades
             laboratorista.save()
-            laboratorista.laboratorios.set(Laboratorio.objects.filter(id__in=lab_ids))
             return redirect('lista_laboratoristas')
 
     return render(request, 'laboratorio/laboratoristas/editar_laboratorista.html', {
-        'laboratorista':          laboratorista,
-        'programas':              ProgramaAcademico.objects.filter(activo=True),
-        'laboratorios':           Laboratorio.objects.all(),
-        'errores':                errores,
+        'laboratorista':             laboratorista,
+        'programas':                 ProgramaAcademico.objects.filter(activo=True),
+        'errores':                   errores,
         'responsabilidades_choices': Laboratorista.RESPONSABILIDADES_CHOICES,
-        'responsabilidades_sel':  resp_sel,
-        'labs_asignados_json':    labs_asignados_j,
+        'responsabilidades_sel':     resp_sel,
     })
 
 
@@ -686,9 +765,11 @@ def eliminar_laboratorista(request, id):
 @rol_requerido('Administrador')
 def detalle_laboratorista(request, id):
     laboratorista = get_object_or_404(Laboratorista, id=id)
+    asignaciones  = laboratorista.asignaciones.select_related('laboratorio')
     return render(request, 'laboratorio/laboratoristas/detalle_laboratorista.html', {
         'laboratorista':             laboratorista,
         'responsabilidades_choices': Laboratorista.RESPONSABILIDADES_CHOICES,
+        'asignaciones':              asignaciones,
     })
 
 
@@ -698,4 +779,9 @@ def toggle_laboratorista(request, id):
     if request.method == 'POST':
         laboratorista.activo = not laboratorista.activo
         laboratorista.save()
+    return redirect('detalle_laboratorista', id=id)
+
+
+@rol_requerido('Administrador')
+def toggle_tipo_laboratorista(request, id):
     return redirect('detalle_laboratorista', id=id)

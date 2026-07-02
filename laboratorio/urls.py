@@ -20,12 +20,14 @@ from .views import (
     estado_modulos_api,
     modulos_disponibles_api,
     gestionar_encargados,
+    asignar_laboratorista,
     lista_laboratoristas,
     crear_laboratorista,
     detalle_laboratorista,
     editar_laboratorista,
     eliminar_laboratorista,
     toggle_laboratorista,
+    toggle_tipo_laboratorista,
 )
 
 urlpatterns = [
@@ -37,6 +39,7 @@ urlpatterns = [
     path('laboratoristas/<int:id>/editar/', editar_laboratorista, name='editar_laboratorista'),
     path('laboratoristas/<int:id>/eliminar/', eliminar_laboratorista, name='eliminar_laboratorista'),
     path('laboratoristas/<int:id>/toggle/', toggle_laboratorista, name='toggle_laboratorista'),
+    path('laboratoristas/<int:id>/toggle-tipo/', toggle_tipo_laboratorista, name='toggle_tipo_laboratorista'),
     path('<int:id>/', detalle_laboratorio, name='detalle_laboratorio'),
     path('<int:id>/editar/', editar_laboratorio, name='editar_laboratorio'),
     path('<int:id>/eliminar/', eliminar_laboratorio, name='eliminar_laboratorio'),
@@ -51,4 +54,5 @@ urlpatterns = [
     path('<int:id>/modulos/estado/', estado_modulos_api, name='estado_modulos_api'),
     path('<int:id>/modulos/disponibles/', modulos_disponibles_api, name='modulos_disponibles_api'),
     path('<int:lab_id>/encargados/', gestionar_encargados, name='gestionar_encargados'),
+    path('<int:lab_id>/laboratoristas/', asignar_laboratorista, name='asignar_laboratorista'),
 ]
