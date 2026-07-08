@@ -1,0 +1,54 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Historial de no disponibilidad — {{ modulo.nombre }}</h2>
+        <small class="text-muted">{{ laboratorio.nombre }} — {{ laboratorio.ubicacion }}</small>
+    </div>
+    <a href="{% url 'mapa_laboratorio' laboratorio.id %}" class="btn btn-outline-secondary btn-sm">
+        &larr; Volver al mapa
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if historial %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Motivo</th>
+                        <th>Desde</th>
+                        <th>Hasta</th>
+                        <th>Duración</th>
+                        <th>Registrado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in historial %}
+                    <tr>
+                        <td>{{ registro.motivo }}</td>
+                        <td>{{ registro.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            {% if registro.fecha_fin %}
+                                {{ registro.fecha_fin|date:"d/m/Y H:i" }}
+                            {% else %}
+                                <span class="text-danger fw-semibold">Actualmente no disponible</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ registro.duracion }}</td>
+                        <td>{{ registro.registrado_por|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">Este módulo nunca ha sido marcado como no disponible.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -160,3 +160,38 @@ class LaboratoristaLab(models.Model):
 
     def __str__(self):
         return f"{self.laboratorista} — {self.laboratorio} ({self.tipo})"
+
+
+class HistorialModulo(models.Model):
+
+    modulo = models.ForeignKey(
+        Modulo,
+        on_delete=models.CASCADE,
+        related_name='historial'
+    )
+    motivo = models.CharField(max_length=300)
+    fecha_inicio = models.DateTimeField(auto_now_add=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+    registrado_por = models.ForeignKey(
+        'users.Usuario',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='historial_modulos'
+    )
+
+    class Meta:
+        ordering = ['-fecha_inicio']
+
+    def __str__(self):
+        return f"{self.modulo.nombre} — {self.motivo} ({self.fecha_inicio.strftime('%d/%m/%Y')})"
+
+    @property
+    def duracion(self):
+        from django.utils import timezone
+        fin = self.fecha_fin or timezone.now()
+        delta = fin - self.fecha_inicio
+        dias = delta.days
+        horas = delta.seconds // 3600
+        if dias > 0:
+            return f"{dias}d {horas}h"
+        return f"{horas}h {(delta.seconds % 3600) // 60}m"

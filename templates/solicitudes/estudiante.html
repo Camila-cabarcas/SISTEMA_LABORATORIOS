@@ -152,6 +152,56 @@
             </div>
         </div>
 
+        <!-- Sección de módulos con layout de laboratorio -->
+        <div id="seccion-modulos-est" class="mb-3" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-semibold mb-0">
+                    Selección de módulos
+                    <small class="text-muted">(máx. 1 módulo)</small>
+                </label>
+                <button type="button" id="btn-cargar-modulos-est" class="btn btn-outline-primary btn-sm"
+                        style="display:none;">
+                    🔄 Ver disponibilidad de módulos
+                </button>
+            </div>
+
+            <input type="hidden" name="modulos_ids" id="modulos_ids_hidden_est" value="">
+
+            <!-- Leyenda -->
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="badge bg-success px-2 py-1">Disponible</span>
+                <span class="badge bg-warning text-dark px-2 py-1">Reservado</span>
+                <span class="badge bg-secondary px-2 py-1">No disponible</span>
+                <span class="badge bg-primary px-2 py-1">Seleccionado</span>
+            </div>
+
+            <!-- Lab room layout -->
+            <div class="lab-room-form">
+                <div class="lab-wall-form">↑ Pizarrón</div>
+                <div class="lab-body-form">
+                    <div class="lab-col-form" id="form-zona-izquierda-est"></div>
+                    <div class="lab-center-form">
+                        <div class="lab-center-row-form" id="form-zona-centro-top-est"></div>
+                        <div class="lab-center-mid-form"  id="form-zona-centro-mid-est"></div>
+                        <div class="lab-center-row-form" id="form-zona-centro-bot-est"></div>
+                    </div>
+                    <div class="lab-col-form" id="form-zona-derecha-est"></div>
+                </div>
+                <div class="lab-bottom-form" id="form-zona-inferior-est"></div>
+                <div class="lab-door-form">🚪 Entrada</div>
+            </div>
+
+            <p id="modulos-placeholder-est" class="text-muted small mt-2">
+                Selecciona laboratorio, fecha y horario primero, luego haz clic en "Ver disponibilidad de módulos".
+            </p>
+
+            <div id="modulos-seleccionados-lista-est" class="mt-2 d-none">
+                <small class="text-primary fw-semibold">
+                    Módulo seleccionado: <span id="modulos-seleccionados-nombres-est"></span>
+                </small>
+            </div>
+        </div>
+
         <hr>
         <h5 class="mb-3">Insumos Requeridos</h5>
 
@@ -213,6 +263,54 @@
 }
 .time-slot.slot-range { background: #f0e0d0; color: #333; border-radius: 0; }
 .time-slot.slot-disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
+
+/* ── Lab room en formulario ── */
+.lab-room-form {
+    border: 3px solid #343a40;
+    border-radius: 8px;
+    background: #fff;
+    padding: 10px;
+    min-height: 400px;
+}
+.lab-wall-form {
+    background: #343a40; color: white; text-align: center;
+    padding: 5px; border-radius: 4px; margin-bottom: 8px;
+    font-size: .8rem; letter-spacing: 1px;
+}
+.lab-body-form { display: flex; gap: 10px; min-height: 280px; }
+.lab-col-form {
+    display: flex; flex-direction: column;
+    gap: 6px; justify-content: center; min-width: 95px;
+}
+.lab-center-form { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.lab-center-row-form { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.lab-center-mid-form {
+    flex: 1; display: flex; flex-wrap: wrap;
+    gap: 6px; align-content: center; justify-content: center;
+}
+.lab-bottom-form {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: center; margin-top: 8px;
+}
+.lab-door-form { text-align: center; margin-top: 6px; font-size: .8rem; color: #666; }
+
+/* ── Módulo en formulario ── */
+.modulo-form-seat {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: 8px; padding: 8px 6px;
+    min-height: 65px; width: 90px; flex-shrink: 0;
+    font-size: .78rem; font-weight: 600; text-align: center;
+    transition: transform .15s, box-shadow .15s;
+    user-select: none;
+}
+.modulo-form-seat.seleccionable { cursor: pointer; }
+.modulo-form-seat.seleccionable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+.modulo-form-seat.no-seleccionable { cursor: not-allowed; opacity: .5; }
+.modulo-cap-form { font-size: .65rem; opacity: .85; margin-top: 2px; }
 </style>
 
 <script>
@@ -459,6 +557,147 @@ function actualizarListaInsumos() {
     document.getElementById('id_insumos_ids').value       = ids.join(',');
     document.getElementById('id_insumos_cantidades').value = cantidades.join(',');
     listContainer.style.display = Object.keys(insumosSeleccionados).length ? 'block' : 'none';
+}
+
+// ── Mapa de módulos ────────────────────────────────────────────
+let modulosSeleccionadosEst = new Set();
+const MAX_MODULOS_EST = 1;
+let modulosDataEst = [];
+
+const checkModuloEst    = document.getElementById('id_necesita_modulo');
+const seccionModulosEst = document.getElementById('seccion-modulos-est');
+
+if (checkModuloEst) {
+    checkModuloEst.addEventListener('change', function() {
+        seccionModulosEst.style.display = this.checked ? 'block' : 'none';
+        if (!this.checked) {
+            modulosSeleccionadosEst.clear();
+            document.getElementById('modulos_ids_hidden_est').value = '';
+            limpiarZonasEst();
+        } else {
+            mostrarBtnModulosEst();
+        }
+    });
+    if (checkModuloEst.checked) seccionModulosEst.style.display = 'block';
+}
+
+function mostrarBtnModulosEst() {
+    const labId  = document.getElementById('id_laboratorio').value;
+    const fecha  = document.getElementById('id_fecha_reserva').value;
+    const inicio = document.getElementById('id_hora_inicio').value;
+    const fin    = document.getElementById('id_hora_fin').value;
+    document.getElementById('btn-cargar-modulos-est').style.display =
+        (labId && fecha && inicio && fin) ? 'inline-block' : 'none';
+}
+
+document.getElementById('id_laboratorio').addEventListener('change', mostrarBtnModulosEst);
+if (fechaInput) fechaInput.addEventListener('change', mostrarBtnModulosEst);
+document.getElementById('btn-confirm-time-est').addEventListener('click', mostrarBtnModulosEst);
+document.getElementById('btn-cargar-modulos-est').addEventListener('click', cargarModulosEst);
+
+function cargarModulosEst() {
+    const labId  = document.getElementById('id_laboratorio').value;
+    const fecha  = document.getElementById('id_fecha_reserva').value;
+    const inicio = document.getElementById('id_hora_inicio').value;
+    const fin    = document.getElementById('id_hora_fin').value;
+    if (!labId || !fecha) { alert('Selecciona laboratorio y fecha primero.'); return; }
+
+    fetch(`/laboratorio/${labId}/modulos/disponibles-publica/?fecha=${fecha}&hora_inicio=${inicio}&hora_fin=${fin}`)
+        .then(r => r.json())
+        .then(data => {
+            modulosDataEst = data.modulos;
+            document.getElementById('modulos-placeholder-est').style.display = 'none';
+            renderModulosLabEst();
+        });
+}
+
+function limpiarZonasEst() {
+    ['form-zona-izquierda-est','form-zona-centro-top-est','form-zona-centro-mid-est',
+     'form-zona-centro-bot-est','form-zona-derecha-est','form-zona-inferior-est'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+}
+
+function renderModulosLabEst() {
+    limpiarZonasEst();
+    const total    = modulosDataEst.length;
+    const porLado  = Math.max(2, Math.floor(total * 0.18));
+    const porFila  = Math.max(2, Math.floor(total * 0.18));
+    const restante = total - porLado * 2 - porFila;
+    const centroT  = Math.floor(restante * 0.33);
+    const centroB  = Math.floor(restante * 0.33);
+    const centroM  = restante - centroT - centroB;
+
+    const zonas = [
+        { id: 'form-zona-izquierda-est',  count: porLado },
+        { id: 'form-zona-centro-top-est', count: centroT },
+        { id: 'form-zona-centro-mid-est', count: centroM },
+        { id: 'form-zona-centro-bot-est', count: centroB },
+        { id: 'form-zona-derecha-est',    count: porLado },
+        { id: 'form-zona-inferior-est',   count: porFila },
+    ];
+
+    let idx = 0;
+    zonas.forEach(zona => {
+        const c = document.getElementById(zona.id);
+        if (!c) return;
+        for (let i = 0; i < zona.count && idx < total; i++, idx++) {
+            c.appendChild(crearModuloSeatEst(modulosDataEst[idx]));
+        }
+    });
+    const cm = document.getElementById('form-zona-centro-mid-est');
+    while (idx < total) { cm.appendChild(crearModuloSeatEst(modulosDataEst[idx])); idx++; }
+
+    actualizarHiddenEst();
+}
+
+function crearModuloSeatEst(m) {
+    const seleccionado  = modulosSeleccionadosEst.has(m.id);
+    const seleccionable = m.seleccionable;
+    const div = document.createElement('div');
+
+    div.className = `modulo-form-seat ${seleccionable ? 'seleccionable' : 'no-seleccionable'}`;
+    div.style.background = seleccionado ? '#0d6efd' :
+                           m.color === 'success' ? '#198754' :
+                           m.color === 'warning'  ? '#ffc107' : '#6c757d';
+    div.style.color = (m.color === 'warning' && !seleccionado) ? '#333' : 'white';
+    if (seleccionado) div.style.outline = '3px solid #0a58ca';
+    div.innerHTML = `
+        <span>${m.nombre}</span>
+        <span class="modulo-cap-form">Cap. ${m.capacidad}</span>
+    `;
+
+    if (seleccionable) {
+        div.addEventListener('click', function() {
+            if (modulosSeleccionadosEst.has(m.id)) {
+                modulosSeleccionadosEst.delete(m.id);
+            } else {
+                if (modulosSeleccionadosEst.size >= MAX_MODULOS_EST) {
+                    alert('Solo puedes seleccionar máximo 1 módulo.');
+                    return;
+                }
+                modulosSeleccionadosEst.add(m.id);
+            }
+            renderModulosLabEst();
+        });
+    }
+    return div;
+}
+
+function actualizarHiddenEst() {
+    const ids = Array.from(modulosSeleccionadosEst);
+    document.getElementById('modulos_ids_hidden_est').value = ids.join(',');
+    const lista   = document.getElementById('modulos-seleccionados-lista-est');
+    const nombres = document.getElementById('modulos-seleccionados-nombres-est');
+    if (ids.length > 0) {
+        lista.classList.remove('d-none');
+        nombres.textContent = modulosDataEst
+            .filter(m => modulosSeleccionadosEst.has(m.id))
+            .map(m => m.nombre).join(', ');
+    } else {
+        lista.classList.add('d-none');
+    }
 }
 </script>
 

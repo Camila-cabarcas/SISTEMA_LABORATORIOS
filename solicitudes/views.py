@@ -19,6 +19,21 @@ def solicitud_estudiante(request):
         form = EstudianteSolicitudForm(None, request.POST)
         if form.is_valid():
             solicitud = form.save()
+
+            if solicitud.necesita_modulo:
+                from laboratorio.models import Modulo
+                ids = [
+                    int(x) for x in request.POST.get('modulos_ids', '').split(',')
+                    if x.strip().isdigit()
+                ]
+                if ids:
+                    modulos = Modulo.objects.filter(
+                        id__in=ids[:1],
+                        laboratorio=solicitud.laboratorio,
+                        disponible=True,
+                    )
+                    solicitud.modulos_asignados.set(modulos)
+
             try:
                 reserva = solicitud.crear_reserva()
             except Exception as e:

@@ -240,8 +240,10 @@ def eliminar_evento(request, id):
 
 @rol_requerido('Administrador', 'Laboratorio')
 def mapa_laboratorio(request, id):
-    from datetime import date, datetime, time
+    from datetime import date, datetime, time, timedelta
+    from django.utils import timezone
     from solicitudes.models import SolicitudReserva
+    from laboratorio.models import HistorialModulo
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
@@ -308,16 +310,38 @@ def mapa_laboratorio(request, id):
             soles = modulo_solicitudes.get(modulo.id, [])
 
             if not modulo.disponible:
-                estado         = 'inactivo'
-                color          = 'secondary'
                 solicitud_info = None
-                motivo         = modulo.motivo_no_disponible
+                registro_activo = HistorialModulo.objects.filter(
+                    modulo=modulo,
+                    fecha_fin__isnull=True
+                ).first()
+
+                if registro_activo:
+                    fecha_inicio_registro = registro_activo.fecha_inicio.date()
+                    if fecha <= fecha_inicio_registro - timedelta(days=1):
+                        estado = 'disponible'
+                        color  = 'success'
+                        motivo = ''
+                    else:
+                        estado = 'inactivo'
+                        color  = 'secondary'
+                        motivo = modulo.motivo_no_disponible
+                else:
+                    estado = 'inactivo'
+                    color  = 'secondary'
+                    motivo = modulo.motivo_no_disponible
 
             elif soles:
+                es_hoy = (fecha == date.today())
+                ahora  = timezone.now().time()
+
                 sol_activa = None
                 for sol in soles:
                     if (sol.reserva and sol.reserva.estado
-                            and sol.reserva.estado.nombre == 'Aprobada'):
+                            and sol.reserva.estado.nombre == 'Aprobada'
+                            and es_hoy
+                            and sol.hora_inicio and sol.hora_fin
+                            and sol.hora_inicio <= ahora <= sol.hora_fin):
                         sol_activa = sol
                         break
 
@@ -400,7 +424,7 @@ def mapa_laboratorio(request, id):
 
 @rol_requerido('Administrador', 'Laboratorio')
 def toggle_modulo(request, lab_id, mod_id):
-    from .models import Modulo
+    from .models import Modulo, HistorialModulo
     laboratorio = get_object_or_404(Laboratorio, id=lab_id)
     _check_lab_access(request, laboratorio)
     modulo = get_object_or_404(Modulo, id=mod_id, laboratorio=laboratorio)
@@ -411,6 +435,23 @@ def toggle_modulo(request, lab_id, mod_id):
         modulo.disponible           = disponible
         modulo.motivo_no_disponible = '' if disponible else motivo
         modulo.save()
+
+        if not disponible:
+            HistorialModulo.objects.create(
+                modulo=modulo,
+                motivo=motivo,
+                registrado_por=request.user,
+            )
+        else:
+            registro_activo = HistorialModulo.objects.filter(
+                modulo=modulo,
+                fecha_fin__isnull=True
+            ).first()
+            if registro_activo:
+                from django.utils import timezone
+                registro_activo.fecha_fin = timezone.now()
+                registro_activo.save()
+
         return JsonResponse({
             'status':     'ok',
             'disponible': modulo.disponible,
@@ -481,17 +522,14 @@ def estado_modulos_api(request, id):
             estado = 'inactivo'
         elif soles:
             sol_activa = None
-            if hora_inicio_filtro and hora_fin_filtro:
-                for sol in soles:
-                    if (sol.reserva and sol.reserva.estado
-                            and sol.reserva.estado.nombre == 'Aprobada'):
-                        sol_activa = sol
-                        break
-            elif es_hoy:
-                for sol in soles:
-                    if sol.hora_inicio and sol.hora_fin and sol.hora_inicio <= hora_actual <= sol.hora_fin:
-                        sol_activa = sol
-                        break
+            for sol in soles:
+                if (sol.reserva and sol.reserva.estado
+                        and sol.reserva.estado.nombre == 'Aprobada'
+                        and es_hoy
+                        and sol.hora_inicio and sol.hora_fin
+                        and sol.hora_inicio <= hora_actual <= sol.hora_fin):
+                    sol_activa = sol
+                    break
             estado = 'ocupado' if sol_activa else 'reservado'
         else:
             estado = 'disponible'
@@ -560,6 +598,72 @@ def modulos_disponibles_api(request, id):
         })
 
     return JsonResponse({'modulos': modulos})
+
+
+def modulos_disponibles_publica_api(request, id):
+    """Igual que modulos_disponibles_api pero de acceso público (sin login),
+    para el mapa de módulos del formulario público de estudiante."""
+    from datetime import date, datetime
+    from solicitudes.models import SolicitudReserva
+
+    laboratorio = get_object_or_404(Laboratorio, id=id)
+
+    fecha_str = request.GET.get('fecha', '')
+    try:
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        fecha = date.today()
+
+    solicitudes = SolicitudReserva.objects.filter(
+        laboratorio=laboratorio,
+        fecha_reserva__date=fecha,
+        reserva__estado__nombre__in=['Pendiente', 'Aprobada'],
+        necesita_modulo=True,
+    ).prefetch_related('modulos_asignados')
+
+    modulos_ocupados = set()
+    for sol in solicitudes:
+        for m in sol.modulos_asignados.all():
+            modulos_ocupados.add(m.id)
+
+    modulos = []
+    for modulo in laboratorio.modulos.all():
+        if not modulo.disponible:
+            estado = 'inactivo'
+        elif modulo.id in modulos_ocupados:
+            estado = 'reservado'
+        else:
+            estado = 'disponible'
+
+        color_map = {
+            'disponible': 'success',
+            'reservado':  'warning',
+            'inactivo':   'secondary',
+        }
+        modulos.append({
+            'id':          modulo.id,
+            'nombre':      modulo.nombre,
+            'capacidad':   modulo.capacidad,
+            'estado':      estado,
+            'color':       color_map.get(estado, 'secondary'),
+            'seleccionable': estado == 'disponible',
+        })
+
+    return JsonResponse({'modulos': modulos})
+
+
+@rol_requerido('Administrador', 'Laboratorio')
+def historial_modulo(request, lab_id, mod_id):
+    from .models import Modulo, HistorialModulo
+    laboratorio = get_object_or_404(Laboratorio, id=lab_id)
+    _check_lab_access(request, laboratorio)
+    modulo = get_object_or_404(Modulo, id=mod_id, laboratorio=laboratorio)
+    historial = HistorialModulo.objects.filter(modulo=modulo)
+    return render(request, 'laboratorio/historial_modulo.html', {
+        'laboratorio': laboratorio,
+        'modulo': modulo,
+        'historial': historial,
+    })
 
 
 @rol_requerido('Administrador')

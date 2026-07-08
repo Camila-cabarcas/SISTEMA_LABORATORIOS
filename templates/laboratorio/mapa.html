@@ -144,6 +144,12 @@
           </div>
         </div>
 
+        <div id="modal-ver-historial-btn" class="mt-2 d-none">
+            <a id="modal-historial-link" href="#" class="btn btn-secondary btn-sm">
+                Ver historial
+            </a>
+        </div>
+
         <div id="modal-reserva-section" class="d-none mt-3">
           <h6 class="fw-semibold border-top pt-3">Información de la reserva</h6>
           <table class="table table-sm mb-0">
@@ -151,7 +157,7 @@
               <tr><th class="text-muted" style="width:40%">Solicitante</th><td id="modal-sol-nombre">—</td></tr>
               <tr><th class="text-muted">Cédula</th><td id="modal-sol-cedula">—</td></tr>
               <tr><th class="text-muted">Tipo</th><td id="modal-sol-tipo">—</td></tr>
-              <tr><th class="text-muted">Horario</th><td id="modal-sol-horario">—</td></tr>
+              <tr><th class="text-muted">Horario de reserva</th><td id="modal-sol-horario">—</td></tr>
               <tr><th class="text-muted">Estado reserva</th><td id="modal-sol-estado">—</td></tr>
             </tbody>
           </table>
@@ -168,11 +174,13 @@
         </div>
 
         {% if es_admin %}
-        <div class="border-top mt-3 pt-3">
+        <div class="border-top mt-3 pt-3" id="admin-section">
           <h6 class="fw-semibold text-muted">Administrar módulo</h6>
           <div id="admin-deshabilitar" class="d-none">
             <div class="mb-2">
-              <label class="form-label small mb-1">Motivo (opcional)</label>
+              <label class="form-label small mb-1">
+                Motivo <span class="text-danger">*</span>
+              </label>
               <input type="text" id="input-motivo" class="form-control form-control-sm"
                      placeholder="Ej: En mantenimiento, dañado...">
             </div>
@@ -255,6 +263,7 @@
 .modulo-seat:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
 .modulo-nombre { font-weight: 600; font-size: .82rem; text-align: center; line-height: 1.2; }
 .modulo-capacidad { font-size: .68rem; opacity: .85; margin-top: 3px; }
+.modulo-horario { font-size: .62rem; opacity: .9; margin-top: 2px; text-align: center; }
 </style>
 
 <script>
@@ -313,9 +322,16 @@ function crearSeat(data) {
     });
   }
   if (d.prestamoId) div.dataset.prestamoId = d.prestamoId;
+
+  let horarioHtml = '';
+  if (d.solInicio && d.solFin && (d.estado === 'reservado' || d.estado === 'ocupado')) {
+    horarioHtml = `<span class="modulo-horario">${d.solInicio}–${d.solFin}</span>`;
+  }
+
   div.innerHTML = `
     <span class="modulo-nombre">${d.nombre}</span>
     <span class="modulo-capacidad">Cap. ${d.capacidad}</span>
+    ${horarioHtml}
   `;
   return div;
 }
@@ -346,11 +362,18 @@ document.getElementById('modalModulo').addEventListener('show.bs.modal', functio
     `modal-header bg-${color} ${color === 'warning' ? 'text-dark' : 'text-white'}`;
 
   const motivoSec = document.getElementById('modal-motivo-section');
-  if (d.estado === 'inactivo' && d.motivo) {
+  if (d.estado === 'inactivo' && d.motivo && d.motivo.trim() !== '') {
     motivoSec.classList.remove('d-none');
     document.getElementById('modal-motivo-texto').textContent = d.motivo;
   } else {
     motivoSec.classList.add('d-none');
+  }
+
+  const histBtn = document.getElementById('modal-ver-historial-btn');
+  if (histBtn) {
+    histBtn.classList.remove('d-none');
+    document.getElementById('modal-historial-link').href =
+        `/laboratorio/${LAB_ID}/modulo/${d.id}/historial/`;
   }
 
   const reservaSec = document.getElementById('modal-reserva-section');
@@ -359,7 +382,9 @@ document.getElementById('modalModulo').addEventListener('show.bs.modal', functio
     document.getElementById('modal-sol-nombre').textContent  = d.solNombre;
     document.getElementById('modal-sol-cedula').textContent  = d.solCedula || '—';
     document.getElementById('modal-sol-tipo').textContent    = d.solTipo;
-    document.getElementById('modal-sol-horario').textContent = d.solInicio + ' – ' + d.solFin;
+    document.getElementById('modal-sol-horario').innerHTML   =
+      `<strong>${d.solInicio} – ${d.solFin}</strong>
+       <small class="text-muted ms-2">(fuera de este rango el módulo está disponible)</small>`;
     document.getElementById('modal-sol-estado').textContent  = d.solEstado;
 
     const verBtn = document.getElementById('modal-ver-reserva-btn');
@@ -381,23 +406,51 @@ document.getElementById('modalModulo').addEventListener('show.bs.modal', functio
     reservaSec.classList.add('d-none');
   }
 
+  const adminSection = document.getElementById('admin-section');
   const btnDes = document.getElementById('admin-deshabilitar');
   const btnHab = document.getElementById('admin-habilitar');
-  if (btnDes && btnHab) {
-    if (d.disponible === 'true') {
-      btnDes.classList.remove('d-none');
-      btnHab.classList.add('d-none');
-      document.getElementById('input-motivo').value = '';
+
+  if (adminSection && btnDes && btnHab) {
+    if (d.estado === 'reservado' || d.estado === 'ocupado') {
+      adminSection.style.display = 'none';
     } else {
-      btnDes.classList.add('d-none');
-      btnHab.classList.remove('d-none');
+      adminSection.style.display = '';
+      if (d.disponible === 'true') {
+        btnDes.classList.remove('d-none');
+        btnHab.classList.add('d-none');
+        document.getElementById('input-motivo').value = '';
+        const errEl = document.getElementById('motivo-error');
+        if (errEl) errEl.remove();
+        document.getElementById('input-motivo').classList.remove('is-invalid');
+      } else {
+        btnDes.classList.add('d-none');
+        btnHab.classList.remove('d-none');
+      }
     }
   }
 });
 
 function toggleModulo(disponible) {
   if (!moduloActual) return;
-  const motivo = disponible ? '' : (document.getElementById('input-motivo').value || '');
+  const motivoInput = document.getElementById('input-motivo');
+  const motivo = disponible ? '' : motivoInput.value.trim();
+
+  if (!disponible && !motivo) {
+    motivoInput.classList.add('is-invalid');
+    if (!document.getElementById('motivo-error')) {
+      const err = document.createElement('div');
+      err.id = 'motivo-error';
+      err.className = 'invalid-feedback d-block';
+      err.textContent = 'El motivo es obligatorio para marcar como no disponible.';
+      motivoInput.parentNode.appendChild(err);
+    }
+    return;
+  }
+
+  motivoInput.classList.remove('is-invalid');
+  const errEl = document.getElementById('motivo-error');
+  if (errEl) errEl.remove();
+
   fetch(`/laboratorio/${LAB_ID}/modulo/${moduloActual.id}/toggle/`, {
     method: 'POST',
     headers: {
