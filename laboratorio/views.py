@@ -325,7 +325,7 @@ def mapa_laboratorio(request, id):
                     else:
                         estado = 'inactivo'
                         color  = 'secondary'
-                        motivo = modulo.motivo_no_disponible
+                        motivo = registro_activo.motivo
                 else:
                     estado = 'inactivo'
                     color  = 'secondary'
@@ -432,6 +432,7 @@ def toggle_modulo(request, lab_id, mod_id):
     if request.method == 'POST':
         disponible = request.POST.get('disponible') == 'true'
         motivo     = request.POST.get('motivo', '').strip()
+        print(f"DEBUG toggle_modulo — disponible={disponible} motivo='{motivo}'")
         modulo.disponible           = disponible
         modulo.motivo_no_disponible = '' if disponible else motivo
         modulo.save()

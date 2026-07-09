@@ -451,6 +451,8 @@ function toggleModulo(disponible) {
   const errEl = document.getElementById('motivo-error');
   if (errEl) errEl.remove();
 
+  console.log('motivo a enviar:', motivo);
+
   fetch(`/laboratorio/${LAB_ID}/modulo/${moduloActual.id}/toggle/`, {
     method: 'POST',
     headers: {
@@ -465,8 +467,8 @@ function toggleModulo(disponible) {
 
 const btnDes = document.getElementById('btn-deshabilitar');
 const btnHab = document.getElementById('btn-habilitar');
-if (btnDes) btnDes.addEventListener('click', () => toggleModulo('false'));
-if (btnHab) btnHab.addEventListener('click', () => toggleModulo('true'));
+if (btnDes) btnDes.addEventListener('click', () => toggleModulo(false));
+if (btnHab) btnHab.addEventListener('click', () => toggleModulo(true));
 
 flatpickr("#fecha-picker", { locale: "es", dateFormat: "Y-m-d", allowInput: true });
 
