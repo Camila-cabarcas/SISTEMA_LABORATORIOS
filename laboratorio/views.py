@@ -33,9 +33,15 @@ def lista_laboratorios(request):
             laboratorio=lab, tipo='encargado'
         ).select_related('laboratorista').first()
 
+    from users.models import ProgramaAcademico
+    programas_unicos = ProgramaAcademico.objects.filter(
+        activo=True
+    ).values_list('nombre', flat=True)
+
     return render(request, 'laboratorio/lista.html', {
         'laboratorios': laboratorios,
         'is_admin': request.user.rol.nombre == 'Administrador',
+        'programas_unicos': programas_unicos,
     })
 
 

@@ -2,15 +2,17 @@
 
 {% block contenido %}
 
-<h1 class="mb-4">Laboratoristas</h1>
-
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Laboratoristas</h1>
     <a href="/laboratorio/laboratoristas/crear/" class="btn btn-primary">
-        Nuevo Laboratorista
+        + Nuevo Laboratorista
     </a>
-    <form method="GET" class="d-flex gap-2">
+</div>
+
+<div class="card p-3 mb-4">
+    <form method="GET" class="d-flex gap-2 align-items-center">
         <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
-               placeholder="Buscar por nombre o cédula..." style="width:260px;">
+               placeholder="Buscar por nombre o cédula..." style="max-width:300px;">
         <button type="submit" class="btn btn-dark btn-sm">Buscar</button>
         {% if q %}
         <a href="/laboratorio/laboratoristas/" class="btn btn-secondary btn-sm">Limpiar</a>
@@ -18,58 +20,65 @@
     </form>
 </div>
 
-<div class="card p-4">
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Cédula</th>
-                <th>Correo</th>
-                <th>Programa</th>
-                <th>Laboratorios</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for lab in laboratoristas %}
-            <tr>
-                <td>{{ lab }}</td>
-                <td>{{ lab.cedula }}</td>
-                <td>{{ lab.correo|default:"—" }}</td>
-                <td>{{ lab.programa|default:"—" }}</td>
-                <td>
+<div class="row g-3">
+    {% for lab in laboratoristas %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">{{ lab }}</h5>
+                    {% if lab.activo %}
+                        <span class="badge bg-success">Activo</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactivo</span>
+                    {% endif %}
+                </div>
+
+                <p class="text-muted small mb-1">
+                    <strong>Cédula:</strong> {{ lab.cedula }}
+                </p>
+                {% if lab.correo %}
+                <p class="text-muted small mb-1">
+                    <strong>Correo:</strong> {{ lab.correo }}
+                </p>
+                {% endif %}
+                {% if lab.programa %}
+                <p class="text-muted small mb-2">
+                    <strong>Programa:</strong> {{ lab.programa }}
+                </p>
+                {% endif %}
+
+                <div class="mb-3">
                     {% for asignacion in lab.asignaciones.all %}
                         {% if asignacion.tipo == 'encargado' %}
-                            <span class="badge bg-warning text-dark me-1">
+                            <span class="badge bg-warning text-dark me-1 mb-1">
                                 Encargado — {{ asignacion.laboratorio.nombre }}
                             </span>
                         {% else %}
-                            <span class="badge bg-secondary me-1">
+                            <span class="badge bg-secondary me-1 mb-1">
                                 {{ asignacion.laboratorio.nombre }}
                             </span>
                         {% endif %}
                     {% empty %}
-                        <span class="text-muted">Sin asignar</span>
+                        <span class="text-muted small">Sin laboratorio asignado</span>
                     {% endfor %}
-                </td>
-                <td>
-                    <a href="/laboratorio/laboratoristas/{{ lab.id }}/"
-                       class="btn btn-info btn-sm">Ver</a>
-                    <a href="/laboratorio/laboratoristas/{{ lab.id }}/editar/"
-                       class="btn btn-warning btn-sm">Editar</a>
-                    <a href="/laboratorio/laboratoristas/{{ lab.id }}/eliminar/"
-                       class="btn btn-danger btn-sm">Eliminar</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" class="text-center text-muted">
-                    No se encontraron laboratoristas.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent d-flex gap-2">
+                <a href="/laboratorio/laboratoristas/{{ lab.id }}/"
+                   class="btn btn-info btn-sm flex-fill">Ver</a>
+                <a href="/laboratorio/laboratoristas/{{ lab.id }}/editar/"
+                   class="btn btn-warning btn-sm flex-fill">Editar</a>
+                <a href="/laboratorio/laboratoristas/{{ lab.id }}/eliminar/"
+                   class="btn btn-danger btn-sm flex-fill">Eliminar</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">No se encontraron laboratoristas.</div>
+    </div>
+    {% endfor %}
 </div>
 
 {% endblock %}
