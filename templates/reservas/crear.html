@@ -100,56 +100,121 @@
             <input type="hidden" name="hora_inicio" id="hora_inicio_hidden" value="{{ post_data.hora_inicio }}">
             <input type="hidden" name="hora_fin"    id="hora_fin_hidden"    value="{{ post_data.hora_fin }}">
 
-            <input type="text" id="horario-display" class="form-control" readonly
-                   placeholder="Selecciona el horario..."
-                   value="{% if post_data.hora_inicio and post_data.hora_fin %}{{ post_data.hora_inicio }} → {{ post_data.hora_fin }}{% endif %}"
-                   style="cursor:pointer;">
-
-            <div id="time-range-panel" style="
-                display: none;
-                position: absolute;
-                z-index: 9999;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-                padding: 20px;
-                width: 340px;
-                margin-top: 4px;
-            ">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="fw-bold" style="font-size:1.1rem;">Horario</span>
-                    <button type="button" id="btn-reset-time"
-                            style="background:none; border:1px solid #e0d6cc; border-radius:6px;
-                                   padding:2px 10px; color:#c07a50; cursor:pointer; font-size:.85rem;">
-                        Reset
-                    </button>
-                </div>
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
-                        <small style="color:#999; font-size:.7rem;">Desde</small>
-                        <div id="display-desde" style="font-weight:600; color:#333;">--:--</div>
+            <div class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Hora inicio</label>
+                    <div class="d-flex gap-1">
+                        <select id="hora-inicio-h" class="form-select form-select-sm" style="width:80px;">
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                        </select>
+                        <span class="align-self-center">:</span>
+                        <select id="hora-inicio-m" class="form-select form-select-sm" style="width:75px;">
+                            <option value="00">00</option>
+                            <option value="05">05</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                            <option value="25">25</option>
+                            <option value="30">30</option>
+                            <option value="35">35</option>
+                            <option value="40">40</option>
+                            <option value="45">45</option>
+                            <option value="50">50</option>
+                            <option value="55">55</option>
+                        </select>
                     </div>
-                    <span style="color:#999;">→</span>
-                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
-                        <small style="color:#999; font-size:.7rem;">Hasta</small>
-                        <div id="display-hasta" style="font-weight:600; color:#333;">--:--</div>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Hora fin</label>
+                    <div class="d-flex gap-1">
+                        <select id="hora-fin-h" class="form-select form-select-sm" style="width:80px;">
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                        </select>
+                        <span class="align-self-center">:</span>
+                        <select id="hora-fin-m" class="form-select form-select-sm" style="width:75px;">
+                            <option value="00">00</option>
+                            <option value="05">05</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                            <option value="25">25</option>
+                            <option value="30">30</option>
+                            <option value="35">35</option>
+                            <option value="40">40</option>
+                            <option value="45">45</option>
+                            <option value="50">50</option>
+                            <option value="55">55</option>
+                        </select>
                     </div>
                 </div>
-                <div id="time-slots" style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; max-height:220px; overflow-y:auto;"></div>
-                <div id="time-error" class="text-danger small mt-2 d-none"></div>
-                <div class="d-flex justify-content-between mt-3">
-                    <button type="button" id="btn-close-time"
-                            style="background:none; border:none; color:#999; cursor:pointer;">Cerrar</button>
-                    <button type="button" id="btn-confirm-time"
-                            style="background:none; border:none; color:#c07a50; font-weight:600; cursor:pointer;">Confirmar</button>
+                <div class="col-auto">
+                    <div id="horario-error" class="text-danger small d-none"></div>
                 </div>
             </div>
         </div>
 
+        <hr>
+        <h5 class="mb-3">Insumos Requeridos</h5>
+
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label for="insumo_buscar" class="form-label">Buscar Insumo</label>
+                <div style="position: relative;">
+                    <input type="text" id="insumo_buscar" class="form-control"
+                           placeholder="Escribe para buscar o haz clic para ver todos..."
+                           autocomplete="off">
+                    <div id="insumo_dropdown" class="list-group mt-2"
+                         style="position: absolute; width: 100%; z-index: 1000;
+                                max-height: 250px; overflow-y: auto; display: none; top: 100%;">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="insumo_cantidad" class="form-label">Cantidad</label>
+                <input type="number" id="insumo_cantidad" class="form-control" min="1" value="1">
+            </div>
+        </div>
+
+        <button type="button" id="agregar_insumo_btn" class="btn btn-sm btn-success mb-3">
+            + Agregar Insumo
+        </button>
+
+        <div id="insumos_lista" class="mb-3" style="display: none;">
+            <h6>Insumos Seleccionados:</h6>
+            <div class="list-group" id="insumos_items"></div>
+        </div>
+
+        <input type="hidden" name="insumos_ids" id="id_insumos_ids" value="">
+        <input type="hidden" name="insumos_cantidades" id="id_insumos_cantidades" value="">
+
         <div class="mb-3 form-check">
             <input type="checkbox" class="form-check-input" name="necesita_modulo"
                    id="id_necesita_modulo"
-                   {% if not post_data or post_data.necesita_modulo %}checked{% endif %}>
+                   {% if post_data.necesita_modulo == 'on' %}checked{% endif %}>
             <label class="form-check-label" for="id_necesita_modulo">
                 Necesita módulo/puesto en el laboratorio
             </label>
@@ -225,19 +290,6 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 
 <style>
-/* ── Time picker ── */
-.time-slot {
-    padding: 6px 4px; border-radius: 6px; text-align: center;
-    font-size: .8rem; cursor: pointer; background: #f8f5f2;
-    color: #333; border: none; transition: background .15s;
-}
-.time-slot:hover { background: #f0e8e0; }
-.time-slot.slot-start, .time-slot.slot-end {
-    background: #c07a50; color: white; border-radius: 50px;
-}
-.time-slot.slot-range { background: #f0e0d0; color: #333; border-radius: 0; }
-.time-slot.slot-disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
-
 /* ── Lab room en formulario ── */
 .lab-room-form {
     border: 3px solid #343a40;
@@ -291,13 +343,6 @@
 let tipoActual = document.querySelector('input[name="tipo_solicitante"]:checked').value;
 let maxHoras   = tipoActual === 'profesor' ? 8 : 4;
 let fpInstance = null;
-let slotInicio = null;
-let slotFin    = null;
-
-function strToMin(hhmm) {
-    const [h, m] = hhmm.split(':').map(Number);
-    return h * 60 + m;
-}
 
 // ── Flatpickr fecha ────────────────────────────────────────────
 function getMinDate() {
@@ -315,95 +360,100 @@ function initFlatpickr() {
     });
 }
 
-// ── Time Range Picker ──────────────────────────────────────────
-function generarSlots() {
-    const slots = [];
-    for (let h = 6; h <= 18; h++)
-        for (let m of [0, 30]) {
-            if (h === 18 && m === 30) continue;
-            slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-        }
-    return slots;
-}
-const SLOTS = generarSlots();
+// ── Selector de horario ─────────────────────────────────────────
+function validarHorario() {
+    const hI = parseInt(document.getElementById('hora-inicio-h').value);
+    const mI = parseInt(document.getElementById('hora-inicio-m').value);
+    const hF = parseInt(document.getElementById('hora-fin-h').value);
+    const mF = parseInt(document.getElementById('hora-fin-m').value);
 
-function renderSlots() {
-    const container = document.getElementById('time-slots');
-    container.innerHTML = '';
-    SLOTS.forEach(slot => {
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'time-slot';
-        btn.textContent = slot; btn.dataset.slot = slot;
-        const minSlot = strToMin(slot);
-        if (!slotInicio) {
-            if (minSlot > strToMin('18:00') - 120) btn.classList.add('slot-disabled');
-        } else {
-            const minInicio = strToMin(slotInicio);
-            const minMin = minInicio + 120;
-            const minMax = minInicio + maxHoras * 60;
-            if (slot === slotInicio) btn.classList.add('slot-start');
-            else if (slotFin && slot === slotFin) btn.classList.add('slot-end');
-            else if (slotFin && minSlot > minInicio && minSlot < strToMin(slotFin)) btn.classList.add('slot-range');
-            else if (minSlot < minMin || minSlot > minMax || minSlot > strToMin('18:00')) btn.classList.add('slot-disabled');
-        }
-        btn.addEventListener('click', function(e) { e.stopPropagation(); onSlotClick(slot); });
-        container.appendChild(btn);
-    });
-}
+    const inicio = hI * 60 + mI;
+    const fin    = hF * 60 + mF;
+    const diff   = fin - inicio;
+    const error  = document.getElementById('horario-error');
 
-function onSlotClick(slot) {
-    document.getElementById('time-error').classList.add('d-none');
-    if (!slotInicio) {
-        slotInicio = slot; slotFin = null;
-        document.getElementById('display-desde').textContent = slot;
-        document.getElementById('display-hasta').textContent = '--:--';
-    } else if (!slotFin) {
-        const diff = strToMin(slot) - strToMin(slotInicio);
-        if (diff < 120) { showTimeError(`Mínimo 2 horas.`); return; }
-        if (diff > maxHoras * 60) { showTimeError(`Máximo ${maxHoras} horas.`); return; }
-        slotFin = slot;
-        document.getElementById('display-hasta').textContent = slot;
-    } else {
-        slotInicio = slot; slotFin = null;
-        document.getElementById('display-desde').textContent = slot;
-        document.getElementById('display-hasta').textContent = '--:--';
+    const ahora    = new Date();
+    const minAhora = ahora.getHours() * 60 + ahora.getMinutes();
+
+    if (inicio < minAhora) {
+        error.textContent = 'La hora de inicio ya pasó.';
+        error.classList.remove('d-none');
+        return false;
     }
-    renderSlots();
+    const CIERRE = 18 * 60; // 18:00 en minutos
+    const minHorasNormal = 120; // 2 horas
+
+    let minMinutos;
+    if (inicio >= 16 * 60) {
+        // Últimas 2 horas — mínimo es lo que queda hasta las 18:00
+        minMinutos = Math.max(30, CIERRE - inicio);
+    } else {
+        minMinutos = minHorasNormal;
+    }
+
+    if (diff < minMinutos) {
+        const hMin = Math.floor(minMinutos / 60);
+        const mMin = minMinutos % 60;
+        const labelMin = hMin > 0 ?
+            `${hMin}h${mMin > 0 ? ' ' + mMin + 'min' : ''}` :
+            `${mMin} minutos`;
+        error.textContent = `Mínimo ${labelMin} para este horario.`;
+        error.classList.remove('d-none');
+        return false;
+    }
+    if (diff > maxHoras * 60) {
+        error.textContent = `Máximo ${maxHoras} horas.`;
+        error.classList.remove('d-none');
+        return false;
+    }
+    if (fin > 18 * 60) {
+        error.textContent = 'El horario no puede superar las 18:00.';
+        error.classList.remove('d-none');
+        return false;
+    }
+
+    error.classList.add('d-none');
+    document.getElementById('hora_inicio_hidden').value =
+        String(hI).padStart(2,'0') + ':' + String(mI).padStart(2,'0');
+    document.getElementById('hora_fin_hidden').value =
+        String(hF).padStart(2,'0') + ':' + String(mF).padStart(2,'0');
+    return true;
 }
 
-function showTimeError(msg) {
-    const el = document.getElementById('time-error');
-    el.textContent = msg; el.classList.remove('d-none');
-}
-function resetTime() {
-    slotInicio = null; slotFin = null;
-    document.getElementById('display-desde').textContent = '--:--';
-    document.getElementById('display-hasta').textContent = '--:--';
-    document.getElementById('time-error').classList.add('d-none');
-    renderSlots();
+function onHorarioChange() {
+    if (validarHorario()) mostrarBtnModulos();
 }
 
-document.getElementById('horario-display').addEventListener('click', function(e) {
-    e.stopPropagation();
-    const panel = document.getElementById('time-range-panel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    if (panel.style.display === 'block') renderSlots();
+['hora-inicio-h', 'hora-inicio-m', 'hora-fin-h', 'hora-fin-m'].forEach(id => {
+    document.getElementById(id).addEventListener('change', onHorarioChange);
 });
-document.getElementById('time-range-panel').addEventListener('click', e => e.stopPropagation());
-document.getElementById('btn-reset-time').addEventListener('click', resetTime);
-document.getElementById('btn-close-time').addEventListener('click', () => {
-    document.getElementById('time-range-panel').style.display = 'none';
+
+document.getElementById('crear-form').addEventListener('submit', function(e) {
+    if (!validarHorario()) {
+        e.preventDefault();
+    }
 });
-document.getElementById('btn-confirm-time').addEventListener('click', function() {
-    if (!slotInicio || !slotFin) { showTimeError('Selecciona inicio y fin.'); return; }
-    document.getElementById('hora_inicio_hidden').value = slotInicio;
-    document.getElementById('hora_fin_hidden').value    = slotFin;
-    document.getElementById('horario-display').value    = `${slotInicio} → ${slotFin}`;
-    document.getElementById('time-range-panel').style.display = 'none';
-});
-document.addEventListener('click', () => {
-    document.getElementById('time-range-panel').style.display = 'none';
-});
+
+function inicializarHorario() {
+    const ahora = new Date();
+    let h = ahora.getHours();
+    let m = Math.ceil(ahora.getMinutes() / 5) * 5;
+    if (m === 60) { m = 0; h += 1; }
+    if (h < 6) { h = 6; m = 0; }
+    if (h > 18) { h = 18; m = 0; }
+
+    const hStr = String(h).padStart(2, '0');
+    const mStr = String(m).padStart(2, '0');
+    document.getElementById('hora-inicio-h').value = hStr;
+    document.getElementById('hora-inicio-m').value = mStr;
+
+    const hFin = Math.min(h + 2, 18);
+    document.getElementById('hora-fin-h').value = String(hFin).padStart(2, '0');
+    document.getElementById('hora-fin-m').value = mStr;
+
+    validarHorario();
+}
+inicializarHorario();
 
 // ── Cambio de tipo ─────────────────────────────────────────────
 document.querySelectorAll('input[name="tipo_solicitante"]').forEach(radio => {
@@ -421,7 +471,7 @@ document.querySelectorAll('input[name="tipo_solicitante"]').forEach(radio => {
             document.getElementById('fecha-hint').textContent = 'Lunes a viernes';
         }
         document.getElementById('fecha-picker').value = '';
-        resetTime();
+        validarHorario();
         initFlatpickr();
         actualizarLimiteModulos();
     });
@@ -627,6 +677,111 @@ document.getElementById('crear-form').addEventListener('submit', function(e) {
         document.getElementById('form-error').classList.remove('d-none');
     }
 });
+
+// ── Buscador de insumos ────────────────────────────────────────
+let insumosSeleccionados = {};
+const buscarInput = document.getElementById('insumo_buscar');
+const dropdownDiv = document.getElementById('insumo_dropdown');
+let insumosCache  = null;
+
+buscarInput.addEventListener('click', mostrarInsumos);
+buscarInput.addEventListener('input', buscarInsumos);
+document.addEventListener('click', function(e) {
+    if (e.target !== buscarInput && !dropdownDiv.contains(e.target))
+        dropdownDiv.style.display = 'none';
+});
+
+function mostrarInsumos() {
+    if (!insumosCache) {
+        fetch('/solicitudes/buscar-insumos/?q=')
+            .then(r => r.json())
+            .then(data => {
+                insumosCache = data.results;
+                renderDropdown(insumosCache);
+                dropdownDiv.style.display = 'block';
+            });
+    } else {
+        renderDropdown(insumosCache);
+        dropdownDiv.style.display = 'block';
+    }
+}
+
+function buscarInsumos(e) {
+    const query = e.target.value;
+    if (query === '') { mostrarInsumos(); return; }
+    fetch(`/solicitudes/buscar-insumos/?q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(data => { renderDropdown(data.results); dropdownDiv.style.display = 'block'; });
+}
+
+function renderDropdown(insumos) {
+    dropdownDiv.innerHTML = '';
+    insumos.forEach(insumo => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'list-group-item list-group-item-action';
+        btn.textContent = insumo.text;
+        if (insumo.disabled) {
+            btn.style.pointerEvents = 'none';
+            btn.style.color = '#999';
+            btn.style.backgroundColor = '#f5f5f5';
+        } else {
+            btn.onclick = e => { e.preventDefault(); seleccionarInsumo(insumo); };
+        }
+        dropdownDiv.appendChild(btn);
+    });
+}
+
+function seleccionarInsumo(insumo) {
+    buscarInput.value = insumo.text;
+    dropdownDiv.style.display = 'none';
+    buscarInput.dataset.insumoId = insumo.id;
+}
+
+document.getElementById('agregar_insumo_btn').addEventListener('click', function() {
+    const insumoId = buscarInput.dataset.insumoId;
+    const cantidad = parseInt(document.getElementById('insumo_cantidad').value) || 1;
+    if (!insumoId) { alert('Selecciona un insumo de la lista'); return; }
+    const texto = buscarInput.value;
+    if (insumosSeleccionados[insumoId]) {
+        insumosSeleccionados[insumoId].cantidad += cantidad;
+    } else {
+        insumosSeleccionados[insumoId] = { id: insumoId, nombre: texto.split('(')[0].trim(), cantidad };
+    }
+    actualizarListaInsumos();
+    buscarInput.value = '';
+    delete buscarInput.dataset.insumoId;
+    document.getElementById('insumo_cantidad').value = '1';
+});
+
+function eliminarInsumo(insumoId) {
+    delete insumosSeleccionados[insumoId];
+    actualizarListaInsumos();
+}
+
+function actualizarListaInsumos() {
+    const lista         = document.getElementById('insumos_items');
+    const listContainer = document.getElementById('insumos_lista');
+    lista.innerHTML = '';
+    const ids = [], cantidades = [];
+    Object.values(insumosSeleccionados).forEach(insumo => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = `
+            <div>
+                <strong>${insumo.nombre}</strong>
+                <span class="badge bg-primary ms-2">${insumo.cantidad}</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger"
+                    onclick="eliminarInsumo(${insumo.id})">Eliminar</button>`;
+        lista.appendChild(item);
+        ids.push(insumo.id);
+        cantidades.push(insumo.cantidad);
+    });
+    document.getElementById('id_insumos_ids').value       = ids.join(',');
+    document.getElementById('id_insumos_cantidades').value = cantidades.join(',');
+    listContainer.style.display = Object.keys(insumosSeleccionados).length ? 'block' : 'none';
+}
 
 // ── Init ───────────────────────────────────────────────────────
 initFlatpickr();

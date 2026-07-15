@@ -162,7 +162,7 @@
             </div>
         </div>
 
-        <!-- Time Range Picker -->
+        <!-- Selector de horario -->
         <div class="mb-3">
             <label class="form-label">
                 Horario *
@@ -172,65 +172,88 @@
             <input type="hidden" name="hora_inicio" id="id_hora_inicio" value="">
             <input type="hidden" name="hora_fin"    id="id_hora_fin"    value="">
 
-            <input type="text" id="horario-display-prof" class="form-control" readonly
-                   placeholder="Selecciona el horario..."
-                   style="cursor:pointer; max-width:300px;">
-
-            <div id="time-range-panel-prof" style="
-                display: none;
-                position: absolute;
-                z-index: 9999;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-                padding: 20px;
-                width: 340px;
-                margin-top: 4px;
-            ">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="fw-bold" style="font-size:1.1rem;">Horario</span>
-                    <button type="button" id="btn-reset-time-prof"
-                            style="background:none; border:1px solid #e0d6cc; border-radius:6px;
-                                   padding:2px 10px; color:#c07a50; cursor:pointer; font-size:.85rem;">
-                        Reset
-                    </button>
-                </div>
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
-                        <small style="color:#999; font-size:.7rem;">Desde</small>
-                        <div id="display-desde-prof" style="font-weight:600; color:#333;">--:--</div>
+            <div class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Hora inicio</label>
+                    <div class="d-flex gap-1">
+                        <select id="hora-inicio-h-prof" class="form-select form-select-sm" style="width:80px;">
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                        </select>
+                        <span class="align-self-center">:</span>
+                        <select id="hora-inicio-m-prof" class="form-select form-select-sm" style="width:75px;">
+                            <option value="00">00</option>
+                            <option value="05">05</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                            <option value="25">25</option>
+                            <option value="30">30</option>
+                            <option value="35">35</option>
+                            <option value="40">40</option>
+                            <option value="45">45</option>
+                            <option value="50">50</option>
+                            <option value="55">55</option>
+                        </select>
                     </div>
-                    <span style="color:#999;">→</span>
-                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
-                        <small style="color:#999; font-size:.7rem;">Hasta</small>
-                        <div id="display-hasta-prof" style="font-weight:600; color:#333;">--:--</div>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Hora fin</label>
+                    <div class="d-flex gap-1">
+                        <select id="hora-fin-h-prof" class="form-select form-select-sm" style="width:80px;">
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                        </select>
+                        <span class="align-self-center">:</span>
+                        <select id="hora-fin-m-prof" class="form-select form-select-sm" style="width:75px;">
+                            <option value="00">00</option>
+                            <option value="05">05</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                            <option value="25">25</option>
+                            <option value="30">30</option>
+                            <option value="35">35</option>
+                            <option value="40">40</option>
+                            <option value="45">45</option>
+                            <option value="50">50</option>
+                            <option value="55">55</option>
+                        </select>
                     </div>
                 </div>
-                <div id="time-slots-prof" style="
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 6px;
-                    max-height: 220px;
-                    overflow-y: auto;
-                "></div>
-                <div id="time-error-prof" class="text-danger small mt-2 d-none"></div>
-                <div class="d-flex justify-content-between mt-3">
-                    <button type="button" id="btn-close-time-prof"
-                            style="background:none; border:none; color:#999; cursor:pointer;">
-                        Cerrar
-                    </button>
-                    <button type="button" id="btn-confirm-time-prof"
-                            style="background:none; border:none; color:#c07a50;
-                                   font-weight:600; cursor:pointer;">
-                        Confirmar
-                    </button>
+                <div class="col-auto">
+                    <div id="horario-error-prof" class="text-danger small d-none"></div>
                 </div>
             </div>
         </div>
 
         <div class="mb-3">
             <div class="form-check">
-                {{ form.necesita_modulo }}
+                <input type="checkbox" class="form-check-input" name="necesita_modulo"
+                       id="id_necesita_modulo"
+                       {% if post_data.necesita_modulo == 'on' %}checked{% endif %}>
                 <label class="form-check-label" for="id_necesita_modulo">
                     Necesita módulo/puesto
                 </label>
@@ -291,123 +314,103 @@
     </form>
 </div>
 
-<style>
-.time-slot {
-    padding: 6px 4px; border-radius: 6px; text-align: center;
-    font-size: .8rem; cursor: pointer; background: #f8f5f2;
-    color: #333; border: none; transition: background .15s;
-}
-.time-slot:hover { background: #f0e8e0; }
-.time-slot.slot-start, .time-slot.slot-end {
-    background: #c07a50; color: white; border-radius: 50px;
-}
-.time-slot.slot-range { background: #f0e0d0; color: #333; border-radius: 0; }
-.time-slot.slot-disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
-</style>
 
 <script>
 let insumosSeleccionadosProf = {};
-let slotInicioProf = null;
-let slotFinProf    = null;
 const MAX_HORAS_PROF = 8;
 
-function strToMinProf(hhmm) {
-    const [h, m] = hhmm.split(':').map(Number);
-    return h * 60 + m;
-}
+// ── Selector de horario ─────────────────────────────────────────
+function validarHorarioProf() {
+    const hI = parseInt(document.getElementById('hora-inicio-h-prof').value);
+    const mI = parseInt(document.getElementById('hora-inicio-m-prof').value);
+    const hF = parseInt(document.getElementById('hora-fin-h-prof').value);
+    const mF = parseInt(document.getElementById('hora-fin-m-prof').value);
 
-// ── Time Range Picker ──────────────────────────────────────────
-function generarSlotsProf() {
-    const slots = [];
-    for (let h = 6; h <= 18; h++)
-        for (let m of [0, 30]) {
-            if (h === 18 && m === 30) continue;
-            slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+    const inicio = hI * 60 + mI;
+    const fin    = hF * 60 + mF;
+    const diff   = fin - inicio;
+    const error  = document.getElementById('horario-error-prof');
+
+    const modoLibre = document.getElementById('modo_libre');
+    const esLibre   = modoLibre && modoLibre.checked;
+
+    if (esLibre) {
+        const ahora    = new Date();
+        const minAhora = ahora.getHours() * 60 + ahora.getMinutes();
+        if (inicio < minAhora) {
+            error.textContent = 'La hora de inicio ya pasó.';
+            error.classList.remove('d-none');
+            return false;
         }
-    return slots;
-}
-const SLOTS_PROF = generarSlotsProf();
-
-function renderSlotsProf() {
-    const container = document.getElementById('time-slots-prof');
-    container.innerHTML = '';
-    SLOTS_PROF.forEach(slot => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'time-slot';
-        btn.textContent = slot;
-        const minSlot = strToMinProf(slot);
-
-        if (!slotInicioProf) {
-            if (minSlot > strToMinProf('18:00') - 120) btn.classList.add('slot-disabled');
-        } else {
-            const minInicio = strToMinProf(slotInicioProf);
-            const minMin = minInicio + 120;
-            const minMax = minInicio + MAX_HORAS_PROF * 60;
-            if (slot === slotInicioProf) btn.classList.add('slot-start');
-            else if (slotFinProf && slot === slotFinProf) btn.classList.add('slot-end');
-            else if (slotFinProf && minSlot > minInicio && minSlot < strToMinProf(slotFinProf)) btn.classList.add('slot-range');
-            else if (minSlot < minMin || minSlot > minMax || minSlot > strToMinProf('18:00')) btn.classList.add('slot-disabled');
-        }
-        btn.addEventListener('click', e => { e.stopPropagation(); onSlotClickProf(slot); });
-        container.appendChild(btn);
-    });
-}
-
-function onSlotClickProf(slot) {
-    document.getElementById('time-error-prof').classList.add('d-none');
-    if (!slotInicioProf) {
-        slotInicioProf = slot; slotFinProf = null;
-        document.getElementById('display-desde-prof').textContent = slot;
-        document.getElementById('display-hasta-prof').textContent = '--:--';
-    } else if (!slotFinProf) {
-        const diff = strToMinProf(slot) - strToMinProf(slotInicioProf);
-        if (diff < 120) { showTimeErrorProf('Mínimo 2 horas.'); return; }
-        if (diff > MAX_HORAS_PROF * 60) { showTimeErrorProf(`Máximo ${MAX_HORAS_PROF} horas.`); return; }
-        slotFinProf = slot;
-        document.getElementById('display-hasta-prof').textContent = slot;
-    } else {
-        slotInicioProf = slot; slotFinProf = null;
-        document.getElementById('display-desde-prof').textContent = slot;
-        document.getElementById('display-hasta-prof').textContent = '--:--';
     }
-    renderSlotsProf();
+    const CIERRE = 18 * 60; // 18:00 en minutos
+    const minHorasNormal = 120; // 2 horas
+
+    let minMinutos;
+    if (inicio >= 16 * 60) {
+        // Últimas 2 horas — mínimo es lo que queda hasta las 18:00
+        minMinutos = Math.max(30, CIERRE - inicio);
+    } else {
+        minMinutos = minHorasNormal;
+    }
+
+    if (diff < minMinutos) {
+        const hMin = Math.floor(minMinutos / 60);
+        const mMin = minMinutos % 60;
+        const labelMin = hMin > 0 ?
+            `${hMin}h${mMin > 0 ? ' ' + mMin + 'min' : ''}` :
+            `${mMin} minutos`;
+        error.textContent = `Mínimo ${labelMin} para este horario.`;
+        error.classList.remove('d-none');
+        return false;
+    }
+    if (diff > MAX_HORAS_PROF * 60) {
+        error.textContent = `Máximo ${MAX_HORAS_PROF} horas.`;
+        error.classList.remove('d-none');
+        return false;
+    }
+    if (fin > 18 * 60) {
+        error.textContent = 'El horario no puede superar las 18:00.';
+        error.classList.remove('d-none');
+        return false;
+    }
+
+    error.classList.add('d-none');
+    document.getElementById('id_hora_inicio').value =
+        String(hI).padStart(2,'0') + ':' + String(mI).padStart(2,'0');
+    document.getElementById('id_hora_fin').value =
+        String(hF).padStart(2,'0') + ':' + String(mF).padStart(2,'0');
+    return true;
 }
 
-function showTimeErrorProf(msg) {
-    const el = document.getElementById('time-error-prof');
-    el.textContent = msg; el.classList.remove('d-none');
-}
+['hora-inicio-h-prof', 'hora-inicio-m-prof', 'hora-fin-h-prof', 'hora-fin-m-prof'].forEach(id => {
+    document.getElementById(id).addEventListener('change', validarHorarioProf);
+});
 
-function resetTimeProf() {
-    slotInicioProf = null; slotFinProf = null;
-    document.getElementById('display-desde-prof').textContent = '--:--';
-    document.getElementById('display-hasta-prof').textContent = '--:--';
-    document.getElementById('time-error-prof').classList.add('d-none');
-    renderSlotsProf();
-}
+document.getElementById('profesor-form').addEventListener('submit', function(e) {
+    if (!validarHorarioProf()) e.preventDefault();
+});
 
-document.getElementById('horario-display-prof').addEventListener('click', function(e) {
-    e.stopPropagation();
-    const panel = document.getElementById('time-range-panel-prof');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    if (panel.style.display === 'block') renderSlotsProf();
-});
-document.getElementById('time-range-panel-prof').addEventListener('click', e => e.stopPropagation());
-document.getElementById('btn-reset-time-prof').addEventListener('click', resetTimeProf);
-document.getElementById('btn-close-time-prof').addEventListener('click', () => {
-    document.getElementById('time-range-panel-prof').style.display = 'none';
-});
-document.getElementById('btn-confirm-time-prof').addEventListener('click', function() {
-    if (!slotInicioProf || !slotFinProf) { showTimeErrorProf('Selecciona inicio y fin.'); return; }
-    document.getElementById('id_hora_inicio').value = slotInicioProf;
-    document.getElementById('id_hora_fin').value    = slotFinProf;
-    document.getElementById('horario-display-prof').value = `${slotInicioProf} → ${slotFinProf}`;
-    document.getElementById('time-range-panel-prof').style.display = 'none';
-});
-document.addEventListener('click', () => {
-    document.getElementById('time-range-panel-prof').style.display = 'none';
-});
+function inicializarHorarioProf() {
+    const ahora = new Date();
+    let h = ahora.getHours();
+    let m = Math.ceil(ahora.getMinutes() / 5) * 5;
+    if (m === 60) { m = 0; h += 1; }
+    if (h < 6) { h = 6; m = 0; }
+    if (h > 18) { h = 18; m = 0; }
+
+    const hStr = String(h).padStart(2, '0');
+    const mStr = String(m).padStart(2, '0');
+    document.getElementById('hora-inicio-h-prof').value = hStr;
+    document.getElementById('hora-inicio-m-prof').value = mStr;
+
+    const hFin = Math.min(h + 2, 18);
+    document.getElementById('hora-fin-h-prof').value = String(hFin).padStart(2, '0');
+    document.getElementById('hora-fin-m-prof').value = mStr;
+
+    validarHorarioProf();
+}
+inicializarHorarioProf();
 
 // ── Toggle de modalidad ────────────────────────────────────────
 function aplicarModo(esLibre) {
@@ -420,6 +423,7 @@ function aplicarModo(esLibre) {
     const labLibre  = document.getElementById('id_laboratorio_libre');
     if (labNormal) labNormal.disabled = esLibre;
     if (labLibre)  labLibre.disabled  = !esLibre;
+    validarHorarioProf();
 }
 
 document.querySelectorAll('input[name="modo_reserva"]').forEach(function(radio) {

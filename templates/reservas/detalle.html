@@ -28,6 +28,12 @@
         {% else %}
             <span class="badge bg-light text-dark fs-6 px-3 py-2">{{ reserva.estado }}</span>
         {% endif %}
+        {% if puede_crear_prestamo %}
+        <a href="/prestamos/crear/{{ reserva.id }}/"
+           class="btn btn-success btn-sm">
+            Crear préstamo
+        </a>
+        {% endif %}
         <a href="/reservas/" class="btn btn-outline-secondary btn-sm">&larr; Volver</a>
     </div>
 </div>

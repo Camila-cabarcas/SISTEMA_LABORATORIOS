@@ -36,6 +36,7 @@ def lista_reservas(request):
     fecha_fin     = request.GET.get('fecha_fin', '')
     reserva_libre = request.GET.get('reserva_libre', '')
     lab_filtro    = request.GET.get('lab', '')
+    listas_prestamo = request.GET.get('listas_prestamo', '')
 
     laboratorios = Laboratorio.objects.all()
 
@@ -70,6 +71,14 @@ def lista_reservas(request):
             solicitud__laboratorio__id=lab_filtro
         ).distinct()
 
+    if listas_prestamo:
+        reservas = reservas.filter(
+            estado__nombre='Aprobada',
+            prestamo__isnull=True,
+            fecha_reserva__lte=ahora,
+            hora_limite_retiro__gte=ahora,
+        )
+
     paginator   = Paginator(reservas, 15)
     page_number = request.GET.get('page', 1)
     page_obj    = paginator.get_page(page_number)
@@ -86,6 +95,7 @@ def lista_reservas(request):
         'reserva_libre': reserva_libre,
         'laboratorios':  laboratorios,
         'lab_filtro':    lab_filtro,
+        'listas_prestamo': listas_prestamo,
     })
 
 
@@ -192,6 +202,27 @@ def crear_reserva(request):
                     reserva = solicitud.crear_reserva()
                     reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
                     reserva.save()
+
+                    insumos_ids        = request.POST.get('insumos_ids', '')
+                    insumos_cantidades = request.POST.get('insumos_cantidades', '')
+
+                    if insumos_ids and reserva:
+                        from inventario.models import Insumo
+                        from reservas.models import ReservaInsumo
+                        ids        = [x for x in insumos_ids.split(',') if x.strip()]
+                        cantidades = [x for x in insumos_cantidades.split(',') if x.strip()]
+                        for i, insumo_id in enumerate(ids):
+                            try:
+                                insumo   = Insumo.objects.get(id=insumo_id)
+                                cantidad = int(cantidades[i]) if i < len(cantidades) else 1
+                                ReservaInsumo.objects.create(
+                                    reserva=reserva,
+                                    insumo=insumo,
+                                    cantidad=cantidad
+                                )
+                            except Exception:
+                                pass
+
                     return redirect('detalle_reserva', id=reserva.pk)
                 except Exception as e:
                     errors.append(str(e))
@@ -226,12 +257,20 @@ def detalle_reserva(request, id):
     else:
         form = ReservaInsumoForm()
 
+    ahora = timezone.now()
+    puede_crear_prestamo = (
+        reserva.estado.nombre == 'Aprobada' and
+        not reserva.prestamo_set.exists() and
+        reserva.fecha_reserva <= ahora <= reserva.hora_limite_retiro
+    )
+
     return render(request, 'reservas/detalle.html', {
         'reserva': reserva,
         'insumos': insumos,
         'form':    form,
-        'now':     timezone.now(),
-        'fecha_vencida': timezone.now() > reserva.fecha_devolucion if reserva.fecha_devolucion else False,
+        'now':     ahora,
+        'fecha_vencida': ahora > reserva.fecha_devolucion if reserva.fecha_devolucion else False,
+        'puede_crear_prestamo': puede_crear_prestamo,
     })
 
 

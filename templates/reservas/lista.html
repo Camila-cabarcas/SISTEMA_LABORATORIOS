@@ -39,6 +39,10 @@
             <a class="btn btn-warning btn-sm estado-btn"   data-estado="Pendiente">Pendientes</a>
             <a class="btn btn-secondary btn-sm estado-btn" data-estado="Cancelada">Canceladas</a>
             <a class="btn btn-danger btn-sm estado-btn"    data-estado="Expirada">Expiradas</a>
+            <a class="btn btn-success btn-sm {% if listas_prestamo %}active{% endif %}"
+               href="?listas_prestamo=1&lab={{ lab_filtro }}">
+               🔔 Listas para préstamo
+            </a>
             <button type="button" class="btn btn-primary btn-sm estado-btn-libre ms-auto" data-libre="1">
                 Reservas libres
             </button>
@@ -50,6 +54,7 @@
             <input type="hidden" name="fecha_fin"     id="fecha_fin_hidden"     value="{{ fecha_fin }}">
             <input type="hidden" name="reserva_libre" id="reserva_libre_hidden" value="{{ reserva_libre }}">
             <input type="hidden" name="lab"           id="lab_hidden"           value="{{ lab_filtro }}">
+            <input type="hidden" name="listas_prestamo" id="listas_prestamo_hidden" value="{{ listas_prestamo }}">
 
             <div class="col-md-3">
                 <label class="form-label small mb-1">Buscar por nombre, cédula o código</label>
@@ -89,7 +94,6 @@
                     <th>Fecha Devolución</th>
                     <th>Estado</th>
                     <th>Ver detalle</th>
-                    <th>Préstamo</th>
                 </tr>
             </thead>
             <tbody>
@@ -124,13 +128,6 @@
                         <a href="/reservas/{{ reserva.id }}/" class="btn btn-info btn-sm">
                             Ver detalle
                         </a>
-                    </td>
-                    <td>
-                        {% if reserva.estado.nombre == 'Aprobada' and not reserva.prestamo_set.exists and reserva.fecha_reserva <= now and now <= reserva.hora_limite_retiro %}
-                        <a href="/prestamos/crear/{{ reserva.id }}/" class="btn btn-success btn-sm">
-                            Crear préstamo
-                        </a>
-                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -203,6 +200,7 @@ document.querySelectorAll('.estado-btn').forEach(function(btn) {
         e.preventDefault();
         document.getElementById('estado-hidden').value = this.dataset.estado;
         document.getElementById('reserva_libre_hidden').value = '';
+        document.getElementById('listas_prestamo_hidden').value = '';
         document.getElementById('filtro-form').submit();
     });
 });
@@ -216,6 +214,7 @@ document.querySelectorAll('.estado-btn-libre').forEach(function(btn) {
         e.preventDefault();
         document.getElementById('estado-hidden').value = '';
         document.getElementById('reserva_libre_hidden').value = '1';
+        document.getElementById('listas_prestamo_hidden').value = '';
         document.getElementById('filtro-form').submit();
     });
 });

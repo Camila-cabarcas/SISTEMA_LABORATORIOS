@@ -51,11 +51,8 @@ class Reserva(models.Model):
 
         lab = solicitud.laboratorio if solicitud and solicitud.laboratorio else None
         if lab:
-            siglas = ''.join(
-                word[0].upper()
-                for word in lab.nombre.split()
-                if word
-            )[:6]
+            palabras = [w for w in lab.nombre.split() if w]
+            siglas = ''.join(word[0].upper() for word in palabras)[:6]
         else:
             siglas = 'LAB'
 
@@ -67,7 +64,11 @@ class Reserva(models.Model):
         if not self.fecha_devolucion:
             self.fecha_devolucion = self.fecha_reserva + timedelta(hours=2)
         super().save(*args, **kwargs)
-        if not self.codigo:
+
+        necesita_regenerar = not self.codigo or (
+            self.codigo.startswith('SIN-') and self.solicitud.first()
+        )
+        if necesita_regenerar:
             self.codigo = self.generar_codigo()
             super().save(update_fields=['codigo'])
 

@@ -77,7 +77,7 @@
             </div>
         </div>
 
-        <!-- Time Range Picker -->
+        <!-- Selector de horario -->
         <div class="mb-3">
             <label class="form-label">
                 Horario *
@@ -87,65 +87,88 @@
             <input type="hidden" name="hora_inicio" id="id_hora_inicio" value="">
             <input type="hidden" name="hora_fin"    id="id_hora_fin"    value="">
 
-            <input type="text" id="horario-display-est" class="form-control" readonly
-                   placeholder="Selecciona el horario..."
-                   style="cursor:pointer; max-width:300px;">
-
-            <div id="time-range-panel-est" style="
-                display: none;
-                position: absolute;
-                z-index: 9999;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-                padding: 20px;
-                width: 340px;
-                margin-top: 4px;
-            ">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="fw-bold" style="font-size:1.1rem;">Horario</span>
-                    <button type="button" id="btn-reset-time-est"
-                            style="background:none; border:1px solid #e0d6cc; border-radius:6px;
-                                   padding:2px 10px; color:#c07a50; cursor:pointer; font-size:.85rem;">
-                        Reset
-                    </button>
-                </div>
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
-                        <small style="color:#999; font-size:.7rem;">Desde</small>
-                        <div id="display-desde-est" style="font-weight:600; color:#333;">--:--</div>
+            <div class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Hora inicio</label>
+                    <div class="d-flex gap-1">
+                        <select id="hora-inicio-h-est" class="form-select form-select-sm" style="width:80px;">
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                        </select>
+                        <span class="align-self-center">:</span>
+                        <select id="hora-inicio-m-est" class="form-select form-select-sm" style="width:75px;">
+                            <option value="00">00</option>
+                            <option value="05">05</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                            <option value="25">25</option>
+                            <option value="30">30</option>
+                            <option value="35">35</option>
+                            <option value="40">40</option>
+                            <option value="45">45</option>
+                            <option value="50">50</option>
+                            <option value="55">55</option>
+                        </select>
                     </div>
-                    <span style="color:#999;">→</span>
-                    <div style="flex:1; background:#f8f5f2; border-radius:8px; padding:6px 12px;">
-                        <small style="color:#999; font-size:.7rem;">Hasta</small>
-                        <div id="display-hasta-est" style="font-weight:600; color:#333;">--:--</div>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small mb-1">Hora fin</label>
+                    <div class="d-flex gap-1">
+                        <select id="hora-fin-h-est" class="form-select form-select-sm" style="width:80px;">
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                        </select>
+                        <span class="align-self-center">:</span>
+                        <select id="hora-fin-m-est" class="form-select form-select-sm" style="width:75px;">
+                            <option value="00">00</option>
+                            <option value="05">05</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                            <option value="25">25</option>
+                            <option value="30">30</option>
+                            <option value="35">35</option>
+                            <option value="40">40</option>
+                            <option value="45">45</option>
+                            <option value="50">50</option>
+                            <option value="55">55</option>
+                        </select>
                     </div>
                 </div>
-                <div id="time-slots-est" style="
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 6px;
-                    max-height: 220px;
-                    overflow-y: auto;
-                "></div>
-                <div id="time-error-est" class="text-danger small mt-2 d-none"></div>
-                <div class="d-flex justify-content-between mt-3">
-                    <button type="button" id="btn-close-time-est"
-                            style="background:none; border:none; color:#999; cursor:pointer;">
-                        Cerrar
-                    </button>
-                    <button type="button" id="btn-confirm-time-est"
-                            style="background:none; border:none; color:#c07a50;
-                                   font-weight:600; cursor:pointer;">
-                        Confirmar
-                    </button>
+                <div class="col-auto">
+                    <div id="horario-error-est" class="text-danger small d-none"></div>
                 </div>
             </div>
         </div>
 
         <div class="mb-3">
             <div class="form-check">
-                {{ form.necesita_modulo }}
+                <input type="checkbox" class="form-check-input" name="necesita_modulo"
+                       id="id_necesita_modulo"
+                       {% if post_data.necesita_modulo == 'on' %}checked{% endif %}>
                 <label class="form-check-label" for="id_necesita_modulo">
                     Necesita módulo/puesto en el laboratorio
                 </label>
@@ -252,18 +275,6 @@
 </div>
 
 <style>
-.time-slot {
-    padding: 6px 4px; border-radius: 6px; text-align: center;
-    font-size: .8rem; cursor: pointer; background: #f8f5f2;
-    color: #333; border: none; transition: background .15s;
-}
-.time-slot:hover { background: #f0e8e0; }
-.time-slot.slot-start, .time-slot.slot-end {
-    background: #c07a50; color: white; border-radius: 50px;
-}
-.time-slot.slot-range { background: #f0e0d0; color: #333; border-radius: 0; }
-.time-slot.slot-disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
-
 /* ── Lab room en formulario ── */
 .lab-room-form {
     border: 3px solid #343a40;
@@ -315,118 +326,100 @@
 
 <script>
 let insumosSeleccionados = {};
-let slotInicioEst = null;
-let slotFinEst    = null;
 const MAX_HORAS_EST = 4;
 
-function strToMinEst(hhmm) {
-    const [h, m] = hhmm.split(':').map(Number);
-    return h * 60 + m;
-}
+// ── Selector de horario ─────────────────────────────────────────
+function validarHorarioEst() {
+    const hI = parseInt(document.getElementById('hora-inicio-h-est').value);
+    const mI = parseInt(document.getElementById('hora-inicio-m-est').value);
+    const hF = parseInt(document.getElementById('hora-fin-h-est').value);
+    const mF = parseInt(document.getElementById('hora-fin-m-est').value);
 
-// ── Time Range Picker ──────────────────────────────────────────
-function generarSlotsEst() {
-    const slots = [];
-    for (let h = 6; h <= 18; h++)
-        for (let m of [0, 30]) {
-            if (h === 18 && m === 30) continue;
-            slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-        }
-    return slots;
-}
-const SLOTS_EST = generarSlotsEst();
+    const inicio = hI * 60 + mI;
+    const fin    = hF * 60 + mF;
+    const diff   = fin - inicio;
+    const error  = document.getElementById('horario-error-est');
 
-function obtenerProximoSlot() {
-    const ahora = new Date();
-    const h = ahora.getHours();
-    const m = ahora.getMinutes();
-    if (m === 0) return h * 60;
-    if (m <= 30) return h * 60 + 30;
-    return (h + 1) * 60;
-}
+    const ahora    = new Date();
+    const minAhora = ahora.getHours() * 60 + ahora.getMinutes();
 
-function renderSlotsEst() {
-    const container = document.getElementById('time-slots-est');
-    container.innerHTML = '';
-    SLOTS_EST.forEach(slot => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'time-slot';
-        btn.textContent = slot;
-        const minSlot = strToMinEst(slot);
-
-        if (!slotInicioEst) {
-            const minProximoSlot = obtenerProximoSlot();
-            if (minSlot < minProximoSlot) btn.classList.add('slot-disabled');
-            else if (minSlot > strToMinEst('18:00') - 120) btn.classList.add('slot-disabled');
-        } else {
-            const minInicio = strToMinEst(slotInicioEst);
-            const minMin = minInicio + 120;
-            const minMax = minInicio + MAX_HORAS_EST * 60;
-            if (slot === slotInicioEst) btn.classList.add('slot-start');
-            else if (slotFinEst && slot === slotFinEst) btn.classList.add('slot-end');
-            else if (slotFinEst && minSlot > minInicio && minSlot < strToMinEst(slotFinEst)) btn.classList.add('slot-range');
-            else if (minSlot < minMin || minSlot > minMax || minSlot > strToMinEst('18:00')) btn.classList.add('slot-disabled');
-        }
-        btn.addEventListener('click', e => { e.stopPropagation(); onSlotClickEst(slot); });
-        container.appendChild(btn);
-    });
-}
-
-function onSlotClickEst(slot) {
-    document.getElementById('time-error-est').classList.add('d-none');
-    if (!slotInicioEst) {
-        slotInicioEst = slot; slotFinEst = null;
-        document.getElementById('display-desde-est').textContent = slot;
-        document.getElementById('display-hasta-est').textContent = '--:--';
-    } else if (!slotFinEst) {
-        const diff = strToMinEst(slot) - strToMinEst(slotInicioEst);
-        if (diff < 120) { showTimeErrorEst('Mínimo 2 horas.'); return; }
-        if (diff > MAX_HORAS_EST * 60) { showTimeErrorEst('Máximo 4 horas.'); return; }
-        slotFinEst = slot;
-        document.getElementById('display-hasta-est').textContent = slot;
-    } else {
-        slotInicioEst = slot; slotFinEst = null;
-        document.getElementById('display-desde-est').textContent = slot;
-        document.getElementById('display-hasta-est').textContent = '--:--';
+    if (inicio < minAhora) {
+        error.textContent = 'La hora de inicio ya pasó.';
+        error.classList.remove('d-none');
+        return false;
     }
-    renderSlotsEst();
+    const CIERRE = 18 * 60; // 18:00 en minutos
+    const minHorasNormal = 120; // 2 horas
+
+    let minMinutos;
+    if (inicio >= 16 * 60) {
+        // Últimas 2 horas — mínimo es lo que queda hasta las 18:00
+        minMinutos = Math.max(30, CIERRE - inicio);
+    } else {
+        minMinutos = minHorasNormal;
+    }
+
+    if (diff < minMinutos) {
+        const hMin = Math.floor(minMinutos / 60);
+        const mMin = minMinutos % 60;
+        const labelMin = hMin > 0 ?
+            `${hMin}h${mMin > 0 ? ' ' + mMin + 'min' : ''}` :
+            `${mMin} minutos`;
+        error.textContent = `Mínimo ${labelMin} para este horario.`;
+        error.classList.remove('d-none');
+        return false;
+    }
+    if (diff > MAX_HORAS_EST * 60) {
+        error.textContent = `Máximo ${MAX_HORAS_EST} horas.`;
+        error.classList.remove('d-none');
+        return false;
+    }
+    if (fin > 18 * 60) {
+        error.textContent = 'El horario no puede superar las 18:00.';
+        error.classList.remove('d-none');
+        return false;
+    }
+
+    error.classList.add('d-none');
+    document.getElementById('id_hora_inicio').value =
+        String(hI).padStart(2,'0') + ':' + String(mI).padStart(2,'0');
+    document.getElementById('id_hora_fin').value =
+        String(hF).padStart(2,'0') + ':' + String(mF).padStart(2,'0');
+    return true;
 }
 
-function showTimeErrorEst(msg) {
-    const el = document.getElementById('time-error-est');
-    el.textContent = msg; el.classList.remove('d-none');
+function onHorarioChangeEst() {
+    if (validarHorarioEst()) mostrarBtnModulosEst();
 }
 
-function resetTimeEst() {
-    slotInicioEst = null; slotFinEst = null;
-    document.getElementById('display-desde-est').textContent = '--:--';
-    document.getElementById('display-hasta-est').textContent = '--:--';
-    document.getElementById('time-error-est').classList.add('d-none');
-    renderSlotsEst();
-}
+['hora-inicio-h-est', 'hora-inicio-m-est', 'hora-fin-h-est', 'hora-fin-m-est'].forEach(id => {
+    document.getElementById(id).addEventListener('change', onHorarioChangeEst);
+});
 
-document.getElementById('horario-display-est').addEventListener('click', function(e) {
-    e.stopPropagation();
-    const panel = document.getElementById('time-range-panel-est');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    if (panel.style.display === 'block') renderSlotsEst();
+document.getElementById('solicitud-form').addEventListener('submit', function(e) {
+    if (!validarHorarioEst()) e.preventDefault();
 });
-document.getElementById('time-range-panel-est').addEventListener('click', e => e.stopPropagation());
-document.getElementById('btn-reset-time-est').addEventListener('click', resetTimeEst);
-document.getElementById('btn-close-time-est').addEventListener('click', () => {
-    document.getElementById('time-range-panel-est').style.display = 'none';
-});
-document.getElementById('btn-confirm-time-est').addEventListener('click', function() {
-    if (!slotInicioEst || !slotFinEst) { showTimeErrorEst('Selecciona inicio y fin.'); return; }
-    document.getElementById('id_hora_inicio').value = slotInicioEst;
-    document.getElementById('id_hora_fin').value    = slotFinEst;
-    document.getElementById('horario-display-est').value = `${slotInicioEst} → ${slotFinEst}`;
-    document.getElementById('time-range-panel-est').style.display = 'none';
-});
-document.addEventListener('click', () => {
-    document.getElementById('time-range-panel-est').style.display = 'none';
-});
+
+function inicializarHorarioEst() {
+    const ahora = new Date();
+    let h = ahora.getHours();
+    let m = Math.ceil(ahora.getMinutes() / 5) * 5;
+    if (m === 60) { m = 0; h += 1; }
+    if (h < 6) { h = 6; m = 0; }
+    if (h > 18) { h = 18; m = 0; }
+
+    const hStr = String(h).padStart(2, '0');
+    const mStr = String(m).padStart(2, '0');
+    document.getElementById('hora-inicio-h-est').value = hStr;
+    document.getElementById('hora-inicio-m-est').value = mStr;
+
+    const hFin = Math.min(h + 2, 18);
+    document.getElementById('hora-fin-h-est').value = String(hFin).padStart(2, '0');
+    document.getElementById('hora-fin-m-est').value = mStr;
+
+    validarHorarioEst();
+}
+inicializarHorarioEst();
 
 // ── Validación de fecha ────────────────────────────────────────
 const fechaInput = document.getElementById('id_fecha_reserva');
@@ -603,7 +596,6 @@ function mostrarBtnModulosEst() {
 
 document.getElementById('id_laboratorio').addEventListener('change', mostrarBtnModulosEst);
 if (fechaInput) fechaInput.addEventListener('change', mostrarBtnModulosEst);
-document.getElementById('btn-confirm-time-est').addEventListener('click', mostrarBtnModulosEst);
 document.getElementById('btn-cargar-modulos-est').addEventListener('click', cargarModulosEst);
 
 function cargarModulosEst() {
