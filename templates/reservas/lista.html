@@ -2,63 +2,87 @@
 
 {% block contenido %}
 
-<h1 class="mb-4">Reservas</h1>
-
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Reservas</h1>
     <a href="/reservas/crear/" class="btn btn-primary">Nueva Reserva</a>
-    <div class="d-flex gap-2">
-        <a class="btn btn-dark btn-sm estado-btn"      data-estado="">Todas</a>
-        <a class="btn btn-success btn-sm estado-btn"   data-estado="Aprobada">Aprobadas</a>
-        <a class="btn btn-warning btn-sm estado-btn"   data-estado="Pendiente">Pendientes</a>
-        <a class="btn btn-secondary btn-sm estado-btn" data-estado="Cancelada">Canceladas</a>
-        <a class="btn btn-danger btn-sm estado-btn"    data-estado="Expirada">Expiradas</a>
-    </div>
 </div>
 
-<form method="GET" class="card p-3 mb-4" id="filtro-form">
-    <input type="hidden" name="estado"        id="estado-hidden"        value="{{ estado_filtro }}">
-    <input type="hidden" name="fecha_inicio"  id="fecha_inicio_hidden"  value="{{ fecha_inicio }}">
-    <input type="hidden" name="fecha_fin"     id="fecha_fin_hidden"     value="{{ fecha_fin }}">
-    <input type="hidden" name="reserva_libre" id="reserva_libre_hidden" value="{{ reserva_libre }}">
+<div class="row g-3">
+    <div class="col-md-2">
+        <div class="card p-0">
+            <div class="card-header fw-semibold small py-2 px-3">
+                Laboratorio
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="?estado={{ estado_filtro }}&buscar={{ nombre_cedula }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&reserva_libre={{ reserva_libre }}"
+                   class="list-group-item list-group-item-action small
+                   {% if not lab_filtro %}active{% endif %}">
+                    Todos
+                </a>
+                {% for lab in laboratorios %}
+                <a href="?lab={{ lab.id }}&estado={{ estado_filtro }}&buscar={{ nombre_cedula }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&reserva_libre={{ reserva_libre }}"
+                   class="list-group-item list-group-item-action small
+                   {% if lab_filtro == lab.id|stringformat:'s' %}active{% endif %}">
+                    {{ lab.nombre }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 
-    <div class="row g-2 align-items-end">
-        <div class="col-md-2">
-            <label class="form-label small mb-1">Cédula</label>
-            <input type="text" name="cedula" class="form-control form-control-sm"
-                   placeholder="Cédula..." value="{{ cedula_filtro }}">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small mb-1">Tipo</label>
-            <select name="tipo" class="form-select form-select-sm">
-                <option value="">Todos</option>
-                <option value="estudiante" {% if tipo_filtro == 'estudiante' %}selected{% endif %}>Estudiante</option>
-                <option value="profesor"   {% if tipo_filtro == 'profesor'   %}selected{% endif %}>Profesor</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small mb-1">Rango de fechas</label>
-            <input type="text" id="date-range-picker" class="form-control form-control-sm"
-                   placeholder="Selecciona un rango..." readonly
-                   value="{% if fecha_inicio %}{{ fecha_inicio }}{% if fecha_fin %} a {{ fecha_fin }}{% endif %}{% endif %}">
-        </div>
-        <div class="col-md-3 d-flex gap-2">
-            <button class="btn btn-dark btn-sm" type="submit">Buscar</button>
-            <a href="/reservas/" class="btn btn-secondary btn-sm">Limpiar</a>
-        </div>
-        <div class="col-auto ms-auto">
-            <button type="button" class="btn btn-primary btn-sm estado-btn-libre" data-libre="1">
+    <div class="col-md-10">
+
+    <div class="card p-3 mb-4 shadow-sm">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a class="btn btn-dark btn-sm estado-btn"      data-estado="">Todas</a>
+            <a class="btn btn-success btn-sm estado-btn"   data-estado="Aprobada">Aprobadas</a>
+            <a class="btn btn-warning btn-sm estado-btn"   data-estado="Pendiente">Pendientes</a>
+            <a class="btn btn-secondary btn-sm estado-btn" data-estado="Cancelada">Canceladas</a>
+            <a class="btn btn-danger btn-sm estado-btn"    data-estado="Expirada">Expiradas</a>
+            <button type="button" class="btn btn-primary btn-sm estado-btn-libre ms-auto" data-libre="1">
                 Reservas libres
             </button>
         </div>
-    </div>
-</form>
 
-<div class="card p-4">
+        <form method="GET" id="filtro-form" class="row g-2 align-items-end">
+            <input type="hidden" name="estado"        id="estado-hidden"        value="{{ estado_filtro }}">
+            <input type="hidden" name="fecha_inicio"  id="fecha_inicio_hidden"  value="{{ fecha_inicio }}">
+            <input type="hidden" name="fecha_fin"     id="fecha_fin_hidden"     value="{{ fecha_fin }}">
+            <input type="hidden" name="reserva_libre" id="reserva_libre_hidden" value="{{ reserva_libre }}">
+            <input type="hidden" name="lab"           id="lab_hidden"           value="{{ lab_filtro }}">
+
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Buscar por nombre, cédula o código</label>
+                <input type="text" name="buscar" class="form-control form-control-sm"
+                       placeholder="Buscar por nombre, cédula o código..." value="{{ nombre_cedula }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Tipo</label>
+                <select name="tipo" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="estudiante" {% if tipo_filtro == 'estudiante' %}selected{% endif %}>Estudiante</option>
+                    <option value="profesor"   {% if tipo_filtro == 'profesor'   %}selected{% endif %}>Profesor</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Rango de fechas</label>
+                <input type="text" id="date-range-picker" class="form-control form-control-sm"
+                       placeholder="Selecciona un rango..." readonly
+                       value="{% if fecha_inicio %}{{ fecha_inicio }}{% if fecha_fin %} a {{ fecha_fin }}{% endif %}{% endif %}">
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button class="btn btn-dark btn-sm" type="submit">Buscar</button>
+                <a href="/reservas/" class="btn btn-secondary btn-sm">Limpiar</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card p-4 shadow-sm">
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>Código</th>
                     <th>Solicitante</th>
                     <th>Fecha Solicitud</th>
                     <th>Fecha de Préstamo</th>
@@ -76,8 +100,10 @@
                     {% elif reserva.estado.nombre == 'Cancelada' %}table-secondary
                     {% elif reserva.estado.nombre == 'Expirada' %}table-danger
                     {% endif %}
-                ">
-                    <td>{{ reserva.id }}</td>
+                "
+                    data-codigo="{{ reserva.codigo }}"
+                >
+                    <td>{{ reserva.codigo }}</td>
                     <td>
                         {% if reserva.usuario %}
                             {{ reserva.usuario }}
@@ -124,10 +150,10 @@
 
                 {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page=1&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">«</a>
+                    <a class="page-link" href="?page=1&estado={{ estado_filtro }}&buscar={{ nombre_cedula }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">«</a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">‹</a>
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&estado={{ estado_filtro }}&buscar={{ nombre_cedula }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">‹</a>
                 </li>
                 {% endif %}
 
@@ -138,17 +164,17 @@
                     </li>
                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">{{ num }}</a>
+                        <a class="page-link" href="?page={{ num }}&estado={{ estado_filtro }}&buscar={{ nombre_cedula }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">{{ num }}</a>
                     </li>
                     {% endif %}
                 {% endfor %}
 
                 {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">›</a>
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&estado={{ estado_filtro }}&buscar={{ nombre_cedula }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">›</a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&estado={{ estado_filtro }}&cedula={{ cedula_filtro }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}">»</a>
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&estado={{ estado_filtro }}&buscar={{ nombre_cedula }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">»</a>
                 </li>
                 {% endif %}
 
@@ -156,6 +182,9 @@
         </nav>
     </div>
     {% endif %}
+    </div>
+
+    </div>
 </div>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">

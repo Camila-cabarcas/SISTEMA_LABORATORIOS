@@ -10,18 +10,49 @@ from .forms import PrestamoForm, CambiarEstadoPrestamoForm, PrestamoItemForm
 
 @rol_requerido('Administrador', 'Laboratorio')
 def lista_prestamos(request):
+    from django.utils import timezone
+    from django.core.paginator import Paginator
+    from laboratorio.models import Laboratorio
 
     estado_filtro = request.GET.get('estado')
+    fecha_inicio  = request.GET.get('fecha_inicio', '')
+    fecha_fin     = request.GET.get('fecha_fin', '')
+    lab_filtro    = request.GET.get('lab', '')
+
+    laboratorios = Laboratorio.objects.all()
+
     prestamos = Prestamo.objects.all().order_by('-fecha_entrega')
 
     if estado_filtro:
         prestamos = prestamos.filter(estado__nombre=estado_filtro)
 
+    if fecha_inicio:
+        prestamos = prestamos.filter(fecha_entrega__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        prestamos = prestamos.filter(fecha_entrega__date__lte=fecha_fin)
+
+    if lab_filtro:
+        prestamos = prestamos.filter(
+            reserva__solicitud__laboratorio__id=lab_filtro
+        ).distinct()
+
+    paginator   = Paginator(prestamos, 15)
+    page_number = request.GET.get('page', 1)
+    page_obj    = paginator.get_page(page_number)
+
     return render(
         request,
         'prestamos/lista.html',
         {
-            'prestamos': prestamos
+            'prestamos':     page_obj,
+            'page_obj':      page_obj,
+            'estado_filtro': estado_filtro,
+            'fecha_inicio':  fecha_inicio,
+            'fecha_fin':     fecha_fin,
+            'laboratorios':  laboratorios,
+            'lab_filtro':    lab_filtro,
+            'now':           timezone.now(),
         }
     )
 

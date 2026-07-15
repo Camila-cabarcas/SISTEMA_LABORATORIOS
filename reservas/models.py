@@ -43,11 +43,33 @@ class Reserva(models.Model):
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
+    codigo = models.CharField(max_length=50, unique=True, blank=True, default='')
+
+    def generar_codigo(self):
+        solicitud = self.solicitud.first()
+        cedula = solicitud.cedula if solicitud else 'SIN'
+
+        lab = solicitud.laboratorio if solicitud and solicitud.laboratorio else None
+        if lab:
+            siglas = ''.join(
+                word[0].upper()
+                for word in lab.nombre.split()
+                if word
+            )[:6]
+        else:
+            siglas = 'LAB'
+
+        numero = str(self.id).zfill(3)
+        return f"{cedula}-{siglas}-R{numero}"
+
     def save(self, *args, **kwargs):
         self.hora_limite_retiro = self.fecha_reserva + timedelta(minutes=30)
         if not self.fecha_devolucion:
             self.fecha_devolucion = self.fecha_reserva + timedelta(hours=2)
         super().save(*args, **kwargs)
+        if not self.codigo:
+            self.codigo = self.generar_codigo()
+            super().save(update_fields=['codigo'])
 
     def __str__(self):
         return f"Reserva {self.pk}"

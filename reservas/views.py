@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, date
 def lista_reservas(request):
     from django.utils import timezone
     from django.db.models import Q
+    from laboratorio.models import Laboratorio
 
     ahora = timezone.now()
     estado_expirada = EstadoReserva.objects.filter(nombre='Expirada').first()
@@ -29,21 +30,25 @@ def lista_reservas(request):
         ).update(estado=estado_expirada)
 
     estado_filtro = request.GET.get('estado', '')
-    cedula_filtro = request.GET.get('cedula', '').strip()
+    nombre_cedula = request.GET.get('buscar', '').strip()
     tipo_filtro   = request.GET.get('tipo', '')
     fecha_inicio  = request.GET.get('fecha_inicio', '')
     fecha_fin     = request.GET.get('fecha_fin', '')
     reserva_libre = request.GET.get('reserva_libre', '')
+    lab_filtro    = request.GET.get('lab', '')
+
+    laboratorios = Laboratorio.objects.all()
 
     reservas = Reserva.objects.all().order_by('-fecha_reserva')
 
     if estado_filtro:
         reservas = reservas.filter(estado__nombre=estado_filtro)
 
-    if cedula_filtro:
+    if nombre_cedula:
         reservas = reservas.filter(
-            Q(usuario__codigo__icontains=cedula_filtro) |
-            Q(solicitud__cedula__icontains=cedula_filtro)
+            Q(solicitud__cedula__icontains=nombre_cedula) |
+            Q(solicitud__nombre__icontains=nombre_cedula) |
+            Q(codigo__icontains=nombre_cedula)
         ).distinct()
 
     if tipo_filtro:
@@ -60,6 +65,11 @@ def lista_reservas(request):
     if reserva_libre == '1':
         reservas = reservas.filter(solicitud__reserva_libre=True)
 
+    if lab_filtro:
+        reservas = reservas.filter(
+            solicitud__laboratorio__id=lab_filtro
+        ).distinct()
+
     paginator   = Paginator(reservas, 15)
     page_number = request.GET.get('page', 1)
     page_obj    = paginator.get_page(page_number)
@@ -69,11 +79,13 @@ def lista_reservas(request):
         'page_obj':      page_obj,
         'now':           ahora,
         'estado_filtro': estado_filtro,
-        'cedula_filtro': cedula_filtro,
+        'nombre_cedula': nombre_cedula,
         'tipo_filtro':   tipo_filtro,
         'fecha_inicio':  fecha_inicio,
         'fecha_fin':     fecha_fin,
         'reserva_libre': reserva_libre,
+        'laboratorios':  laboratorios,
+        'lab_filtro':    lab_filtro,
     })
 
 
@@ -199,6 +211,8 @@ def crear_reserva(request):
 
 @rol_requerido('Administrador', 'Laboratorio')
 def detalle_reserva(request, id):
+    from django.utils import timezone
+
     reserva = get_object_or_404(Reserva, id=id)
     insumos = ReservaInsumo.objects.filter(reserva=reserva)
 
@@ -215,7 +229,9 @@ def detalle_reserva(request, id):
     return render(request, 'reservas/detalle.html', {
         'reserva': reserva,
         'insumos': insumos,
-        'form':    form
+        'form':    form,
+        'now':     timezone.now(),
+        'fecha_vencida': timezone.now() > reserva.fecha_devolucion if reserva.fecha_devolucion else False,
     })
 
 

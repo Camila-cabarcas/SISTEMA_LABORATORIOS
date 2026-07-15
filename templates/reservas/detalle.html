@@ -4,225 +4,332 @@
 
 {% with solicitante=reserva.solicitud.all.0 %}
 
-<h1 class="mb-4">
-    Reserva —
-    {% if solicitante %}
-        {{ solicitante.nombre }}
-    {% elif reserva.usuario %}
-        {{ reserva.usuario }}
-    {% else %}
-        Sin usuario
-    {% endif %}
-    | {{ reserva.fecha_reserva|date:"j M Y H:i" }}
-</h1>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h1 class="mb-0">
+        Reserva —
+        {% if solicitante %}
+            {{ solicitante.nombre }}
+        {% elif reserva.usuario %}
+            {{ reserva.usuario }}
+        {% else %}
+            Sin usuario
+        {% endif %}
+        <small class="text-muted fs-5">| {{ reserva.fecha_reserva|date:"j M Y H:i" }}</small>
+    </h1>
+    <div class="d-flex align-items-center gap-2">
+        {% if reserva.estado.nombre == 'Aprobada' %}
+            <span class="badge bg-success fs-6 px-3 py-2">{{ reserva.estado }}</span>
+        {% elif reserva.estado.nombre == 'Pendiente' %}
+            <span class="badge bg-warning text-dark fs-6 px-3 py-2">{{ reserva.estado }}</span>
+        {% elif reserva.estado.nombre == 'Cancelada' %}
+            <span class="badge bg-danger fs-6 px-3 py-2">{{ reserva.estado }}</span>
+        {% elif reserva.estado.nombre == 'Expirada' %}
+            <span class="badge bg-secondary fs-6 px-3 py-2">{{ reserva.estado }}</span>
+        {% else %}
+            <span class="badge bg-light text-dark fs-6 px-3 py-2">{{ reserva.estado }}</span>
+        {% endif %}
+        <a href="/reservas/" class="btn btn-outline-secondary btn-sm">&larr; Volver</a>
+    </div>
+</div>
 
-<div class="card p-4 mb-4">
-    <h5 class="mb-3">Información de la reserva</h5>
-    <div class="row">
-        <div class="col-md-6">
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Solicitante</h5>
 
-            {% if solicitante %}
-                <p>
-                    <strong>Tipo:</strong>
-                    {% if solicitante.tipo_solicitante == 'profesor' %}
-                        <span class="badge bg-success">Profesor</span>
-                    {% else %}
-                        <span class="badge bg-info text-dark">Estudiante</span>
-                    {% endif %}
+                {% if solicitante %}
+                    <p>
+                        <strong>Tipo:</strong>
+                        {% if solicitante.tipo_solicitante == 'profesor' %}
+                            <span class="badge bg-success">Profesor</span>
+                        {% else %}
+                            <span class="badge bg-info text-dark">Estudiante</span>
+                        {% endif %}
+                        {% if solicitante.reserva_libre %}
+                            <span class="badge bg-primary ms-1">Reserva libre</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Nombre completo:</strong> {{ solicitante.nombre }}</p>
+                    <p><strong>Cédula/ID:</strong> {{ solicitante.cedula|default:"No registrada" }}</p>
+
                     {% if solicitante.reserva_libre %}
-                        <span class="badge bg-primary ms-1">Reserva libre</span>
+                        {% if solicitante.programa %}
+                            <p><strong>Grupo / Actividad:</strong> {{ solicitante.programa }}</p>
+                        {% endif %}
+                        {% if solicitante.descripcion_actividad %}
+                            <p><strong>Descripción de actividad:</strong> {{ solicitante.descripcion_actividad }}</p>
+                        {% endif %}
+                        {% if solicitante.cantidad_asistentes_libre %}
+                            <p><strong>Asistentes:</strong> {{ solicitante.cantidad_asistentes_libre }}</p>
+                        {% endif %}
+                    {% else %}
+                        {% if solicitante.programa %}
+                            <p><strong>Programa/Carrera:</strong> {{ solicitante.programa }}</p>
+                        {% endif %}
+                        {% if solicitante.curso %}
+                            <p><strong>Curso:</strong> {{ solicitante.curso }}</p>
+                        {% endif %}
+                    {% endif %}
+                {% elif reserva.usuario %}
+                    <p><strong>Nombre completo:</strong> {{ reserva.usuario.get_full_name|default:reserva.usuario.username }}</p>
+                {% else %}
+                    <p><strong>Nombre completo:</strong> <span class="text-muted">Sin usuario</span></p>
+                {% endif %}
+
+                {% if reserva.usuario and solicitante and solicitante.nombre != reserva.usuario.get_full_name %}
+                    <p><strong>Gestionada por:</strong> {{ reserva.usuario }}</p>
+                {% endif %}
+
+                <p><strong>Laboratorio:</strong>
+                    {% if solicitante %}{{ solicitante.laboratorio }}{% else %}No especificado{% endif %}
+                </p>
+
+                <p class="mb-0"><strong>Módulo(s) asignados:</strong>
+                    {% if solicitante %}
+                        {% if solicitante.necesita_modulo %}
+                            {% with modulos=solicitante.modulos_asignados.all %}
+                            {% if modulos %}
+                                {% if modulos.count == 1 %}
+                                    <span class="badge bg-primary">{{ modulos.0.nombre }}</span>
+                                {% else %}
+                                    <a class="text-decoration-none" data-bs-toggle="collapse"
+                                       href="#lista-modulos" role="button">
+                                        <span class="badge bg-primary">
+                                            {{ modulos.count }} módulos asignados ▾
+                                        </span>
+                                    </a>
+                                    <div class="collapse mt-1" id="lista-modulos">
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for m in modulos %}
+                                            <span class="badge bg-secondary">{{ m.nombre }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-warning">Requiere módulo — aún sin asignar</span>
+                            {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">No requiere módulo</span>
+                        {% endif %}
+                    {% else %}
+                        No especificado
                     {% endif %}
                 </p>
-                <p><strong>Solicitante:</strong> {{ solicitante.nombre }}</p>
-                <p><strong>Cédula/ID:</strong> {{ solicitante.cedula|default:"No registrada" }}</p>
-                {% if solicitante.reserva_libre %}
-                    {% if solicitante.programa %}
-                        <p><strong>Grupo / Actividad:</strong> {{ solicitante.programa }}</p>
-                    {% endif %}
-                    {% if solicitante.descripcion_actividad %}
-                        <p><strong>Descripción de actividad:</strong> {{ solicitante.descripcion_actividad }}</p>
-                    {% endif %}
-                    {% if solicitante.cantidad_asistentes_libre %}
-                        <p><strong>Asistentes:</strong> {{ solicitante.cantidad_asistentes_libre }}</p>
-                    {% endif %}
-                {% else %}
-                    {% if solicitante.programa %}
-                        <p><strong>Programa/Carrera:</strong> {{ solicitante.programa }}</p>
-                    {% endif %}
-                    {% if solicitante.curso %}
-                        <p><strong>Curso:</strong> {{ solicitante.curso }}</p>
-                    {% endif %}
+
+                {% if solicitante and solicitante.observaciones %}
+                    <hr>
+                    <p class="mb-0"><strong>Observaciones:</strong> {{ solicitante.observaciones }}</p>
                 {% endif %}
-            {% elif reserva.usuario %}
-                <p><strong>Solicitante:</strong> {{ reserva.usuario.get_full_name|default:reserva.usuario.username }}</p>
-            {% else %}
-                <p><strong>Solicitante:</strong> <span class="text-muted">Sin usuario</span></p>
-            {% endif %}
-
-            {% if reserva.usuario and solicitante and solicitante.nombre != reserva.usuario.get_full_name %}
-                <p><strong>Gestionada por:</strong> {{ reserva.usuario }}</p>
-            {% endif %}
-
-            <p><strong>Laboratorio:</strong>
-                {% if solicitante %}{{ solicitante.laboratorio }}{% else %}No especificado{% endif %}
-            </p>
-
-            <p><strong>Módulo(s):</strong>
-                {% if solicitante %}
-                    {% if solicitante.necesita_modulo %}
-                        {% with modulos=solicitante.modulos_asignados.all %}
-                        {% if modulos %}
-                            {% if modulos.count == 1 %}
-                                <span class="badge bg-primary">{{ modulos.0.nombre }}</span>
-                            {% else %}
-                                <a class="text-decoration-none" data-bs-toggle="collapse"
-                                   href="#lista-modulos" role="button">
-                                    <span class="badge bg-primary">
-                                        {{ modulos.count }} módulos asignados ▾
-                                    </span>
-                                </a>
-                                <div class="collapse mt-1" id="lista-modulos">
-                                    <div class="d-flex flex-wrap gap-1">
-                                        {% for m in modulos %}
-                                        <span class="badge bg-secondary">{{ m.nombre }}</span>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            {% endif %}
-                        {% else %}
-                            <span class="text-warning">Requiere módulo — aún sin asignar</span>
-                        {% endif %}
-                        {% endwith %}
-                    {% else %}
-                        <span class="text-muted">No requiere módulo</span>
-                    {% endif %}
-                {% else %}
-                    No especificado
-                {% endif %}
-            </p>
-
-        </div>
-        <div class="col-md-6">
-            <p><strong>Fecha de solicitud:</strong> {{ reserva.fecha_creacion|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</p>
-            <p><strong>Fecha de uso:</strong> {{ reserva.fecha_reserva|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</p>
-            <p><strong>Límite de retiro:</strong> {{ reserva.hora_limite_retiro|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</p>
-            <p><strong>Fecha devolución:</strong> {{ reserva.fecha_devolucion|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</p>
-            <p>
-                <strong>Estado:</strong>
-                {% if reserva.estado.nombre == 'Aprobada' %}
-                    <span class="badge bg-success">{{ reserva.estado }}</span>
-                {% elif reserva.estado.nombre == 'Pendiente' %}
-                    <span class="badge bg-warning text-dark">{{ reserva.estado }}</span>
-                {% elif reserva.estado.nombre == 'Cancelada' %}
-                    <span class="badge bg-danger">{{ reserva.estado }}</span>
-                {% elif reserva.estado.nombre == 'Expirada' %}
-                    <span class="badge bg-secondary">{{ reserva.estado }}</span>
-                {% else %}
-                    {{ reserva.estado }}
-                {% endif %}
-            </p>
-            {% if solicitante and solicitante.observaciones %}
-                <p><strong>Observaciones:</strong> {{ solicitante.observaciones }}</p>
-            {% endif %}
+            </div>
         </div>
     </div>
 
-    {% if solicitante and solicitante.insumos.all %}
-    <hr>
-    <h6 class="mt-2">Insumos solicitados originalmente</h6>
-    <table class="table table-sm table-bordered w-auto">
-        <thead class="table-light">
-            <tr>
-                <th>Insumo</th>
-                <th>Cantidad pedida</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for si in solicitante.insumos.all %}
-            <tr>
-                <td>{{ si.insumo.nombre }}</td>
-                <td>{{ si.cantidad }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Fechas y estado</h5>
 
-    {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Laboratorio' %}
-        {% if reserva.estado.nombre == 'Pendiente' %}
-            {% if solicitante.reserva_libre and user.rol.nombre == 'Laboratorio' %}
-            <div class="alert alert-warning mt-3" role="alert">
-                <strong>Atención:</strong> Solo el Administrador puede aprobar esta reserva libre.
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <span class="timeline-dot {% if now >= reserva.fecha_creacion %}bg-success{% else %}bg-secondary{% endif %}"></span>
+                        <div class="timeline-label">Solicitud creada</div>
+                        <div class="timeline-date">{{ reserva.fecha_creacion|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</div>
+                    </div>
+                    <div class="timeline-item">
+                        <span class="timeline-dot {% if now >= reserva.fecha_reserva %}bg-success{% else %}bg-secondary{% endif %}"></span>
+                        <div class="timeline-label">Fecha de uso</div>
+                        <div class="timeline-date">{{ reserva.fecha_reserva|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</div>
+                    </div>
+                    <div class="timeline-item">
+                        <span class="timeline-dot {% if reserva.hora_limite_retiro and now >= reserva.hora_limite_retiro %}bg-success{% else %}bg-secondary{% endif %}"></span>
+                        <div class="timeline-label">Límite de retiro</div>
+                        <div class="timeline-date">{{ reserva.hora_limite_retiro|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</div>
+                    </div>
+                    <div class="timeline-item timeline-item-last">
+                        <span class="timeline-dot {% if reserva.fecha_devolucion and now >= reserva.fecha_devolucion %}bg-success{% else %}bg-secondary{% endif %}"></span>
+                        <div class="timeline-label">Fecha devolución</div>
+                        <div class="timeline-date">{{ reserva.fecha_devolucion|date:"j \d\e F \d\e Y \a \l\a\s H:i" }}</div>
+                    </div>
+                </div>
+
+                {% if fecha_vencida %}
+                <div class="alert alert-danger py-2 mb-0 mt-2">
+                    <small>La fecha de devolución ya venció.</small>
+                </div>
+                {% endif %}
             </div>
-            <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/" class="mt-2">
-                {% csrf_token %}
-                <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
-            </form>
-            {% else %}
-            <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/" class="mt-3">
-                {% csrf_token %}
-                <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2">Aprobar</button>
-                <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
-            </form>
-            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <ul class="nav nav-tabs" id="detalleTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-insumos-btn" data-bs-toggle="tab"
+                        data-bs-target="#tab-insumos" type="button" role="tab">
+                    Insumos reservados
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-agregar-btn" data-bs-toggle="tab"
+                        data-bs-target="#tab-agregar" type="button" role="tab">
+                    Agregar insumo
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-original-btn" data-bs-toggle="tab"
+                        data-bs-target="#tab-original" type="button" role="tab">
+                    Solicitud original
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content pt-3" id="detalleTabsContent">
+
+            <div class="tab-pane fade show active" id="tab-insumos" role="tabpanel">
+                {% if insumos %}
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Insumo</th>
+                            <th>Cantidad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for insumo in insumos %}
+                        <tr>
+                            <td>{{ insumo.insumo.nombre }}</td>
+                            <td>{{ insumo.cantidad }}</td>
+                            <td>
+                                <form method="POST"
+                                    action="/reservas/{{ reserva.id }}/insumo/{{ insumo.id }}/eliminar/"
+                                    data-nombre="{{ insumo.insumo.nombre }}"
+                                    class="form-eliminar-insumo">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                        {% if fecha_vencida or reserva.estado.nombre == 'Expirada' or reserva.estado.nombre == 'Cancelada' %}
+                                        disabled
+                                        {% endif %}>
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted mb-0">No hay insumos agregados aún.</p>
+                {% endif %}
+            </div>
+
+            <div class="tab-pane fade" id="tab-agregar" role="tabpanel">
+                {% if fecha_vencida or reserva.estado.nombre == 'Expirada' or reserva.estado.nombre == 'Cancelada' %}
+                <div class="alert alert-warning mb-0">
+                    No se pueden agregar insumos — la fecha de devolución ya venció.
+                </div>
+                {% else %}
+                <form method="POST">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary">Guardar insumo</button>
+                </form>
+                {% endif %}
+            </div>
+
+            <div class="tab-pane fade" id="tab-original" role="tabpanel">
+                {% if solicitante and solicitante.insumos.all %}
+                <table class="table table-sm table-bordered w-auto mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Insumo</th>
+                            <th>Cantidad pedida</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for si in solicitante.insumos.all %}
+                        <tr>
+                            <td>{{ si.insumo.nombre }}</td>
+                            <td>{{ si.cantidad }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted mb-0">No se registraron insumos en la solicitud original.</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Laboratorio' %}
+    {% if reserva.estado.nombre == 'Pendiente' %}
+        {% if solicitante.reserva_libre and user.rol.nombre == 'Laboratorio' %}
+        <div class="alert alert-warning" role="alert">
+            <strong>Atención:</strong> Solo el Administrador puede aprobar esta reserva libre.
+        </div>
+        <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/">
+            {% csrf_token %}
+            <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
+        </form>
+        {% else %}
+        <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/">
+            {% csrf_token %}
+            <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2">Aprobar</button>
+            <button type="submit" name="accion" value="cancelar" class="btn btn-danger">Cancelar reserva</button>
+        </form>
         {% endif %}
     {% endif %}
-
-</div>
-
-{% if reserva.estado.nombre != 'Expirada' and reserva.estado.nombre != 'Cancelada' %}
-<div class="card p-4 mb-4">
-    <h5>Agregar insumo a la reserva</h5>
-    <form method="POST">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Guardar insumo</button>
-    </form>
-</div>
 {% endif %}
 
-<div class="card p-4">
-    <h5>Insumos reservados</h5>
-
-    {% if insumos %}
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Insumo</th>
-                <th>Cantidad</th>
-                {% if reserva.estado.nombre != 'Expirada' and reserva.estado.nombre != 'Cancelada' %}
-                <th>Acciones</th>
-                {% endif %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for insumo in insumos %}
-            <tr>
-                <td>{{ insumo.insumo.nombre }}</td>
-                <td>{{ insumo.cantidad }}</td>
-                {% if reserva.estado.nombre != 'Expirada' and reserva.estado.nombre != 'Cancelada' %}
-                <td>
-                    <form method="POST"
-                        action="/reservas/{{ reserva.id }}/insumo/{{ insumo.id }}/eliminar/"
-                        data-nombre="{{ insumo.insumo.nombre }}"
-                        class="form-eliminar-insumo">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
-                    </form>
-                </td>
-                {% endif %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="text-muted">No hay insumos agregados aún.</p>
-    {% endif %}
-
-    <a href="/reservas/" class="btn btn-secondary mt-3">Volver</a>
-</div>
-
 {% endwith %}
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 26px;
+}
+.timeline-item {
+    position: relative;
+    padding-bottom: 1.35rem;
+}
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 16px;
+    bottom: -6px;
+    width: 2px;
+    background: #dee2e6;
+}
+.timeline-item-last::before {
+    display: none;
+}
+.timeline-dot {
+    position: absolute;
+    left: -26px;
+    top: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px #fff;
+}
+.timeline-label {
+    font-weight: 600;
+    font-size: .9rem;
+}
+.timeline-date {
+    font-size: .82rem;
+    color: #6c757d;
+}
+</style>
 
 <script>
 document.querySelectorAll('.form-eliminar-insumo').forEach(function(form) {

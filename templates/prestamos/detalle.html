@@ -2,76 +2,187 @@
 
 {% block contenido %}
 
-<h1 class="mb-4">Préstamo #{{ prestamo.id }}</h1>
-
-<div class="card p-4 mb-4">
-
-    <h5>Información del préstamo</h5>
-
-    <p><strong>Reserva:</strong> {{ prestamo.reserva }}</p>
-    <p><strong>Responsable:</strong> {{ prestamo.responsable }}</p>
-    <p><strong>Estado:</strong> {{ prestamo.estado }}</p>
-    <p><strong>Fecha entrega:</strong> {{ prestamo.fecha_entrega }}</p>
-    <p><strong>Fecha devolución esperada:</strong> {{ prestamo.reserva.fecha_devolucion }}</p>
-    <p><strong>Fecha devolución real:</strong> {{ prestamo.fecha_devolucion|default:"Pendiente" }}</p>
-
-    {% if prestamo.estado.nombre == 'Retrasado' %}
-    <div class="alert alert-danger mt-2">
-        ⚠️ Devolución retrasada
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h1 class="mb-0">Préstamo {{ prestamo.codigo }}</h1>
+    <div class="d-flex align-items-center gap-2">
+        {% if prestamo.estado.nombre == 'Activo' %}
+            <span class="badge bg-success fs-6 px-3 py-2">{{ prestamo.estado }}</span>
+        {% elif prestamo.estado.nombre == 'Retrasado' %}
+            <span class="badge bg-warning text-dark fs-6 px-3 py-2">{{ prestamo.estado }}</span>
+        {% elif prestamo.estado.nombre == 'Devuelto' %}
+            <span class="badge bg-secondary fs-6 px-3 py-2">{{ prestamo.estado }}</span>
+        {% else %}
+            <span class="badge bg-light text-dark fs-6 px-3 py-2">{{ prestamo.estado }}</span>
+        {% endif %}
+        <a href="/prestamos/" class="btn btn-outline-secondary btn-sm">&larr; Volver</a>
     </div>
-    {% endif %}
-
-    {% if prestamo.fecha_devolucion and prestamo.fecha_devolucion > prestamo.reserva.fecha_devolucion %}
-    <div class="alert alert-warning mt-2">
-        ⚠️ Este préstamo fue devuelto con retraso
-    </div>
-    {% endif %}
-
 </div>
 
-<div class="card p-4 mb-4">
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                {% with sol=prestamo.reserva.solicitud.first %}
+                <h5 class="card-title mb-3">Información del préstamo</h5>
 
-    <h5>Ítems prestados</h5>
+                <p><strong>Código:</strong> {{ prestamo.codigo }}</p>
+                <p>
+                    <strong>Solicitante:</strong>
+                    {{ sol.nombre|default:prestamo.reserva.usuario }}
+                    {% if sol.cedula %}({{ sol.cedula }}){% endif %}
+                </p>
+                <p><strong>Laboratorio:</strong> {{ sol.laboratorio|default:"—" }}</p>
+                <p>
+                    <strong>Reserva:</strong>
+                    <a href="/reservas/{{ prestamo.reserva.id }}/">{{ prestamo.reserva }}</a>
+                </p>
+                <p><strong>Responsable:</strong> {{ prestamo.responsable }}</p>
+                <p><strong>Fecha de entrega:</strong> {{ prestamo.fecha_entrega }}</p>
+                <p><strong>Fecha devolución esperada:</strong> {{ prestamo.reserva.fecha_devolucion }}</p>
+                <p class="mb-0">
+                    <strong>Fecha devolución real:</strong>
+                    {% if prestamo.fecha_devolucion %}
+                        {{ prestamo.fecha_devolucion }}
+                        {% if prestamo.fecha_devolucion > prestamo.reserva.fecha_devolucion %}
+                            <span class="badge bg-danger ms-1">Con retraso</span>
+                        {% else %}
+                            <span class="badge bg-success ms-1">A tiempo</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% endif %}
+                </p>
 
-    {% if items %}
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Código</th>
-                <th>Insumo</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td>{{ item.item_inventario.codigo }}</td>
-                <td>{{ item.item_inventario.insumo.nombre }}</td>
-                <td>{{ item.item_inventario.estado.nombre }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                {% if prestamo.estado.nombre == 'Retrasado' %}
+                <div class="alert alert-danger mt-3 mb-0">
+                    ⚠️ Devolución retrasada
+                </div>
+                {% endif %}
 
-    {% else %}
-    <p class="text-muted">No hay ítems agregados aún.</p>
-    {% endif %}
+                {% if prestamo.fecha_devolucion and prestamo.fecha_devolucion > prestamo.reserva.fecha_devolucion %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    ⚠️ Este préstamo fue devuelto con retraso
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
 
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Línea de tiempo</h5>
+
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <span class="timeline-dot bg-success"></span>
+                        <div class="timeline-label">Entregado</div>
+                        <div class="timeline-date">{{ prestamo.fecha_entrega }}</div>
+                    </div>
+                    <div class="timeline-item">
+                        <span class="timeline-dot {% if prestamo.fecha_devolucion or prestamo.estado.nombre == 'Retrasado' %}bg-success{% else %}bg-secondary{% endif %}"></span>
+                        <div class="timeline-label">Vence</div>
+                        <div class="timeline-date">{{ prestamo.reserva.fecha_devolucion }}</div>
+                    </div>
+                    <div class="timeline-item timeline-item-last">
+                        <span class="timeline-dot {% if prestamo.fecha_devolucion %}bg-success{% else %}bg-secondary{% endif %}"></span>
+                        <div class="timeline-label">Devuelto</div>
+                        <div class="timeline-date">{{ prestamo.fecha_devolucion|default:"Pendiente" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="d-flex gap-2">
-    <a href="/prestamos/" class="btn btn-secondary">
-        Volver
-    </a>
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Ítems prestados</h5>
 
-    {% if prestamo.estado.nombre == 'Activo' or prestamo.estado.nombre == 'Retrasado' %}
-        <form method="POST" action="/prestamos/{{ prestamo.id }}/devolver/">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-success">
-                Marcar como devuelto
-            </button>
-        </form>
+        {% if items %}
+        <table class="table table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Insumo</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.item_inventario.codigo }}</td>
+                    <td>{{ item.item_inventario.insumo.nombre }}</td>
+                    <td>{{ item.item_inventario.estado.nombre }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted mb-0">No hay ítems agregados aún.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if prestamo.estado.nombre == 'Activo' or prestamo.estado.nombre == 'Retrasado' %}
+<form method="POST" action="/prestamos/{{ prestamo.id }}/devolver/" id="form-marcar-devuelto">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">
+        Marcar como devuelto
+    </button>
+</form>
 {% endif %}
-</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 26px;
+}
+.timeline-item {
+    position: relative;
+    padding-bottom: 1.35rem;
+}
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 16px;
+    bottom: -6px;
+    width: 2px;
+    background: #dee2e6;
+}
+.timeline-item-last::before {
+    display: none;
+}
+.timeline-dot {
+    position: absolute;
+    left: -26px;
+    top: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px #fff;
+}
+.timeline-label {
+    font-weight: 600;
+    font-size: .9rem;
+}
+.timeline-date {
+    font-size: .82rem;
+    color: #6c757d;
+}
+</style>
+
+<script>
+const formDevuelto = document.getElementById('form-marcar-devuelto');
+if (formDevuelto) {
+    formDevuelto.addEventListener('submit', function(e) {
+        if (!confirm('¿Confirmas que este préstamo fue devuelto?')) {
+            e.preventDefault();
+        }
+    });
+}
+</script>
 
 {% endblock %}

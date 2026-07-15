@@ -2,74 +2,254 @@
 
 {% block contenido %}
 
-<h1 class="mb-4">Préstamos</h1>
-
-<div class="d-flex justify-content-between mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Préstamos</h1>
     <a href="/reservas/para-prestamo/" class="btn btn-primary">Nuevo Préstamo</a>
-    <div class="d-flex gap-2">
-        <a href="?" class="btn btn-dark btn-sm">Todos</a>
-        <a href="?estado=Activo" class="btn btn-success btn-sm">Activos</a>
-        <a href="?estado=Retrasado" class="btn btn-warning btn-sm">Retrasados</a>
-        <a href="?estado=Devuelto" class="btn btn-secondary btn-sm">Devueltos</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-2">
+        <div class="card p-0">
+            <div class="card-header fw-semibold small py-2 px-3">
+                Laboratorio
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="?estado={{ estado_filtro|default:'' }}"
+                   class="list-group-item list-group-item-action small
+                   {% if not lab_filtro %}active{% endif %}">
+                    Todos
+                </a>
+                {% for lab in laboratorios %}
+                <a href="?lab={{ lab.id }}&estado={{ estado_filtro|default:'' }}"
+                   class="list-group-item list-group-item-action small
+                   {% if lab_filtro == lab.id|stringformat:'s' %}active{% endif %}">
+                    {{ lab.nombre }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-10">
+
+    <div class="card p-3 mb-4 shadow-sm">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="?lab={{ lab_filtro }}" class="btn btn-dark btn-sm estado-btn" data-estado="">Todos</a>
+            <a href="?estado=Activo&lab={{ lab_filtro }}" class="btn btn-success btn-sm estado-btn" data-estado="Activo">Activos</a>
+            <a href="?estado=Retrasado&lab={{ lab_filtro }}" class="btn btn-warning btn-sm estado-btn" data-estado="Retrasado">Retrasados</a>
+            <a href="?estado=Devuelto&lab={{ lab_filtro }}" class="btn btn-secondary btn-sm estado-btn" data-estado="Devuelto">Devueltos</a>
+        </div>
+
+        <form method="GET" id="filtro-fechas-form" class="row g-2 align-items-end">
+            <input type="hidden" name="estado" id="estado-hidden" value="{{ estado_filtro|default:'' }}">
+            <input type="hidden" name="lab" id="lab-hidden" value="{{ lab_filtro|default:'' }}">
+
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Buscar por nombre, cédula o código</label>
+                <input type="text" id="buscar-prestamo" class="form-control form-control-sm"
+                       placeholder="Buscar por nombre, cédula o código (ej: 34567543-LBMEC-P001)...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Rango de fechas de entrega</label>
+                <input type="text" id="date-range-picker" name="_rango_display" class="form-control form-control-sm"
+                       placeholder="Selecciona un rango..." readonly
+                       value="{% if fecha_inicio %}{{ fecha_inicio }}{% if fecha_fin %} a {{ fecha_fin }}{% endif %}{% endif %}">
+                <input type="hidden" name="fecha_inicio" id="fecha_inicio_hidden" value="{{ fecha_inicio }}">
+                <input type="hidden" name="fecha_fin" id="fecha_fin_hidden" value="{{ fecha_fin }}">
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button class="btn btn-dark btn-sm" type="submit">Buscar</button>
+                <a href="/prestamos/" class="btn btn-secondary btn-sm">Limpiar</a>
+            </div>
+            <div class="col-auto ms-auto">
+                <small class="text-muted" id="conteo-prestamos">
+                    Mostrando {{ prestamos|length }} préstamo{{ prestamos|length|pluralize:"s" }}
+                </small>
+            </div>
+        </form>
+    </div>
+
+    <div class="card p-4 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-striped" id="tabla-prestamos">
+
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Responsable</th>
+                    <th>Estado</th>
+                    <th>Fecha Entrega</th>
+                    <th>Fecha Devolución</th>
+                    <th>Retraso</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for prestamo in prestamos %}
+                {% with sol=prestamo.reserva.solicitud.first %}
+                <tr class="prestamo-row
+                    {% if prestamo.estado.nombre == 'Activo' %}table-success
+                    {% elif prestamo.estado.nombre == 'Retrasado' %}table-warning
+                    {% elif prestamo.estado.nombre == 'Devuelto' %}table-secondary
+                    {% endif %}
+                    "
+                    data-codigo="{{ prestamo.codigo|lower }}"
+                    data-solicitante="{{ sol.nombre|default:prestamo.reserva.usuario|lower }}"
+                    data-cedula="{{ sol.cedula|default:'' }}"
+                >
+                    <td>{{ prestamo.codigo }}</td>
+                    <td>{{ prestamo.responsable }}</td>
+                    <td>{{ prestamo.estado }}</td>
+                    <td>{{ prestamo.fecha_entrega }}</td>
+                    <td>{{ prestamo.fecha_devolucion|default:"Pendiente" }}</td>
+                    <td>
+                        {% if prestamo.estado.nombre == 'Devuelto' %}
+                            {% if prestamo.fecha_devolucion > prestamo.reserva.fecha_devolucion %}
+                                <span class="badge bg-danger">Con retraso</span>
+                            {% else %}
+                                <span class="badge bg-success">A tiempo</span>
+                            {% endif %}
+                        {% else %}
+                            ---
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a
+                            href="/prestamos/{{ prestamo.id }}/"
+                            class="btn btn-info btn-sm"
+                        >
+                            Ver detalle
+                        </a>
+                    </td>
+                </tr>
+                {% endwith %}
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted">
+                        No hay préstamos registrados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+        <div id="sin-resultados" class="text-center text-muted py-3 d-none">
+            No se encontraron préstamos con ese criterio.
+        </div>
+    </div>
+
+    <!-- Paginación -->
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <small class="text-muted">
+            Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }}
+            de {{ page_obj.paginator.count }} préstamos
+        </small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1&estado={{ estado_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">«</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&estado={{ estado_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">‹</a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}&estado={{ estado_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&estado={{ estado_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">›</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&estado={{ estado_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&lab={{ lab_filtro }}">»</a>
+                </li>
+                {% endif %}
+
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
     </div>
 </div>
 
-<div class="card p-4">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 
-    <table class="table table-striped">
+<script>
+const estadoActual = "{{ estado_filtro|default:'' }}";
 
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Reserva</th>
-                <th>Responsable</th>
-                <th>Estado</th>
-                <th>Fecha Entrega</th>
-                <th>Fecha Devolución</th>
-                <th>Retraso</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
+document.querySelectorAll('.estado-btn').forEach(function(btn) {
+    if (btn.dataset.estado === estadoActual) {
+        btn.style.outline = '2px solid rgba(0,0,0,0.4)';
+        btn.style.outlineOffset = '2px';
+    }
+});
 
-        <tbody>
-            {% for prestamo in prestamos %}
-            <tr class="
-                {% if prestamo.estado.nombre == 'Activo' %}table-success
-                {% elif prestamo.estado.nombre == 'Retrasado' %}table-warning
-                {% elif prestamo.estado.nombre == 'Devuelto' %}table-secondary
-                {% endif %}
-            ">
-                <td>{{ prestamo.id }}</td>
-                <td>{{ prestamo.reserva }}</td>
-                <td>{{ prestamo.responsable }}</td>
-                <td>{{ prestamo.estado }}</td>
-                <td>{{ prestamo.fecha_entrega }}</td>
-                <td>{{ prestamo.fecha_devolucion|default:"Pendiente" }}</td>
-                <td>
-                    {% if prestamo.estado.nombre == 'Devuelto' %}
-                        {% if prestamo.fecha_devolucion > prestamo.reserva.fecha_devolucion %}
-                            <span class="badge bg-danger">Con retraso</span>
-                        {% else %}
-                            <span class="badge bg-success">A tiempo</span>
-                        {% endif %}
-                    {% else %}
-                        ---
-                    {% endif %}
-                </td>
-                <td>
-                    <a
-                        href="/prestamos/{{ prestamo.id }}/"
-                        class="btn btn-info btn-sm"
-                    >
-                        Ver detalle
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+flatpickr("#date-range-picker", {
+    mode: "range",
+    dateFormat: "Y-m-d",
+    locale: "es",
+    allowInput: false,
+    onChange: function(selectedDates) {
+        if (selectedDates.length === 1) {
+            const d = selectedDates[0].toISOString().split('T')[0];
+            document.getElementById('fecha_inicio_hidden').value = d;
+            document.getElementById('fecha_fin_hidden').value = d;
+        } else if (selectedDates.length === 2) {
+            document.getElementById('fecha_inicio_hidden').value = selectedDates[0].toISOString().split('T')[0];
+            document.getElementById('fecha_fin_hidden').value = selectedDates[1].toISOString().split('T')[0];
+        }
+    }
+});
 
-    </table>
+const buscar = document.getElementById('buscar-prestamo');
+const conteo = document.getElementById('conteo-prestamos');
+const sinResultados = document.getElementById('sin-resultados');
 
-</div>
+function filtrarPrestamos() {
+    const q = buscar.value.toLowerCase().trim();
+    const filas = document.querySelectorAll('.prestamo-row');
+    let visibles = 0;
+
+    filas.forEach(function(fila) {
+        const solicitante = fila.dataset.solicitante || '';
+        const cedula       = (fila.dataset.cedula || '').toLowerCase();
+        const codigo       = fila.dataset.codigo || '';
+
+        const match = !q || solicitante.includes(q) || cedula.includes(q) || codigo.includes(q);
+
+        if (match) {
+            fila.style.display = '';
+            visibles++;
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+
+    conteo.textContent = `Mostrando ${visibles} préstamo${visibles !== 1 ? 's' : ''}`;
+    sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
+}
+
+if (buscar) {
+    buscar.addEventListener('input', filtrarPrestamos);
+}
+</script>
 
 {% endblock %}
