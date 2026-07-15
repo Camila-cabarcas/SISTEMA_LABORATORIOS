@@ -336,6 +336,15 @@ function generarSlotsEst() {
 }
 const SLOTS_EST = generarSlotsEst();
 
+function obtenerProximoSlot() {
+    const ahora = new Date();
+    const h = ahora.getHours();
+    const m = ahora.getMinutes();
+    if (m === 0) return h * 60;
+    if (m <= 30) return h * 60 + 30;
+    return (h + 1) * 60;
+}
+
 function renderSlotsEst() {
     const container = document.getElementById('time-slots-est');
     container.innerHTML = '';
@@ -347,7 +356,9 @@ function renderSlotsEst() {
         const minSlot = strToMinEst(slot);
 
         if (!slotInicioEst) {
-            if (minSlot > strToMinEst('18:00') - 120) btn.classList.add('slot-disabled');
+            const minProximoSlot = obtenerProximoSlot();
+            if (minSlot < minProximoSlot) btn.classList.add('slot-disabled');
+            else if (minSlot > strToMinEst('18:00') - 120) btn.classList.add('slot-disabled');
         } else {
             const minInicio = strToMinEst(slotInicioEst);
             const minMin = minInicio + 120;

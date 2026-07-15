@@ -100,7 +100,7 @@
                         </a>
                     </td>
                     <td>
-                        {% if reserva.estado.nombre == 'Aprobada' and not reserva.prestamo_set.exists and reserva.hora_limite_retiro > now %}
+                        {% if reserva.estado.nombre == 'Aprobada' and not reserva.prestamo_set.exists and reserva.fecha_reserva <= now and now <= reserva.hora_limite_retiro %}
                         <a href="/prestamos/crear/{{ reserva.id }}/" class="btn btn-success btn-sm">
                             Crear préstamo
                         </a>

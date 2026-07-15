@@ -67,7 +67,7 @@ def lista_reservas(request):
     return render(request, 'reservas/lista.html', {
         'reservas':      page_obj,
         'page_obj':      page_obj,
-        'now':           datetime.now(),
+        'now':           ahora,
         'estado_filtro': estado_filtro,
         'cedula_filtro': cedula_filtro,
         'tipo_filtro':   tipo_filtro,
