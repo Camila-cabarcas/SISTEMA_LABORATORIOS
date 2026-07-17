@@ -57,6 +57,13 @@
 <div class="alert alert-warning mt-2">{{ error_filtro }}</div>
 {% endif %}
 
+{% if not filtro_valido and not error_filtro %}
+<div class="alert alert-info mb-3">
+    Selecciona fecha y horario para ver la disponibilidad de reservas.
+    Los módulos en gris están actualmente no disponibles.
+</div>
+{% endif %}
+
 {% if filtro_valido %}
 <div class="card shadow-sm mb-3">
   <div class="card-body py-2">
@@ -69,6 +76,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 {% if modulos_data %}
 <div id="modulos-source" style="display:none;">
@@ -119,7 +127,6 @@
 </div>
 {% else %}
 <div class="alert alert-info">Este laboratorio no tiene módulos registrados.</div>
-{% endif %}
 {% endif %}
 
 <div class="modal fade" id="modalModulo" tabindex="-1" aria-hidden="true">

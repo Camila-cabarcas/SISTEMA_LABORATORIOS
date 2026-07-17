@@ -14,6 +14,22 @@ def lista_prestamos(request):
     from django.core.paginator import Paginator
     from laboratorio.models import Laboratorio
 
+    ahora = timezone.now()
+
+    # Auto-marcar préstamos retrasados
+    estado_retrasado = EstadoPrestamo.objects.filter(
+        nombre='Retrasado'
+    ).first()
+    estado_activo = EstadoPrestamo.objects.filter(
+        nombre='Activo'
+    ).first()
+
+    if estado_retrasado and estado_activo:
+        Prestamo.objects.filter(
+            estado=estado_activo,
+            reserva__fecha_devolucion__lt=ahora
+        ).update(estado=estado_retrasado)
+
     estado_filtro = request.GET.get('estado')
     fecha_inicio  = request.GET.get('fecha_inicio', '')
     fecha_fin     = request.GET.get('fecha_fin', '')
@@ -52,7 +68,7 @@ def lista_prestamos(request):
             'fecha_fin':     fecha_fin,
             'laboratorios':  laboratorios,
             'lab_filtro':    lab_filtro,
-            'now':           timezone.now(),
+            'now':           ahora,
         }
     )
 

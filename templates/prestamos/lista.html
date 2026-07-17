@@ -76,7 +76,7 @@
             <thead>
                 <tr>
                     <th>Código</th>
-                    <th>Responsable</th>
+                    <th>Solicitante</th>
                     <th>Estado</th>
                     <th>Fecha Entrega</th>
                     <th>Fecha Devolución</th>
@@ -99,7 +99,7 @@
                     data-cedula="{{ sol.cedula|default:'' }}"
                 >
                     <td>{{ prestamo.codigo }}</td>
-                    <td>{{ prestamo.responsable }}</td>
+                    <td>{{ sol.nombre|default:prestamo.reserva.usuario }}</td>
                     <td>{{ prestamo.estado }}</td>
                     <td>{{ prestamo.fecha_entrega }}</td>
                     <td>{{ prestamo.fecha_devolucion|default:"Pendiente" }}</td>

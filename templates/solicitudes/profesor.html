@@ -176,7 +176,7 @@
                 <div class="col-auto">
                     <label class="form-label small mb-1">Hora inicio</label>
                     <div class="d-flex gap-1">
-                        <select id="hora-inicio-h-prof" class="form-select form-select-sm" style="width:80px;">
+                        <select id="prof-hora-inicio-h" class="form-select form-select-sm" style="width:80px;">
                             <option value="06">06</option>
                             <option value="07">07</option>
                             <option value="08">08</option>
@@ -192,7 +192,7 @@
                             <option value="18">18</option>
                         </select>
                         <span class="align-self-center">:</span>
-                        <select id="hora-inicio-m-prof" class="form-select form-select-sm" style="width:75px;">
+                        <select id="prof-hora-inicio-m" class="form-select form-select-sm" style="width:75px;">
                             <option value="00">00</option>
                             <option value="05">05</option>
                             <option value="10">10</option>
@@ -211,7 +211,7 @@
                 <div class="col-auto">
                     <label class="form-label small mb-1">Hora fin</label>
                     <div class="d-flex gap-1">
-                        <select id="hora-fin-h-prof" class="form-select form-select-sm" style="width:80px;">
+                        <select id="prof-hora-fin-h" class="form-select form-select-sm" style="width:80px;">
                             <option value="06">06</option>
                             <option value="07">07</option>
                             <option value="08">08</option>
@@ -227,7 +227,7 @@
                             <option value="18">18</option>
                         </select>
                         <span class="align-self-center">:</span>
-                        <select id="hora-fin-m-prof" class="form-select form-select-sm" style="width:75px;">
+                        <select id="prof-hora-fin-m" class="form-select form-select-sm" style="width:75px;">
                             <option value="00">00</option>
                             <option value="05">05</option>
                             <option value="10">10</option>
@@ -321,10 +321,10 @@ const MAX_HORAS_PROF = 8;
 
 // ── Selector de horario ─────────────────────────────────────────
 function validarHorarioProf() {
-    const hI = parseInt(document.getElementById('hora-inicio-h-prof').value);
-    const mI = parseInt(document.getElementById('hora-inicio-m-prof').value);
-    const hF = parseInt(document.getElementById('hora-fin-h-prof').value);
-    const mF = parseInt(document.getElementById('hora-fin-m-prof').value);
+    const hI = parseInt(document.getElementById('prof-hora-inicio-h').value);
+    const mI = parseInt(document.getElementById('prof-hora-inicio-m').value);
+    const hF = parseInt(document.getElementById('prof-hora-fin-h').value);
+    const mF = parseInt(document.getElementById('prof-hora-fin-m').value);
 
     const inicio = hI * 60 + mI;
     const fin    = hF * 60 + mF;
@@ -342,6 +342,11 @@ function validarHorarioProf() {
             error.classList.remove('d-none');
             return false;
         }
+    }
+    if (fin <= inicio) {
+        error.textContent = 'La hora de fin debe ser posterior a la de inicio.';
+        error.classList.remove('d-none');
+        return false;
     }
     const CIERRE = 18 * 60; // 18:00 en minutos
     const minHorasNormal = 120; // 2 horas
@@ -383,7 +388,93 @@ function validarHorarioProf() {
     return true;
 }
 
-['hora-inicio-h-prof', 'hora-inicio-m-prof', 'hora-fin-h-prof', 'hora-fin-m-prof'].forEach(id => {
+function actualizarSelectoresHora(prefijo, maxHoras) {
+    const ahora = new Date();
+    const horaActual = ahora.getHours();
+    const minActual  = ahora.getMinutes();
+
+    const selectHI = document.getElementById(prefijo + 'hora-inicio-h');
+    const selectMI = document.getElementById(prefijo + 'hora-inicio-m');
+    const selectHF = document.getElementById(prefijo + 'hora-fin-h');
+    const selectMF = document.getElementById(prefijo + 'hora-fin-m');
+
+    // Deshabilitar horas pasadas en inicio
+    Array.from(selectHI.options).forEach(opt => {
+        const h = parseInt(opt.value);
+        opt.disabled = h < horaActual;
+        opt.style.color = h < horaActual ? '#ccc' : '';
+    });
+
+    // Si la hora seleccionada ya pasó, avanzar al próximo disponible
+    if (parseInt(selectHI.value) < horaActual) {
+        selectHI.value = String(horaActual).padStart(2, '0');
+    }
+
+    // Actualizar minutos de inicio
+    Array.from(selectMI.options).forEach(opt => {
+        const m = parseInt(opt.value);
+        const mismaHora = parseInt(selectHI.value) === horaActual;
+        opt.disabled = mismaHora && m < minActual;
+        opt.style.color = (mismaHora && m < minActual) ? '#ccc' : '';
+    });
+
+    // Actualizar hora fin según inicio seleccionado
+    const hI = parseInt(selectHI.value);
+    const mI = parseInt(selectMI.value);
+    const inicioMin = hI * 60 + mI;
+
+    // Mínimo: 2h (o menos si es después de las 16:00)
+    const minDiff = inicioMin >= 16 * 60 ?
+        Math.max(30, 18 * 60 - inicioMin) : 120;
+    // Máximo: maxHoras
+    const maxDiff = maxHoras * 60;
+
+    Array.from(selectHF.options).forEach(opt => {
+        const h = parseInt(opt.value);
+        const finMin = h * 60 + parseInt(selectMF.value);
+        const diff = finMin - inicioMin;
+        opt.disabled = diff < minDiff || diff > maxDiff || h * 60 > 18 * 60;
+        opt.style.color = opt.disabled ? '#ccc' : '';
+    });
+
+    Array.from(selectMF.options).forEach(opt => {
+        const m = parseInt(opt.value);
+        const hF = parseInt(selectHF.value);
+        const finMin = hF * 60 + m;
+        const diff = finMin - inicioMin;
+        opt.disabled = diff < minDiff || diff > maxDiff || finMin > 18 * 60;
+        opt.style.color = opt.disabled ? '#ccc' : '';
+    });
+
+    // Auto-seleccionar fin válido si el actual no es válido
+    const hF = parseInt(selectHF.value);
+    const mF = parseInt(selectMF.value);
+    const finMin = hF * 60 + mF;
+    const diff = finMin - inicioMin;
+    if (diff < minDiff || diff > maxDiff || finMin > 18 * 60) {
+        // Seleccionar mínimo válido
+        const finIdeal = inicioMin + minDiff;
+        const hIdeal = Math.floor(finIdeal / 60);
+        const mIdeal = finIdeal % 60;
+        selectHF.value = String(hIdeal).padStart(2, '0');
+        // Seleccionar el minuto más cercano disponible
+        let mejorM = 0;
+        Array.from(selectMF.options).forEach(opt => {
+            if (!opt.disabled && parseInt(opt.value) <= mIdeal) {
+                mejorM = parseInt(opt.value);
+            }
+        });
+        selectMF.value = String(mejorM).padStart(2, '0');
+    }
+}
+
+['prof-hora-inicio-h', 'prof-hora-inicio-m', 'prof-hora-fin-h'].forEach(id => {
+    document.getElementById(id).addEventListener('change', function() {
+        actualizarSelectoresHora('prof-', MAX_HORAS_PROF);
+    });
+});
+
+['prof-hora-inicio-h', 'prof-hora-inicio-m', 'prof-hora-fin-h', 'prof-hora-fin-m'].forEach(id => {
     document.getElementById(id).addEventListener('change', validarHorarioProf);
 });
 
@@ -401,13 +492,14 @@ function inicializarHorarioProf() {
 
     const hStr = String(h).padStart(2, '0');
     const mStr = String(m).padStart(2, '0');
-    document.getElementById('hora-inicio-h-prof').value = hStr;
-    document.getElementById('hora-inicio-m-prof').value = mStr;
+    document.getElementById('prof-hora-inicio-h').value = hStr;
+    document.getElementById('prof-hora-inicio-m').value = mStr;
 
     const hFin = Math.min(h + 2, 18);
-    document.getElementById('hora-fin-h-prof').value = String(hFin).padStart(2, '0');
-    document.getElementById('hora-fin-m-prof').value = mStr;
+    document.getElementById('prof-hora-fin-h').value = String(hFin).padStart(2, '0');
+    document.getElementById('prof-hora-fin-m').value = mStr;
 
+    actualizarSelectoresHora('prof-', MAX_HORAS_PROF);
     validarHorarioProf();
 }
 inicializarHorarioProf();

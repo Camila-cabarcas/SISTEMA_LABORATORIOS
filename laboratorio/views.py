@@ -406,6 +406,24 @@ def mapa_laboratorio(request, id):
                 'solicitud': solicitud_info,
                 'motivo':    motivo,
             })
+    else:
+        modulos_data = []
+        for modulo in laboratorio.modulos.all():
+            if not modulo.disponible:
+                estado = 'inactivo'
+                color  = 'secondary'
+                motivo = modulo.motivo_no_disponible
+            else:
+                estado = 'disponible'
+                color  = 'success'
+                motivo = ''
+            modulos_data.append({
+                'modulo':    modulo,
+                'estado':    estado,
+                'color':     color,
+                'solicitud': None,
+                'motivo':    motivo,
+            })
 
     horas_disponibles = [
         f"{h:02d}:{m:02d}"
