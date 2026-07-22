@@ -5,6 +5,9 @@ django-stubs==6.0.4
 django-stubs-ext==6.0.4
 librt==0.11.0
 pathspec==1.1.1
+pytest>=7.0
+pytest-django>=4.5
+pytest-cov>=4.0
 sqlparse==0.5.5
 types-PyYAML==6.0.12.20260518
 typing_extensions==4.15.0
