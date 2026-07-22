@@ -93,3 +93,5 @@ AUTH_USER_MODEL = 'users.Usuario'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 
+from .logging_config import LOGGING
+

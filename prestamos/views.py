@@ -2,10 +2,14 @@
 views.py — prestamos
 Vistas para listar, crear, ver detalle, cambiar estado y marcar como devuelto un préstamo.
 """
+import logging
+
 from django.shortcuts import render, redirect, get_object_or_404
 from users.decorators import rol_requerido
 from .models import Prestamo, PrestamoItem, EstadoPrestamo, InspeccionItem
 from .forms import PrestamoForm, CambiarEstadoPrestamoForm, PrestamoItemForm
+
+logger = logging.getLogger(__name__)
 
 
 @rol_requerido('Administrador', 'Laboratorio')
@@ -287,10 +291,17 @@ def marcar_devuelto(request, id):
     )
 
     if request.method == 'POST':
+        logger.info(f"marcar_devuelto | iniciando | prestamo_id={prestamo.id} | usuario={request.user.email}")
 
         from .services.inspeccionar_prestamo_service import FinalizarInspeccionService
 
-        FinalizarInspeccionService().finalizar(prestamo_id=prestamo.id)
+        try:
+            FinalizarInspeccionService().finalizar(prestamo_id=prestamo.id)
+        except Exception as e:
+            logger.error(f"Error en marcar_devuelto | {str(e)} | prestamo_id={prestamo.id} | usuario={request.user.email}")
+            raise
+
+        logger.info(f"marcar_devuelto | prestamo_id={prestamo.id} marcado como Devuelto | usuario={request.user.email}")
 
         return redirect('detalle_prestamo', id=prestamo.pk)
 

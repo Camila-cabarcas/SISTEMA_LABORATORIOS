@@ -7,3 +7,5 @@ venv/
 .coverage
 htmlcov/
 .pytest_cache/
+logs/app.log
+*.log

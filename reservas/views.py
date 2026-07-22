@@ -2,6 +2,8 @@
 views.py — reservas
 Vistas para listar, crear manualmente, aprobar, cancelar y gestionar reservas e insumos asociados.
 """
+import logging
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from users.decorators import rol_requerido
@@ -11,6 +13,8 @@ from laboratorio.models import HorarioLaboratorio
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from datetime import datetime, timedelta, date
+
+logger = logging.getLogger(__name__)
 
 
 @rol_requerido('Administrador', 'Laboratorio')
@@ -111,6 +115,8 @@ def crear_reserva(request):
     programas = ProgramaAcademico.objects.filter(activo=True)
 
     if request.method == 'POST':
+        logger.info(f"crear_reserva | iniciando | usuario={request.user.email}")
+
         tipo          = request.POST.get('tipo_solicitante', 'estudiante')
         nombre        = request.POST.get('nombre', '').strip()
         cedula        = request.POST.get('cedula', '').strip()
@@ -244,8 +250,11 @@ def crear_reserva(request):
                             except Exception:
                                 pass
 
+                    logger.info(f"crear_reserva | reserva_id={reserva.id} creada | usuario={request.user.email}")
+
                     return redirect('detalle_reserva', id=reserva.pk)
                 except Exception as e:
+                    logger.error(f"Error en crear_reserva | {str(e)} | usuario={request.user.email}")
                     errors.append(str(e))
 
         return render(request, 'reservas/crear.html', {
