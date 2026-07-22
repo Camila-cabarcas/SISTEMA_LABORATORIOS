@@ -92,6 +92,7 @@
                     {% if prestamo.estado.nombre == 'Activo' %}table-success
                     {% elif prestamo.estado.nombre == 'Retrasado' %}table-warning
                     {% elif prestamo.estado.nombre == 'Devuelto' %}table-secondary
+                    {% elif prestamo.estado.nombre == 'En Inspección' %}table-info
                     {% endif %}
                     "
                     data-codigo="{{ prestamo.codigo|lower }}"

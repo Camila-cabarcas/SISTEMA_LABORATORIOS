@@ -87,3 +87,47 @@ class PrestamoItem(models.Model):
 
     def __str__(self):
         return self.item_inventario.codigo
+
+
+class InspeccionItem(models.Model):
+
+    ESTADO_CHOICES = [
+        ('bien', 'Bien'),
+        ('danado', 'Dañado'),
+        ('no_entregado', 'No entregado'),
+    ]
+
+    prestamo = models.ForeignKey(
+        Prestamo,
+        on_delete=models.CASCADE,
+        related_name='inspecciones'
+    )
+
+    prestamo_item = models.ForeignKey(
+        PrestamoItem,
+        on_delete=models.CASCADE,
+        related_name='inspecciones'
+    )
+
+    estado_inspeccion = models.CharField(
+        max_length=20,
+        choices=ESTADO_CHOICES,
+        default='bien'
+    )
+
+    observaciones = models.TextField(blank=True, default='')
+
+    inspector = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    fecha_inspeccion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_inspeccion']
+
+    def __str__(self):
+        return f"{self.prestamo_item} — {self.get_estado_inspeccion_display()}"

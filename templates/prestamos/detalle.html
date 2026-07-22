@@ -1,4 +1,5 @@
 {% extends 'base_general.html' %}
+{% load prestamos_extras %}
 
 {% block contenido %}
 
@@ -11,6 +12,8 @@
             <span class="badge bg-warning text-dark fs-6 px-3 py-2">{{ prestamo.estado }}</span>
         {% elif prestamo.estado.nombre == 'Devuelto' %}
             <span class="badge bg-secondary fs-6 px-3 py-2">{{ prestamo.estado }}</span>
+        {% elif prestamo.estado.nombre == 'En Inspección' %}
+            <span class="badge bg-info text-dark fs-6 px-3 py-2">{{ prestamo.estado }}</span>
         {% else %}
             <span class="badge bg-light text-dark fs-6 px-3 py-2">{{ prestamo.estado }}</span>
         {% endif %}
@@ -32,10 +35,6 @@
                     {% if sol.cedula %}({{ sol.cedula }}){% endif %}
                 </p>
                 <p><strong>Laboratorio:</strong> {{ sol.laboratorio|default:"—" }}</p>
-                <p>
-                    <strong>Reserva:</strong>
-                    <a href="/reservas/{{ prestamo.reserva.id }}/">{{ prestamo.reserva }}</a>
-                </p>
                 <p><strong>Responsable:</strong> {{ prestamo.responsable }}</p>
                 <p><strong>Fecha de entrega:</strong> {{ prestamo.fecha_entrega }}</p>
                 <p><strong>Fecha devolución esperada:</strong> {{ prestamo.reserva.fecha_devolucion }}</p>
@@ -107,15 +106,31 @@
                     <th>Código</th>
                     <th>Insumo</th>
                     <th>Estado</th>
+                    <th>Inspección</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in items %}
+                {% with insp=inspecciones|get_item:item.id %}
                 <tr>
                     <td>{{ item.item_inventario.codigo }}</td>
                     <td>{{ item.item_inventario.insumo.nombre }}</td>
                     <td>{{ item.item_inventario.estado.nombre }}</td>
+                    <td>
+                        {% if insp %}
+                            {% if insp.estado_inspeccion == 'bien' %}
+                                <span class="badge bg-success">{{ insp.get_estado_inspeccion_display }}</span>
+                            {% elif insp.estado_inspeccion == 'danado' %}
+                                <span class="badge bg-danger">{{ insp.get_estado_inspeccion_display }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ insp.get_estado_inspeccion_display }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted small">Sin inspeccionar</span>
+                        {% endif %}
+                    </td>
                 </tr>
+                {% endwith %}
                 {% endfor %}
             </tbody>
         </table>
@@ -126,12 +141,16 @@
 </div>
 
 {% if prestamo.estado.nombre == 'Activo' or prestamo.estado.nombre == 'Retrasado' %}
-<form method="POST" action="/prestamos/{{ prestamo.id }}/devolver/" id="form-marcar-devuelto">
+<form method="POST" action="{% url 'iniciar_inspeccion' prestamo.id %}" id="form-iniciar-inspeccion">
     {% csrf_token %}
     <button type="submit" class="btn btn-success">
-        Marcar como devuelto
+        Iniciar Inspección
     </button>
 </form>
+{% elif prestamo.estado.nombre == 'En Inspección' %}
+<a href="{% url 'inspeccionar_prestamo' prestamo.id %}" class="btn btn-info text-dark">
+    Continuar Inspección
+</a>
 {% endif %}
 
 <style>
@@ -175,10 +194,10 @@
 </style>
 
 <script>
-const formDevuelto = document.getElementById('form-marcar-devuelto');
-if (formDevuelto) {
-    formDevuelto.addEventListener('submit', function(e) {
-        if (!confirm('¿Confirmas que este préstamo fue devuelto?')) {
+const formIniciarInspeccion = document.getElementById('form-iniciar-inspeccion');
+if (formIniciarInspeccion) {
+    formIniciarInspeccion.addEventListener('submit', function(e) {
+        if (!confirm('¿Iniciar la inspección de devolución de este préstamo?')) {
             e.preventDefault();
         }
     });

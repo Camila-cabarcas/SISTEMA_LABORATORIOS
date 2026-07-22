@@ -1,0 +1,99 @@
+{% extends 'base_general.html' %}
+{% load prestamos_extras %}
+
+{% block contenido %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h1 class="mb-0">Inspección de devolución — {{ prestamo.codigo }}</h1>
+    <a href="{% url 'detalle_prestamo' prestamo.id %}" class="btn btn-outline-secondary btn-sm">
+        &larr; Volver al préstamo
+    </a>
+</div>
+
+<form method="POST" id="form-inspeccion">
+    {% csrf_token %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Evaluación de ítems</h5>
+
+            {% if items %}
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Insumo</th>
+                        <th style="width:180px;">Estado</th>
+                        <th>Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    {% with insp=inspecciones|get_item:item.id %}
+                    <tr>
+                        <td>{{ item.item_inventario.codigo }}</td>
+                        <td>{{ item.item_inventario.insumo.nombre }}</td>
+                        <td>
+                            <select name="estado_{{ item.id }}" class="form-select form-select-sm estado-inspeccion-select">
+                                <option value="bien" {% if not insp or insp.estado_inspeccion == 'bien' %}selected{% endif %}>Bien</option>
+                                <option value="danado" {% if insp.estado_inspeccion == 'danado' %}selected{% endif %}>Dañado</option>
+                                <option value="no_entregado" {% if insp.estado_inspeccion == 'no_entregado' %}selected{% endif %}>No entregado</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" name="observaciones_{{ item.id }}" class="form-control form-control-sm"
+                                   value="{{ insp.observaciones|default:'' }}"
+                                   placeholder="Observaciones (opcional)">
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted mb-0">Este préstamo no tiene ítems.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h6 class="fw-semibold mb-2">Resumen</h6>
+            <div class="d-flex flex-wrap gap-3">
+                <span class="badge bg-success px-3 py-2">Bien: <span id="conteo-bien">0</span></span>
+                <span class="badge bg-danger px-3 py-2">Dañado: <span id="conteo-danado">0</span></span>
+                <span class="badge bg-secondary px-3 py-2">No entregado: <span id="conteo-no-entregado">0</span></span>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" name="accion" value="guardar" class="btn btn-primary">
+        Guardar
+    </button>
+    <button type="submit" name="accion" value="marcar_devuelto" class="btn btn-success">
+        Marcar como Devuelto
+    </button>
+    <a href="{% url 'detalle_prestamo' prestamo.id %}" class="btn btn-secondary">
+        Cancelar
+    </a>
+</form>
+
+<script>
+function actualizarResumenInspeccion() {
+    let bien = 0, danado = 0, noEntregado = 0;
+    document.querySelectorAll('.estado-inspeccion-select').forEach(function(sel) {
+        if (sel.value === 'bien') bien++;
+        else if (sel.value === 'danado') danado++;
+        else if (sel.value === 'no_entregado') noEntregado++;
+    });
+    document.getElementById('conteo-bien').textContent = bien;
+    document.getElementById('conteo-danado').textContent = danado;
+    document.getElementById('conteo-no-entregado').textContent = noEntregado;
+}
+document.querySelectorAll('.estado-inspeccion-select').forEach(function(sel) {
+    sel.addEventListener('change', actualizarResumenInspeccion);
+});
+actualizarResumenInspeccion();
+</script>
+
+{% endblock %}

@@ -52,12 +52,23 @@ def registrar_movimiento_estado(sender, instance, created, **kwargs):
 
     items = PrestamoItem.objects.filter(prestamo=instance)
 
+    # Si el préstamo pasó por el flujo de inspección, el estado de cada ítem
+    # ya fue asignado individualmente (bien/dañado/no_entregado) por
+    # marcar_devuelto — no lo pisamos con el estado genérico de abajo.
+    from .models import InspeccionItem
+    tiene_inspeccion = (
+        estado_nombre == 'DEVUELTO'
+        and InspeccionItem.objects.filter(prestamo=instance).exists()
+    )
+
     for prestamo_item in items:
 
         item = prestamo_item.item_inventario
-        item.estado = estado_item
-        item._desde_prestamo = True
-        item.save()
+
+        if not tiene_inspeccion:
+            item.estado = estado_item
+            item._desde_prestamo = True
+            item.save()
 
         MovimientoInventario.objects.create(
             item_inventario=item,
