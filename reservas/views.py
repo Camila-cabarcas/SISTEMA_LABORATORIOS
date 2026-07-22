@@ -208,16 +208,21 @@ def crear_reserva(request):
                 )
 
                 try:
+                    from reservas.services.crear_reserva_service import CrearReservaService
+
                     solicitud.save()
+
                     modulos_ids_str = request.POST.get('modulos_ids', '')
-                    if modulos_ids_str:
-                        from laboratorio.models import Modulo
-                        ids = [int(x) for x in modulos_ids_str.split(',') if x.strip().isdigit()]
-                        modulos = Modulo.objects.filter(id__in=ids, laboratorio=laboratorio)
-                        solicitud.modulos_asignados.set(modulos)
-                    reserva = solicitud.crear_reserva()
-                    reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
-                    reserva.save()
+                    modulos_ids = (
+                        [int(x) for x in modulos_ids_str.split(',') if x.strip().isdigit()]
+                        if modulos_ids_str else None
+                    )
+
+                    reserva = CrearReservaService().ejecutar(
+                        solicitud_id=solicitud.id,
+                        usuario=request.user,
+                        modulos_ids=modulos_ids,
+                    )
 
                     insumos_ids        = request.POST.get('insumos_ids', '')
                     insumos_cantidades = request.POST.get('insumos_cantidades', '')

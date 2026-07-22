@@ -224,20 +224,12 @@ def iniciar_inspeccion(request, id):
 
     if request.method == 'POST':
 
-        estado_inspeccion = EstadoPrestamo.objects.get(nombre='En Inspección')
-        prestamo.estado = estado_inspeccion
-        prestamo.save()
+        from .services.inspeccionar_prestamo_service import InspeccionarPrestamoService
 
-        items = PrestamoItem.objects.filter(prestamo=prestamo)
-        for item in items:
-            InspeccionItem.objects.get_or_create(
-                prestamo=prestamo,
-                prestamo_item=item,
-                defaults={
-                    'estado_inspeccion': 'bien',
-                    'inspector': request.user,
-                }
-            )
+        InspeccionarPrestamoService().iniciar_inspeccion(
+            prestamo_id=prestamo.id,
+            usuario=request.user,
+        )
 
         return redirect('inspeccionar_prestamo', id=prestamo.pk)
 
@@ -289,9 +281,6 @@ def inspeccionar_prestamo(request, id):
 @rol_requerido('Administrador', 'Laboratorio')
 def marcar_devuelto(request, id):
 
-    from django.utils import timezone
-    from inventario.models import EstadoItem
-
     prestamo = get_object_or_404(Prestamo, id=id)
     inspecciones = InspeccionItem.objects.filter(prestamo=prestamo).select_related(
         'prestamo_item__item_inventario__insumo'
@@ -299,23 +288,9 @@ def marcar_devuelto(request, id):
 
     if request.method == 'POST':
 
-        estado_disponible = EstadoItem.objects.filter(nombre='Disponible').first()
-        estado_danado = EstadoItem.objects.filter(nombre='Dañado').first()
+        from .services.inspeccionar_prestamo_service import FinalizarInspeccionService
 
-        for inspeccion in inspecciones:
-            item_inventario = inspeccion.prestamo_item.item_inventario
-            if inspeccion.estado_inspeccion == 'bien' and estado_disponible:
-                item_inventario.estado = estado_disponible
-                item_inventario.save()
-            elif inspeccion.estado_inspeccion == 'danado' and estado_danado:
-                item_inventario.estado = estado_danado
-                item_inventario.save()
-            # no_entregado: sin cambio de estado
-
-        estado_devuelto = EstadoPrestamo.objects.get(nombre='Devuelto')
-        prestamo.estado = estado_devuelto
-        prestamo.fecha_devolucion = timezone.now()
-        prestamo.save()
+        FinalizarInspeccionService().finalizar(prestamo_id=prestamo.id)
 
         return redirect('detalle_prestamo', id=prestamo.pk)
 
