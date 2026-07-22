@@ -9,9 +9,8 @@ class SolicitudInsumoInline(admin.TabularInline):
 
 @admin.register(Curso)
 class CursoAdmin(admin.ModelAdmin):
-    list_display = ('codigo', 'nombre', 'profesor', 'cantidad_estudiantes')
-    search_fields = ('codigo', 'nombre')
-    list_filter = ('profesor',)
+    list_display = ['codigo', 'nombre', 'profesor', 'cantidad_estudiantes']
+    search_fields = ['codigo', 'nombre']
 
 
 @admin.register(SolicitudReserva)

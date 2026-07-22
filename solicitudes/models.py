@@ -47,6 +47,7 @@ class SolicitudReserva(models.Model):
 
     nombre = models.CharField(max_length=200, blank=True)
     cedula = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(blank=True, default='')
     programa = models.CharField(max_length=200, blank=True)
 
     curso = models.ForeignKey(

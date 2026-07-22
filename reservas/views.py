@@ -122,6 +122,15 @@ def crear_reserva(request):
         hora_fin      = request.POST.get('hora_fin', '')
         necesita      = request.POST.get('necesita_modulo') == 'on'
         observaciones = request.POST.get('observaciones', '')
+        email         = request.POST.get('email', '').strip()
+
+        profesor_invitado = tipo == 'profesor' and request.POST.get('profesor_invitado') == '1'
+
+        # SolicitudReserva no tiene un campo email propio; para no perder el
+        # dato de contacto del profesor invitado, lo dejamos registrado en
+        # observaciones en vez de descartarlo silenciosamente.
+        if profesor_invitado and email:
+            observaciones = f"Email de contacto: {email}\n{observaciones}".strip()
 
         errors = []
 
@@ -161,17 +170,23 @@ def crear_reserva(request):
             if not laboratorio:
                 errors.append('Laboratorio no válido.')
 
-            curso = Curso.objects.filter(id=curso_id).first() if curso_id else None
-
+            curso = None
             usuario = None
-            if tipo == 'profesor' and nombre:
-                partes = nombre.split()
-                query  = Q()
-                for p in partes:
-                    query |= (Q(first_name__icontains=p) |
-                              Q(last_name__icontains=p)  |
-                              Q(username__icontains=p))
-                usuario = Usuario.objects.filter(query, rol__nombre='Docente').first()
+            if tipo == 'profesor' and profesor_invitado:
+                # Profesor invitado/externo: se usan nombre/cédula/email tal
+                # cual los dio el encargado, sin buscarlo ni vincularlo a
+                # ningún Usuario ni Curso registrado.
+                pass
+            else:
+                curso = Curso.objects.filter(id=curso_id).first() if curso_id else None
+                if tipo == 'profesor' and nombre:
+                    partes = nombre.split()
+                    query  = Q()
+                    for p in partes:
+                        query |= (Q(first_name__icontains=p) |
+                                  Q(last_name__icontains=p)  |
+                                  Q(username__icontains=p))
+                    usuario = Usuario.objects.filter(query, rol__nombre='Docente').first()
 
             if fecha_obj and hora_inicio_obj and not errors:
                 fecha_dt = datetime.combine(fecha_obj, hora_inicio_obj)
@@ -183,6 +198,7 @@ def crear_reserva(request):
                     programa=programa,
                     curso=curso,
                     usuario=usuario,
+                    reserva_libre=profesor_invitado,
                     laboratorio=laboratorio,
                     fecha_reserva=fecha_dt,
                     hora_inicio=hora_inicio_obj,
@@ -264,6 +280,19 @@ def detalle_reserva(request, id):
         reserva.fecha_reserva <= ahora <= reserva.hora_limite_retiro
     )
 
+    # SolicitudReserva no tiene un campo email propio: para profesores
+    # invitados, crear_reserva lo guarda como la primera línea de
+    # observaciones ("Email de contacto: ..."). Lo separamos aquí para
+    # mostrarlo como campo propio y no duplicarlo dentro de Observaciones.
+    solicitante = reserva.solicitud.first()
+    email_solicitante = ''
+    observaciones_solicitante = solicitante.observaciones if solicitante else ''
+    prefijo_email = 'Email de contacto: '
+    if solicitante and observaciones_solicitante.startswith(prefijo_email):
+        primera_linea, _, resto = observaciones_solicitante.partition('\n')
+        email_solicitante = primera_linea[len(prefijo_email):].strip()
+        observaciones_solicitante = resto.strip()
+
     return render(request, 'reservas/detalle.html', {
         'reserva': reserva,
         'insumos': insumos,
@@ -271,6 +300,8 @@ def detalle_reserva(request, id):
         'now':     ahora,
         'fecha_vencida': ahora > reserva.fecha_devolucion if reserva.fecha_devolucion else False,
         'puede_crear_prestamo': puede_crear_prestamo,
+        'email_solicitante': email_solicitante,
+        'observaciones_solicitante': observaciones_solicitante,
     })
 
 

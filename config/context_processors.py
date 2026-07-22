@@ -13,7 +13,6 @@ def notificaciones_admin(request):
             estado='pendiente'
         ).count(),
         'notif_cursos': SolicitudRegistroCurso.objects.filter(
-            estado='pendiente',
-            solicitud_profesor__estado='aprobada'
+            estado='pendiente'
         ).count(),
     }
