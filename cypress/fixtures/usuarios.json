@@ -1,0 +1,10 @@
+{
+  "admin": {
+    "username": "e2e_admin",
+    "password": "E2eAdmin!2026"
+  },
+  "laboratorista": {
+    "username": "e2e_laboratorista",
+    "password": "E2eLab!2026"
+  }
+}

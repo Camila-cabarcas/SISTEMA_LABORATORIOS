@@ -1,0 +1,13 @@
+{
+  "name": "sistema-laboratorios-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tests E2E con Cypress para el Sistema de Laboratorios (Django).",
+  "scripts": {
+    "test:e2e": "cypress open",
+    "test:e2e:headless": "cypress run"
+  },
+  "devDependencies": {
+    "cypress": "^13.17.0"
+  }
+}
