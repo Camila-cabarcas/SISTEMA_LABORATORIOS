@@ -4,6 +4,7 @@ Django==6.0.5
 django-stubs==6.0.4
 django-stubs-ext==6.0.4
 librt==0.11.0
+locust>=2.15
 pathspec==1.1.1
 pytest>=7.0
 pytest-django>=4.5
