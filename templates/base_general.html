@@ -5,18 +5,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Laboratorios</title>
+    <title>{% block titulo %}Sistema de Laboratorios{% endblock %}</title>
     <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/flatly/bootstrap.min.css"
         rel="stylesheet"
     >
+    <link
+        href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
+        rel="stylesheet"
+    >
+    {% load static %}
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
 </head>
 
-<body class="bg-light">
+<body class="d-flex flex-column min-vh-100">
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
     <div class="container">
-        <a class="navbar-brand" href="/">Sistema de Laboratorios</a>
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <span class="brand-icon"><i class="fa-solid fa-flask-vial"></i></span>
+            Sistema de Laboratorios
+        </a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMenu">
             <span class="navbar-toggler-icon"></span>
@@ -27,93 +37,93 @@
         {% if user.rol.nombre == 'Administrador' %}
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle {% if '/inventario/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">Inventario</a>
+                <a class="nav-link dropdown-toggle {% if '/inventario/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-boxes-stacked me-1"></i>Inventario</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
-                    <li><a class="dropdown-item" href="/inventario/">Insumos</a></li>
-                    <li><a class="dropdown-item" href="/inventario/items/">Items</a></li>
-                    <li><a class="dropdown-item" href="/inventario/movimientos/">Movimientos</a></li>
+                    <li><a class="dropdown-item" href="/inventario/"><i class="fa-solid fa-vial me-2"></i>Insumos</a></li>
+                    <li><a class="dropdown-item" href="/inventario/items/"><i class="fa-solid fa-cubes me-2"></i>Items</a></li>
+                    <li><a class="dropdown-item" href="/inventario/movimientos/"><i class="fa-solid fa-arrow-right-arrow-left me-2"></i>Movimientos</a></li>
                 </ul>
             </li>
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle {% if '/prestamos/' in request.path or '/reservas/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">Actividad</a>
+                <a class="nav-link dropdown-toggle {% if '/prestamos/' in request.path or '/reservas/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-clipboard-list me-1"></i>Actividad</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
-                    <li><a class="dropdown-item" href="/prestamos/">Préstamos</a></li>
-                    <li><a class="dropdown-item" href="/reservas/">Reservas</a></li>
+                    <li><a class="dropdown-item" href="/prestamos/"><i class="fa-solid fa-hand-holding me-2"></i>Préstamos</a></li>
+                    <li><a class="dropdown-item" href="/reservas/"><i class="fa-solid fa-calendar-check me-2"></i>Reservas</a></li>
                 </ul>
             </li>
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle {% if '/laboratorio/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">Laboratorios</a>
+                <a class="nav-link dropdown-toggle {% if '/laboratorio/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-flask me-1"></i>Laboratorios</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
-                    <li><a class="dropdown-item" href="/laboratorio/">Laboratorio</a></li>
-                    <li><a class="dropdown-item {% if '/laboratorio/laboratoristas' in request.path %}active{% endif %}" href="/laboratorio/laboratoristas/">Laboratoristas</a></li>
+                    <li><a class="dropdown-item" href="/laboratorio/"><i class="fa-solid fa-building me-2"></i>Laboratorio</a></li>
+                    <li><a class="dropdown-item {% if '/laboratorio/laboratoristas' in request.path %}active{% endif %}" href="/laboratorio/laboratoristas/"><i class="fa-solid fa-user-gear me-2"></i>Laboratoristas</a></li>
                 </ul>
             </li>
 
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle {% if '/usuarios/programas' in request.path or '/usuarios/profesores' in request.path or '/solicitudes/cursos' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
-                    Académico
-                    {% if notif_profesores > 0 or notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores|add:notif_cursos }}</span>{% endif %}
+                    <i class="fa-solid fa-graduation-cap me-1"></i>Académico
+                    {% if notif_profesores > 0 or notif_cursos > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores|add:notif_cursos }}</span>{% endif %}
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark">
-                    <li><a class="dropdown-item {% if '/usuarios/programas' in request.path %}active{% endif %}" href="/usuarios/programas/">Programas</a></li>
+                    <li><a class="dropdown-item {% if '/usuarios/programas' in request.path %}active{% endif %}" href="/usuarios/programas/"><i class="fa-solid fa-list-check me-2"></i>Programas</a></li>
                     <li><a class="dropdown-item {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">
-                        Profesores
-                        {% if notif_profesores > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
+                        <i class="fa-solid fa-chalkboard-user me-2"></i>Profesores
+                        {% if notif_profesores > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
                     </a></li>
                     <li><a class="dropdown-item {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">
-                        Cursos
-                        {% if notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
+                        <i class="fa-solid fa-book me-2"></i>Cursos
+                        {% if notif_cursos > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
                     </a></li>
                 </ul>
             </li>
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle {% if '/usuarios/' in request.path or 'solicitudes-profesores' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">Administración</a>
+                <a class="nav-link dropdown-toggle {% if '/usuarios/' in request.path or 'solicitudes-profesores' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-user-shield me-1"></i>Administración</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
-                    <li><a class="dropdown-item" href="/usuarios/">Usuarios</a></li>
-                    <li><a class="dropdown-item {% if 'solicitudes-profesores' in request.path %}active{% endif %}" href="/solicitudes/solicitudes-profesores/">Solicitudes Registro</a></li>
+                    <li><a class="dropdown-item" href="/usuarios/"><i class="fa-solid fa-users me-2"></i>Usuarios</a></li>
+                    <li><a class="dropdown-item {% if 'solicitudes-profesores' in request.path %}active{% endif %}" href="/solicitudes/solicitudes-profesores/"><i class="fa-solid fa-file-signature me-2"></i>Solicitudes Registro</a></li>
                 </ul>
             </li>
 
         {% elif user.rol.nombre == 'Laboratorio' %}
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Inventario</a>
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-boxes-stacked me-1"></i>Inventario</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
-                    <li><a class="dropdown-item" href="/inventario/items/">Items</a></li>
-                    <li><a class="dropdown-item" href="/inventario/movimientos/">Movimientos</a></li>
+                    <li><a class="dropdown-item" href="/inventario/items/"><i class="fa-solid fa-cubes me-2"></i>Items</a></li>
+                    <li><a class="dropdown-item" href="/inventario/movimientos/"><i class="fa-solid fa-arrow-right-arrow-left me-2"></i>Movimientos</a></li>
                 </ul>
             </li>
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Actividad</a>
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-clipboard-list me-1"></i>Actividad</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
-                    <li><a class="dropdown-item" href="/prestamos/">Préstamos</a></li>
-                    <li><a class="dropdown-item" href="/reservas/">Reservas</a></li>
+                    <li><a class="dropdown-item" href="/prestamos/"><i class="fa-solid fa-hand-holding me-2"></i>Préstamos</a></li>
+                    <li><a class="dropdown-item" href="/reservas/"><i class="fa-solid fa-calendar-check me-2"></i>Reservas</a></li>
                 </ul>
             </li>
 
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                    Académico
-                    {% if notif_profesores > 0 or notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores|add:notif_cursos }}</span>{% endif %}
+                    <i class="fa-solid fa-graduation-cap me-1"></i>Académico
+                    {% if notif_profesores > 0 or notif_cursos > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores|add:notif_cursos }}</span>{% endif %}
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark">
                     <li><a class="dropdown-item {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">
-                        Profesores
-                        {% if notif_profesores > 0 %}<span class="badge bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
+                        <i class="fa-solid fa-chalkboard-user me-2"></i>Profesores
+                        {% if notif_profesores > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
                     </a></li>
                     <li><a class="dropdown-item {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">
-                        Cursos
-                        {% if notif_cursos > 0 %}<span class="badge bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
+                        <i class="fa-solid fa-book me-2"></i>Cursos
+                        {% if notif_cursos > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
                     </a></li>
                 </ul>
             </li>
 
             <li class="nav-item">
-                <a class="nav-link" href="/laboratorio/">Laboratorio</a>
+                <a class="nav-link" href="/laboratorio/"><i class="fa-solid fa-flask me-1"></i>Laboratorio</a>
             </li>
 
         {% endif %}
@@ -121,12 +131,12 @@
 
         <ul class="navbar-nav ms-auto">
         {% if user.is_authenticated %}
-            <li class="nav-item"><span class="nav-link text-light">{{ user.username }}</span></li>
+            <li class="nav-item"><span class="nav-link text-light"><i class="fa-solid fa-circle-user me-1"></i>{{ user.username }}</span></li>
             <li class="nav-item">
                 <form method="POST" action="/logout/">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-link nav-link text-light">
-                        Cerrar sesión
+                        <i class="fa-solid fa-right-from-bracket me-1"></i>Cerrar sesión
                     </button>
                 </form>
             </li>
@@ -137,12 +147,27 @@
     </nav>
 
 
-    <div class="container mt-4">
+    <main class="container my-4 flex-grow-1">
         {% block contenido %}
         {% endblock %}
-    </div>
+    </main>
+
+    <footer class="site-footer py-4">
+        <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <span class="footer-brand"><i class="fa-solid fa-flask-vial me-1"></i>Sistema de Laboratorios</span>
+                <span class="ms-2 small">&copy; {% now "Y" %} Universidad de Antioquia</span>
+            </div>
+            <div class="d-flex gap-3 small">
+                <a href="/"><i class="fa-solid fa-house me-1"></i>Inicio</a>
+                <a href="/reservas/"><i class="fa-solid fa-calendar-check me-1"></i>Reservas</a>
+                <a href="/prestamos/"><i class="fa-solid fa-hand-holding me-1"></i>Préstamos</a>
+            </div>
+        </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
 
 </body>
 

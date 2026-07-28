@@ -2,11 +2,12 @@
 
 {% block contenido %}
 
-<h1 class="mb-4">Solicitud de Reserva - Estudiante</h1>
+<h1 class="mb-1"><i class="fa-solid fa-user-graduate text-brand me-2"></i>Solicitud de Reserva — Estudiante</h1>
+<p class="text-muted mb-4">Completa el formulario para reservar un laboratorio y los insumos que necesites.</p>
 
 {% if form.non_field_errors %}
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <strong>Error:</strong>
+        <strong><i class="fa-solid fa-circle-exclamation me-1"></i>Error:</strong>
         {% for error in form.non_field_errors %}
             <div>{{ error }}</div>
         {% endfor %}
@@ -14,11 +15,11 @@
     </div>
 {% endif %}
 
-<div class="card p-4">
+<div class="card shadow-sm p-4">
     <form method="POST" id="solicitud-form">
         {% csrf_token %}
 
-        <h5 class="mb-3">Información Personal</h5>
+        <h5 class="mb-3"><i class="fa-solid fa-id-card text-brand me-2"></i>Información Personal</h5>
 
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -57,7 +58,7 @@
         </div>
 
         <hr>
-        <h5 class="mb-3">Información de Reserva</h5>
+        <h5 class="mb-3"><i class="fa-solid fa-flask text-brand me-2"></i>Información de Reserva</h5>
 
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -184,7 +185,7 @@
                 </label>
                 <button type="button" id="btn-cargar-modulos-est" class="btn btn-outline-primary btn-sm"
                         style="display:none;">
-                    🔄 Ver disponibilidad de módulos
+                    <i class="fa-solid fa-arrows-rotate me-1"></i>Ver disponibilidad de módulos
                 </button>
             </div>
 
@@ -192,15 +193,15 @@
 
             <!-- Leyenda -->
             <div class="d-flex flex-wrap gap-2 mb-2">
-                <span class="badge bg-success px-2 py-1">Disponible</span>
-                <span class="badge bg-warning text-dark px-2 py-1">Reservado</span>
-                <span class="badge bg-secondary px-2 py-1">No disponible</span>
-                <span class="badge bg-primary px-2 py-1">Seleccionado</span>
+                <span class="badge badge-pill-lg bg-success">Disponible</span>
+                <span class="badge badge-pill-lg bg-warning text-dark">Reservado</span>
+                <span class="badge badge-pill-lg bg-secondary">No disponible</span>
+                <span class="badge badge-pill-lg bg-primary">Seleccionado</span>
             </div>
 
             <!-- Lab room layout -->
             <div class="lab-room-form">
-                <div class="lab-wall-form">↑ Pizarrón</div>
+                <div class="lab-wall-form"><i class="fa-solid fa-arrow-up me-1"></i>Pizarrón</div>
                 <div class="lab-body-form">
                     <div class="lab-col-form" id="form-zona-izquierda-est"></div>
                     <div class="lab-center-form">
@@ -211,7 +212,7 @@
                     <div class="lab-col-form" id="form-zona-derecha-est"></div>
                 </div>
                 <div class="lab-bottom-form" id="form-zona-inferior-est"></div>
-                <div class="lab-door-form">🚪 Entrada</div>
+                <div class="lab-door-form"><i class="fa-solid fa-door-open me-1"></i>Entrada</div>
             </div>
 
             <p id="modulos-placeholder-est" class="text-muted small mt-2">
@@ -226,7 +227,7 @@
         </div>
 
         <hr>
-        <h5 class="mb-3">Insumos Requeridos</h5>
+        <h5 class="mb-3"><i class="fa-solid fa-vial text-brand me-2"></i>Insumos Requeridos</h5>
 
         <div class="row">
             <div class="col-md-8 mb-3">
@@ -248,11 +249,11 @@
         </div>
 
         <button type="button" id="agregar_insumo_btn" class="btn btn-sm btn-success mb-3">
-            + Agregar Insumo
+            <i class="fa-solid fa-plus me-1"></i>Agregar Insumo
         </button>
 
         <div id="insumos_lista" class="mb-3" style="display: none;">
-            <h6>Insumos Seleccionados:</h6>
+            <h6><i class="fa-solid fa-list-check me-1"></i>Insumos Seleccionados:</h6>
             <div class="list-group" id="insumos_items"></div>
         </div>
 
@@ -268,8 +269,8 @@
             {% endif %}
         </div>
 
-        <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
-        <a href="/solicitudes/" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1"></i>Enviar Solicitud</button>
+        <a href="/solicitudes/" class="btn btn-secondary"><i class="fa-solid fa-xmark me-1"></i>Cancelar</a>
 
     </form>
 </div>

@@ -3,15 +3,15 @@
 {% block contenido %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="mb-0">Reservas</h1>
-    <a href="/reservas/crear/" class="btn btn-primary">Nueva Reserva</a>
+    <h1 class="mb-0"><i class="fa-solid fa-calendar-check text-brand me-2"></i>Reservas</h1>
+    <a href="/reservas/crear/" class="btn btn-primary"><i class="fa-solid fa-plus me-1"></i>Nueva Reserva</a>
 </div>
 
 <div class="row g-3">
     <div class="col-md-2">
         <div class="card p-0">
             <div class="card-header fw-semibold small py-2 px-3">
-                Laboratorio
+                <i class="fa-solid fa-building me-1"></i>Laboratorio
             </div>
             <div class="list-group list-group-flush">
                 <a href="?estado={{ estado_filtro }}&buscar={{ nombre_cedula }}&tipo={{ tipo_filtro }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&reserva_libre={{ reserva_libre }}"
@@ -41,10 +41,10 @@
             <a class="btn btn-danger btn-sm estado-btn"    data-estado="Expirada">Expiradas</a>
             <a class="btn btn-success btn-sm {% if listas_prestamo %}active{% endif %}"
                href="?listas_prestamo=1&lab={{ lab_filtro }}">
-               🔔 Listas para préstamo
+               <i class="fa-solid fa-bell me-1"></i>Listas para préstamo
             </a>
             <button type="button" class="btn btn-primary btn-sm estado-btn-libre ms-auto" data-libre="1">
-                Reservas libres
+                <i class="fa-solid fa-unlock me-1"></i>Reservas libres
             </button>
         </div>
 
@@ -76,15 +76,15 @@
                        value="{% if fecha_inicio %}{{ fecha_inicio }}{% if fecha_fin %} a {{ fecha_fin }}{% endif %}{% endif %}">
             </div>
             <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-dark btn-sm" type="submit">Buscar</button>
-                <a href="/reservas/" class="btn btn-secondary btn-sm">Limpiar</a>
+                <button class="btn btn-dark btn-sm" type="submit"><i class="fa-solid fa-magnifying-glass me-1"></i>Buscar</button>
+                <a href="/reservas/" class="btn btn-secondary btn-sm"><i class="fa-solid fa-broom me-1"></i>Limpiar</a>
             </div>
         </form>
     </div>
 
     <div class="card p-4 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-striped">
+        <table class="table table-striped table-hover align-middle">
             <thead>
                 <tr>
                     <th>Código</th>
@@ -98,15 +98,7 @@
             </thead>
             <tbody>
                 {% for reserva in reservas %}
-                <tr class="
-                    {% if reserva.estado.nombre == 'Aprobada' %}table-success
-                    {% elif reserva.estado.nombre == 'Pendiente' %}table-warning
-                    {% elif reserva.estado.nombre == 'Cancelada' %}table-secondary
-                    {% elif reserva.estado.nombre == 'Expirada' %}table-danger
-                    {% endif %}
-                "
-                    data-codigo="{{ reserva.codigo }}"
-                >
+                <tr data-codigo="{{ reserva.codigo }}">
                     <td>{{ reserva.codigo }}</td>
                     <td>
                         {% if reserva.usuario %}
@@ -123,10 +115,22 @@
                     <td>{{ reserva.fecha_creacion|date:"d/m/Y H:i" }}</td>
                     <td>{{ reserva.fecha_reserva|date:"d/m/Y H:i" }}</td>
                     <td>{{ reserva.fecha_devolucion|date:"d/m/Y H:i" }}</td>
-                    <td>{{ reserva.estado }}</td>
+                    <td>
+                        {% if reserva.estado.nombre == 'Aprobada' %}
+                            <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>{{ reserva.estado }}</span>
+                        {% elif reserva.estado.nombre == 'Pendiente' %}
+                            <span class="badge bg-warning text-dark"><i class="fa-solid fa-clock me-1"></i>{{ reserva.estado }}</span>
+                        {% elif reserva.estado.nombre == 'Cancelada' %}
+                            <span class="badge bg-secondary"><i class="fa-solid fa-ban me-1"></i>{{ reserva.estado }}</span>
+                        {% elif reserva.estado.nombre == 'Expirada' %}
+                            <span class="badge bg-danger"><i class="fa-solid fa-hourglass-end me-1"></i>{{ reserva.estado }}</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark">{{ reserva.estado }}</span>
+                        {% endif %}
+                    </td>
                     <td>
                         <a href="/reservas/{{ reserva.id }}/" class="btn btn-info btn-sm">
-                            Ver detalle
+                            <i class="fa-solid fa-eye me-1"></i>Ver detalle
                         </a>
                     </td>
                 </tr>

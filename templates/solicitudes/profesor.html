@@ -2,11 +2,12 @@
 
 {% block contenido %}
 
-<h1 class="mb-4">Solicitud de Reserva - Profesor</h1>
+<h1 class="mb-1"><i class="fa-solid fa-chalkboard-user text-brand me-2"></i>Solicitud de Reserva — Profesor</h1>
+<p class="text-muted mb-4">Completa el formulario para reservar un laboratorio para tu curso o actividad.</p>
 
 {% if form.non_field_errors %}
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <strong>Error:</strong>
+        <strong><i class="fa-solid fa-circle-exclamation me-1"></i>Error:</strong>
         {% for error in form.non_field_errors %}
             <div>{{ error }}</div>
         {% endfor %}
@@ -16,7 +17,7 @@
 
 {% if errores_libres %}
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <strong>Error en la solicitud:</strong>
+        <strong><i class="fa-solid fa-circle-exclamation me-1"></i>Error en la solicitud:</strong>
         {% for error in errores_libres %}
             <div>{{ error }}</div>
         {% endfor %}
@@ -24,13 +25,13 @@
     </div>
 {% endif %}
 
-<div class="card p-4">
+<div class="card shadow-sm p-4">
     <form method="POST" id="profesor-form">
         {% csrf_token %}
 
         <!-- Toggle de modalidad -->
         <div class="mb-4 p-3 bg-light rounded border">
-            <p class="fw-semibold mb-2">Modalidad de reserva</p>
+            <p class="fw-semibold mb-2"><i class="fa-solid fa-sliders text-brand me-2"></i>Modalidad de reserva</p>
             <div class="btn-group" role="group">
                 <input type="radio" class="btn-check" name="modo_reserva" id="modo_normal"
                        value="normal" autocomplete="off"
@@ -49,7 +50,7 @@
         <input type="hidden" name="reserva_libre" id="reserva_libre_hidden"
                value="{% if errores_libres %}1{% else %}0{% endif %}">
 
-        <h5 class="mb-3">Información del Profesor</h5>
+        <h5 class="mb-3"><i class="fa-solid fa-id-card text-brand me-2"></i>Información del Profesor</h5>
 
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -149,7 +150,7 @@
         </div>
 
         <hr>
-        <h5 class="mb-3">Horario de Reserva</h5>
+        <h5 class="mb-3"><i class="fa-solid fa-clock text-brand me-2"></i>Horario de Reserva</h5>
 
         <div class="row">
             <div class="col-md-4 mb-3">
@@ -261,7 +262,7 @@
         </div>
 
         <hr>
-        <h5 class="mb-3">Insumos Requeridos</h5>
+        <h5 class="mb-3"><i class="fa-solid fa-vial text-brand me-2"></i>Insumos Requeridos</h5>
 
         <div class="row">
             <div class="col-md-8 mb-3">
@@ -283,11 +284,11 @@
         </div>
 
         <button type="button" id="agregar_insumo_btn_prof" class="btn btn-sm btn-success mb-3">
-            + Agregar Insumo
+            <i class="fa-solid fa-plus me-1"></i>Agregar Insumo
         </button>
 
         <div id="insumos_lista_prof" class="mb-3" style="display: none;">
-            <h6>Insumos Seleccionados:</h6>
+            <h6><i class="fa-solid fa-list-check me-1"></i>Insumos Seleccionados:</h6>
             <div class="list-group" id="insumos_items_prof"></div>
         </div>
 
@@ -308,8 +309,8 @@
             </div>
         {% endif %}
 
-        <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
-        <a href="/solicitudes/" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1"></i>Enviar Solicitud</button>
+        <a href="/solicitudes/" class="btn btn-secondary"><i class="fa-solid fa-xmark me-1"></i>Cancelar</a>
 
     </form>
 </div>

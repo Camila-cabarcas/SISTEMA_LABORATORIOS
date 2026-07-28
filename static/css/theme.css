@@ -1,0 +1,205 @@
+/*
+theme.css — Sistema de Laboratorios
+Capa de estilo compartida sobre Bootswatch Flatly: tarjetas, tablas, badges
+de estado, botones y navegación. Complementa el framework, no lo reemplaza.
+*/
+
+:root {
+    --sl-primary: #2c6e9b;
+    --sl-primary-dark: #1f4f70;
+    --sl-accent: #2f9e6b;
+    --sl-surface: #f4f7f9;
+    --sl-radius: .6rem;
+    --sl-shadow-sm: 0 1px 3px rgba(15, 40, 60, .08);
+    --sl-shadow-md: 0 .5rem 1.25rem rgba(15, 40, 60, .10);
+}
+
+body {
+    background-color: var(--sl-surface);
+}
+
+main {
+    min-height: 70vh;
+}
+
+/* ── Navbar ─────────────────────────────────────────────────── */
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: .2px;
+}
+
+.navbar-brand .brand-icon {
+    color: #ffffff;
+    background: rgba(255, 255, 255, .15);
+    border-radius: .5rem;
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: .5rem;
+}
+
+.navbar .nav-link {
+    font-weight: 500;
+}
+
+.navbar .dropdown-item.active,
+.navbar .dropdown-item:active {
+    background-color: var(--sl-primary);
+}
+
+/* ── Tarjetas ───────────────────────────────────────────────── */
+.card {
+    border: 1px solid rgba(15, 40, 60, .06);
+    border-radius: var(--sl-radius);
+    box-shadow: var(--sl-shadow-sm);
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+
+.card.card-hover:hover,
+a.card:hover {
+    box-shadow: var(--sl-shadow-md);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    border-top-left-radius: var(--sl-radius) !important;
+    border-top-right-radius: var(--sl-radius) !important;
+    font-weight: 600;
+}
+
+/* Tarjetas de estadística del dashboard */
+.stat-card {
+    border: none;
+    border-radius: var(--sl-radius);
+    box-shadow: var(--sl-shadow-sm);
+    padding: 1.25rem 1.5rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--sl-shadow-md);
+}
+
+.stat-card .stat-icon {
+    font-size: 1.5rem;
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .18);
+    flex-shrink: 0;
+}
+
+.stat-card .stat-value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.stat-card .stat-label {
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    opacity: .9;
+}
+
+/* ── Botones ────────────────────────────────────────────────── */
+.btn {
+    border-radius: .5rem;
+    font-weight: 500;
+    transition: transform .1s ease, box-shadow .15s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 .25rem .5rem rgba(15, 40, 60, .12);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* ── Tablas ─────────────────────────────────────────────────── */
+.table {
+    --bs-table-hover-bg: rgba(44, 110, 155, .06);
+}
+
+.table thead th {
+    text-transform: uppercase;
+    font-size: .75rem;
+    letter-spacing: .4px;
+    color: #5c6f7c;
+    border-bottom-width: 2px;
+    white-space: nowrap;
+}
+
+/* ── Badges de estado ───────────────────────────────────────── */
+.badge {
+    font-weight: 600;
+    letter-spacing: .2px;
+    border-radius: .4rem;
+}
+
+.badge.badge-pill-lg {
+    padding: .5rem .9rem;
+    font-size: .85rem;
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.site-footer {
+    background-color: #22303a;
+    color: #cfd8dc;
+    margin-top: 3rem;
+}
+
+.site-footer a {
+    color: #cfd8dc;
+    text-decoration: none;
+}
+
+.site-footer a:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+.site-footer .footer-brand {
+    color: #fff;
+    font-weight: 700;
+}
+
+/* ── Formularios ────────────────────────────────────────────── */
+.form-label {
+    font-weight: 600;
+    font-size: .88rem;
+    color: #35424a;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--sl-primary);
+    box-shadow: 0 0 0 .2rem rgba(44, 110, 155, .18);
+}
+
+/* ── Utilidades ─────────────────────────────────────────────── */
+.text-brand {
+    color: var(--sl-primary) !important;
+}
+
+.bg-brand {
+    background-color: var(--sl-primary) !important;
+}
+
+@media (max-width: 767.98px) {
+    .stat-card {
+        margin-bottom: .75rem;
+    }
+}
