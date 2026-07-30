@@ -168,7 +168,7 @@
         <div class="mb-3">
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" name="necesita_modulo"
-                       id="id_necesita_modulo"
+                       id="id_necesita_modulo" autocomplete="off"
                        {% if post_data.necesita_modulo == 'on' %}checked{% endif %}>
                 <label class="form-check-label" for="id_necesita_modulo">
                     Necesita módulo/puesto en el laboratorio
@@ -331,6 +331,18 @@ try {
 let insumosSeleccionados = {};
 const MAX_HORAS_EST = 4;
 
+// Las restricciones de hora (deshabilitar horas "ya pasadas") solo tienen
+// sentido si la reserva es para HOY. Si la fecha elegida es un día futuro,
+// aplicar la hora actual del reloj las deja todas deshabilitadas fuera del
+// horario 06:00-18:00 (p.ej. probando la reserva de mañana a las 22:00).
+function fechaReservaEsHoy() {
+    const el = document.getElementById('id_fecha_reserva');
+    if (!el || !el.value) return true;
+    const ahora = new Date();
+    const hoyStr = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
+    return el.value === hoyStr;
+}
+
 // ── Selector de horario ─────────────────────────────────────────
 function validarHorarioEst() {
     const hI = parseInt(document.getElementById('est-hora-inicio-h').value);
@@ -346,7 +358,7 @@ function validarHorarioEst() {
     const ahora    = new Date();
     const minAhora = ahora.getHours() * 60 + ahora.getMinutes();
 
-    if (inicio < minAhora) {
+    if (fechaReservaEsHoy() && inicio < minAhora) {
         error.textContent = 'La hora de inicio ya pasó.';
         error.classList.remove('d-none');
         return false;
@@ -398,8 +410,16 @@ function validarHorarioEst() {
 
 function actualizarSelectoresHora(prefijo, maxHoras) {
     const ahora = new Date();
-    const horaActual = ahora.getHours();
-    const minActual  = ahora.getMinutes();
+    // El laboratorio solo abre 06:00–18:00 (mismo rango que las <option> de
+    // estos <select>). Sin este límite, fuera de ese rango horaActual queda
+    // fuera de [6,18] y TODAS las opciones se marcan disabled — el selector
+    // de hora queda inutilizable ("deshabilitado" a simple vista). Esa
+    // restricción solo aplica si la reserva es para HOY: para una fecha
+    // futura no tiene sentido limitar según la hora actual del reloj.
+    const esHoy       = fechaReservaEsHoy();
+    const horaReal    = ahora.getHours();
+    const horaActual  = esHoy ? Math.min(Math.max(horaReal, 6), 18) : 6;
+    const minActual   = (esHoy && horaActual === horaReal) ? ahora.getMinutes() : 0;
 
     const selectHI = document.getElementById(prefijo + 'hora-inicio-h');
     const selectMI = document.getElementById(prefijo + 'hora-inicio-m');
@@ -537,6 +557,8 @@ if (fechaInput) {
             errorDiv.classList.add('d-none');
             this.classList.remove('is-invalid');
         }
+        actualizarSelectoresHora('est-', MAX_HORAS_EST);
+        validarHorarioEst();
     });
     const hoy = new Date();
     fechaInput.min = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
@@ -800,6 +822,13 @@ function actualizarHiddenEst() {
         lista.classList.add('d-none');
     }
 }
+
+// El botón "Eliminar" de cada insumo se genera dinámicamente con
+// onclick="eliminarInsumo(...)" en el HTML — los handlers inline solo
+// resuelven contra el scope global, así que hay que exponerla explícitamente
+// (si no, definida solo dentro de este closure, el click tira ReferenceError).
+window.eliminarInsumo = eliminarInsumo;
+
 } catch (err) {
     console.error('Error en JS estudiante:', err);
 }

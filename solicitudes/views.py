@@ -84,6 +84,13 @@ def solicitud_profesor(request):
                 errores_libres.append('Selecciona un laboratorio.')
             if not fecha_str:
                 errores_libres.append('Selecciona una fecha.')
+            else:
+                from datetime import datetime as _dt_check
+                try:
+                    if _dt_check.strptime(fecha_str, '%Y-%m-%d').date() < _dt_check.now().date():
+                        errores_libres.append('La fecha de reserva no puede ser anterior a hoy.')
+                except ValueError:
+                    errores_libres.append('Fecha inválida.')
             if not hora_ini_str:
                 errores_libres.append('Selecciona la hora de inicio.')
             if not hora_fin_str:
@@ -125,10 +132,22 @@ def solicitud_profesor(request):
                     solicitud.save()
 
                     if necesita_modulo:
-                        modulos = Modulo.objects.filter(
-                            laboratorio=laboratorio,
-                            disponible=True
-                        )[:cantidad]
+                        modulos_ids_str = request.POST.get('modulos_ids', '')
+                        if modulos_ids_str:
+                            modulos_ids = [
+                                int(x) for x in modulos_ids_str.split(',')
+                                if x.strip().isdigit()
+                            ]
+                            modulos = Modulo.objects.filter(
+                                id__in=modulos_ids,
+                                laboratorio=laboratorio,
+                                disponible=True,
+                            )
+                        else:
+                            modulos = Modulo.objects.filter(
+                                laboratorio=laboratorio,
+                                disponible=True
+                            )[:cantidad]
                         solicitud.modulos_asignados.set(modulos)
 
                     ids_str       = request.POST.get('insumos_ids', '')

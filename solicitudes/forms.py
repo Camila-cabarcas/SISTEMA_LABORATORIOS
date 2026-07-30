@@ -2,10 +2,12 @@
 forms.py — solicitudes
 Formularios EstudianteSolicitudForm, ProfesorSolicitudForm y CursoForm.
 """
+from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import SolicitudReserva, Curso, SolicitudInsumo
 from inventario.models import Insumo
+from laboratorio.models import Laboratorio
 
 CARRERAS_INGENIERIA = [
     ('', '--- Selecciona una carrera ---'),
@@ -90,6 +92,9 @@ class EstudianteSolicitudForm(forms.ModelForm):
         if user and user.is_authenticated:
             self.instance.usuario = user
 
+        self.fields['laboratorio'].queryset = Laboratorio.objects.filter(activo=True)
+        self.fields['fecha_reserva'].widget.attrs['min'] = date.today().isoformat()
+
         # Cargar programas desde la base de datos
         from users.models import ProgramaAcademico
         self.fields['programa'].choices = (
@@ -163,6 +168,10 @@ class ProfesorSolicitudForm(forms.ModelForm):
         widget=forms.HiddenInput(),
         required=False
     )
+    modulos_ids = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=False
+    )
 
     class Meta:
         model = SolicitudReserva
@@ -215,6 +224,9 @@ class ProfesorSolicitudForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.instance.tipo_solicitante = 'profesor'
 
+        self.fields['laboratorio'].queryset = Laboratorio.objects.filter(activo=True)
+        self.fields['fecha_reserva'].widget.attrs['min'] = date.today().isoformat()
+
         campos_requeridos = ['nombre', 'cedula', 'curso', 'laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin']
         for campo in campos_requeridos:
             if campo in self.fields:
@@ -238,9 +250,30 @@ class ProfesorSolicitudForm(forms.ModelForm):
         if commit:
             instance.save()
             self._guardar_insumos(instance)
-            instance.asignar_modulos_automaticamente()
+            self._asignar_modulos(instance)
 
         return instance
+
+    def _asignar_modulos(self, instance):
+        """Usa los módulos elegidos manualmente en el mapa del formulario
+        (modulos_ids) si el profesor seleccionó alguno; si no marcó
+        necesita_modulo, no asigna nada; si lo marcó pero no eligió módulos
+        específicos (JS deshabilitado, etc.), cae al reparto automático."""
+        if not instance.necesita_modulo:
+            return
+
+        ids_str = (self.cleaned_data or {}).get('modulos_ids', '')
+        if ids_str:
+            from laboratorio.models import Modulo
+            ids = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
+            modulos = Modulo.objects.filter(
+                id__in=ids,
+                laboratorio=instance.laboratorio,
+                disponible=True,
+            )
+            instance.modulos_asignados.set(modulos)
+        else:
+            instance.asignar_modulos_automaticamente()
 
     def _guardar_insumos(self, instance):
         cleaned_data = self.cleaned_data or {}

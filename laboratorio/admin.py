@@ -24,6 +24,8 @@ class LaboratorioAdminForm(forms.ModelForm):
 
 class LaboratorioAdmin(admin.ModelAdmin):
     form = LaboratorioAdminForm
+    list_display = ('nombre', 'ubicacion', 'activo')
+    list_filter = ('activo',)
 
 
 admin.site.register(Laboratorio, LaboratorioAdmin)

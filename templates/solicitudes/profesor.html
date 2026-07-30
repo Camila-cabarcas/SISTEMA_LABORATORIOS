@@ -253,11 +253,61 @@
         <div class="mb-3">
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" name="necesita_modulo"
-                       id="id_necesita_modulo"
+                       id="id_necesita_modulo" autocomplete="off"
                        {% if post_data.necesita_modulo == 'on' %}checked{% endif %}>
                 <label class="form-check-label" for="id_necesita_modulo">
                     Necesita módulo/puesto
                 </label>
+            </div>
+        </div>
+
+        <!-- Sección de módulos con layout de laboratorio -->
+        <div id="seccion-modulos-prof" class="mb-3" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-semibold mb-0">
+                    Selección de módulos
+                    <small class="text-muted">(según cantidad de asistentes)</small>
+                </label>
+                <button type="button" id="btn-cargar-modulos-prof" class="btn btn-outline-primary btn-sm"
+                        style="display:none;">
+                    <i class="fa-solid fa-arrows-rotate me-1"></i>Ver disponibilidad de módulos
+                </button>
+            </div>
+
+            <input type="hidden" name="modulos_ids" id="modulos_ids_hidden_prof" value="">
+
+            <!-- Leyenda -->
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="badge badge-pill-lg bg-success">Disponible</span>
+                <span class="badge badge-pill-lg bg-warning text-dark">Reservado</span>
+                <span class="badge badge-pill-lg bg-secondary">No disponible</span>
+                <span class="badge badge-pill-lg bg-primary">Seleccionado</span>
+            </div>
+
+            <!-- Lab room layout -->
+            <div class="lab-room-form">
+                <div class="lab-wall-form"><i class="fa-solid fa-arrow-up me-1"></i>Pizarrón</div>
+                <div class="lab-body-form">
+                    <div class="lab-col-form" id="form-zona-izquierda-prof"></div>
+                    <div class="lab-center-form">
+                        <div class="lab-center-row-form" id="form-zona-centro-top-prof"></div>
+                        <div class="lab-center-mid-form"  id="form-zona-centro-mid-prof"></div>
+                        <div class="lab-center-row-form" id="form-zona-centro-bot-prof"></div>
+                    </div>
+                    <div class="lab-col-form" id="form-zona-derecha-prof"></div>
+                </div>
+                <div class="lab-bottom-form" id="form-zona-inferior-prof"></div>
+                <div class="lab-door-form"><i class="fa-solid fa-door-open me-1"></i>Entrada</div>
+            </div>
+
+            <p id="modulos-placeholder-prof" class="text-muted small mt-2">
+                Selecciona laboratorio y fecha/horario primero, luego haz clic en "Ver disponibilidad de módulos".
+            </p>
+
+            <div id="modulos-seleccionados-lista-prof" class="mt-2 d-none">
+                <small class="text-primary fw-semibold">
+                    Módulos seleccionados: <span id="modulos-seleccionados-nombres-prof"></span>
+                </small>
             </div>
         </div>
 
@@ -315,10 +365,73 @@
     </form>
 </div>
 
+<style>
+/* ── Lab room en formulario ── */
+.lab-room-form {
+    border: 3px solid #343a40;
+    border-radius: 8px;
+    background: #fff;
+    padding: 10px;
+    min-height: 400px;
+}
+.lab-wall-form {
+    background: #343a40; color: white; text-align: center;
+    padding: 5px; border-radius: 4px; margin-bottom: 8px;
+    font-size: .8rem; letter-spacing: 1px;
+}
+.lab-body-form { display: flex; gap: 10px; min-height: 280px; }
+.lab-col-form {
+    display: flex; flex-direction: column;
+    gap: 6px; justify-content: center; min-width: 95px;
+}
+.lab-center-form { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.lab-center-row-form { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.lab-center-mid-form {
+    flex: 1; display: flex; flex-wrap: wrap;
+    gap: 6px; align-content: center; justify-content: center;
+}
+.lab-bottom-form {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: center; margin-top: 8px;
+}
+.lab-door-form { text-align: center; margin-top: 6px; font-size: .8rem; color: #666; }
+
+/* ── Módulo en formulario ── */
+.modulo-form-seat {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: 8px; padding: 8px 6px;
+    min-height: 65px; width: 90px; flex-shrink: 0;
+    font-size: .78rem; font-weight: 600; text-align: center;
+    transition: transform .15s, box-shadow .15s;
+    user-select: none;
+}
+.modulo-form-seat.seleccionable { cursor: pointer; }
+.modulo-form-seat.seleccionable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+.modulo-form-seat.no-seleccionable { cursor: not-allowed; opacity: .5; }
+.modulo-cap-form { font-size: .65rem; opacity: .85; margin-top: 2px; }
+</style>
 
 <script>
+window.addEventListener('DOMContentLoaded', function() {
+try {
 let insumosSeleccionadosProf = {};
 const MAX_HORAS_PROF = 8;
+
+// Las restricciones de hora (deshabilitar horas "ya pasadas") solo tienen
+// sentido si la reserva es para HOY. Si la fecha elegida es un día futuro,
+// aplicar la hora actual del reloj las deja todas deshabilitadas fuera del
+// horario 06:00-18:00 (p.ej. probando la reserva de mañana a las 22:00).
+function fechaReservaEsHoy() {
+    const el = document.getElementById('id_fecha_reserva');
+    if (!el || !el.value) return true;
+    const ahora = new Date();
+    const hoyStr = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
+    return el.value === hoyStr;
+}
 
 // ── Selector de horario ─────────────────────────────────────────
 function validarHorarioProf() {
@@ -335,7 +448,7 @@ function validarHorarioProf() {
     const modoLibre = document.getElementById('modo_libre');
     const esLibre   = modoLibre && modoLibre.checked;
 
-    if (esLibre) {
+    if (esLibre && fechaReservaEsHoy()) {
         const ahora    = new Date();
         const minAhora = ahora.getHours() * 60 + ahora.getMinutes();
         if (inicio < minAhora) {
@@ -391,8 +504,16 @@ function validarHorarioProf() {
 
 function actualizarSelectoresHora(prefijo, maxHoras) {
     const ahora = new Date();
-    const horaActual = ahora.getHours();
-    const minActual  = ahora.getMinutes();
+    // El laboratorio solo abre 06:00–18:00 (mismo rango que las <option> de
+    // estos <select>). Sin este límite, fuera de ese rango horaActual queda
+    // fuera de [6,18] y TODAS las opciones se marcan disabled — el selector
+    // de hora queda inutilizable ("deshabilitado" a simple vista). Esa
+    // restricción solo aplica si la reserva es para HOY: para una fecha
+    // futura no tiene sentido limitar según la hora actual del reloj.
+    const esHoy       = fechaReservaEsHoy();
+    const horaReal    = ahora.getHours();
+    const horaActual  = esHoy ? Math.min(Math.max(horaReal, 6), 18) : 6;
+    const minActual   = (esHoy && horaActual === horaReal) ? ahora.getMinutes() : 0;
 
     const selectHI = document.getElementById(prefijo + 'hora-inicio-h');
     const selectMI = document.getElementById(prefijo + 'hora-inicio-m');
@@ -517,6 +638,7 @@ function aplicarModo(esLibre) {
     if (labNormal) labNormal.disabled = esLibre;
     if (labLibre)  labLibre.disabled  = !esLibre;
     validarHorarioProf();
+    mostrarBtnModulosProf();
 }
 
 document.querySelectorAll('input[name="modo_reserva"]').forEach(function(radio) {
@@ -524,6 +646,153 @@ document.querySelectorAll('input[name="modo_reserva"]').forEach(function(radio) 
 });
 const modoLibreRadio = document.getElementById('modo_libre');
 aplicarModo(modoLibreRadio && modoLibreRadio.checked);
+
+// ── Mapa de módulos ────────────────────────────────────────────
+let modulosSeleccionadosProf = new Set();
+let modulosDataProf = [];
+
+const checkModuloProf    = document.getElementById('id_necesita_modulo');
+const seccionModulosProf = document.getElementById('seccion-modulos-prof');
+
+if (checkModuloProf) {
+    checkModuloProf.addEventListener('change', function() {
+        seccionModulosProf.style.display = this.checked ? 'block' : 'none';
+        if (!this.checked) {
+            modulosSeleccionadosProf.clear();
+            document.getElementById('modulos_ids_hidden_prof').value = '';
+            limpiarZonasProf();
+        } else {
+            mostrarBtnModulosProf();
+        }
+    });
+    if (checkModuloProf.checked) seccionModulosProf.style.display = 'block';
+}
+
+function obtenerLabIdProf() {
+    const esLibre = modoLibreRadio && modoLibreRadio.checked;
+    const select  = document.getElementById(esLibre ? 'id_laboratorio_libre' : 'id_laboratorio');
+    return select ? select.value : '';
+}
+
+function mostrarBtnModulosProf() {
+    const labId  = obtenerLabIdProf();
+    const fecha  = document.getElementById('id_fecha_reserva').value;
+    const inicio = document.getElementById('id_hora_inicio').value;
+    const fin    = document.getElementById('id_hora_fin').value;
+    const btn    = document.getElementById('btn-cargar-modulos-prof');
+    if (btn) {
+        btn.style.display = (labId && fecha && inicio && fin) ? 'inline-block' : 'none';
+    }
+}
+
+const labNormalSelect = document.getElementById('id_laboratorio');
+const labLibreSelect  = document.getElementById('id_laboratorio_libre');
+if (labNormalSelect) labNormalSelect.addEventListener('change', mostrarBtnModulosProf);
+if (labLibreSelect)  labLibreSelect.addEventListener('change', mostrarBtnModulosProf);
+if (fechaInputProf)  fechaInputProf.addEventListener('change', mostrarBtnModulosProf);
+const btnCargarModulosProf = document.getElementById('btn-cargar-modulos-prof');
+if (btnCargarModulosProf) btnCargarModulosProf.addEventListener('click', cargarModulosProf);
+
+function cargarModulosProf() {
+    const labId  = obtenerLabIdProf();
+    const fecha  = document.getElementById('id_fecha_reserva').value;
+    const inicio = document.getElementById('id_hora_inicio').value;
+    const fin    = document.getElementById('id_hora_fin').value;
+    if (!labId || !fecha) { alert('Selecciona laboratorio y fecha primero.'); return; }
+
+    fetch(`/laboratorio/${labId}/modulos/disponibles-publica/?fecha=${fecha}&hora_inicio=${inicio}&hora_fin=${fin}`)
+        .then(r => r.json())
+        .then(data => {
+            modulosDataProf = data.modulos;
+            document.getElementById('modulos-placeholder-prof').style.display = 'none';
+            renderModulosLabProf();
+        });
+}
+
+function limpiarZonasProf() {
+    ['form-zona-izquierda-prof','form-zona-centro-top-prof','form-zona-centro-mid-prof',
+     'form-zona-centro-bot-prof','form-zona-derecha-prof','form-zona-inferior-prof'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+}
+
+function renderModulosLabProf() {
+    limpiarZonasProf();
+    const total    = modulosDataProf.length;
+    const porLado  = Math.max(2, Math.floor(total * 0.18));
+    const porFila  = Math.max(2, Math.floor(total * 0.18));
+    const restante = total - porLado * 2 - porFila;
+    const centroT  = Math.floor(restante * 0.33);
+    const centroB  = Math.floor(restante * 0.33);
+    const centroM  = restante - centroT - centroB;
+
+    const zonas = [
+        { id: 'form-zona-izquierda-prof',  count: porLado },
+        { id: 'form-zona-centro-top-prof', count: centroT },
+        { id: 'form-zona-centro-mid-prof', count: centroM },
+        { id: 'form-zona-centro-bot-prof', count: centroB },
+        { id: 'form-zona-derecha-prof',    count: porLado },
+        { id: 'form-zona-inferior-prof',   count: porFila },
+    ];
+
+    let idx = 0;
+    zonas.forEach(zona => {
+        const c = document.getElementById(zona.id);
+        if (!c) return;
+        for (let i = 0; i < zona.count && idx < total; i++, idx++) {
+            c.appendChild(crearModuloSeatProf(modulosDataProf[idx]));
+        }
+    });
+    const cm = document.getElementById('form-zona-centro-mid-prof');
+    while (idx < total) { cm.appendChild(crearModuloSeatProf(modulosDataProf[idx])); idx++; }
+
+    actualizarHiddenProf();
+}
+
+function crearModuloSeatProf(m) {
+    const seleccionado  = modulosSeleccionadosProf.has(m.id);
+    const seleccionable = m.seleccionable;
+    const div = document.createElement('div');
+
+    div.className = `modulo-form-seat ${seleccionable ? 'seleccionable' : 'no-seleccionable'}`;
+    div.style.background = seleccionado ? '#0d6efd' :
+                           m.color === 'success' ? '#198754' :
+                           m.color === 'warning'  ? '#ffc107' : '#6c757d';
+    div.style.color = (m.color === 'warning' && !seleccionado) ? '#333' : 'white';
+    if (seleccionado) div.style.outline = '3px solid #0a58ca';
+    div.innerHTML = `
+        <span>${m.nombre}</span>
+        <span class="modulo-cap-form">Cap. ${m.capacidad}</span>
+    `;
+
+    if (seleccionable) {
+        div.addEventListener('click', function() {
+            if (modulosSeleccionadosProf.has(m.id)) {
+                modulosSeleccionadosProf.delete(m.id);
+            } else {
+                modulosSeleccionadosProf.add(m.id);
+            }
+            renderModulosLabProf();
+        });
+    }
+    return div;
+}
+
+function actualizarHiddenProf() {
+    const ids = Array.from(modulosSeleccionadosProf);
+    document.getElementById('modulos_ids_hidden_prof').value = ids.join(',');
+    const lista   = document.getElementById('modulos-seleccionados-lista-prof');
+    const nombres = document.getElementById('modulos-seleccionados-nombres-prof');
+    if (ids.length > 0) {
+        lista.classList.remove('d-none');
+        nombres.textContent = modulosDataProf
+            .filter(m => modulosSeleccionadosProf.has(m.id))
+            .map(m => m.nombre).join(', ');
+    } else {
+        lista.classList.add('d-none');
+    }
+}
 
 // ── Validación de cédula ───────────────────────────────────────
 document.getElementById('id_cedula').addEventListener('input', function(e) {
@@ -617,6 +886,8 @@ if (fechaInputProf) {
             errorDiv.classList.add('d-none');
             this.classList.remove('is-invalid');
         }
+        actualizarSelectoresHora('prof-', MAX_HORAS_PROF);
+        validarHorarioProf();
     });
     const hoy    = new Date();
     const manana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
@@ -728,6 +999,17 @@ function actualizarListaInsumosProf() {
     document.getElementById('id_insumos_cantidades_prof').value = cantidades.join(',');
     listContainer.style.display = Object.keys(insumosSeleccionadosProf).length ? 'block' : 'none';
 }
+
+// El botón "Eliminar" de cada insumo se genera dinámicamente con
+// onclick="eliminarInsumoProf(...)" en el HTML — los handlers inline solo
+// resuelven contra el scope global, así que hay que exponerla explícitamente
+// (si no, definida solo dentro de este closure, el click tira ReferenceError).
+window.eliminarInsumoProf = eliminarInsumoProf;
+
+} catch (err) {
+    console.error('Error en JS profesor:', err);
+}
+});
 </script>
 
 {% endblock %}

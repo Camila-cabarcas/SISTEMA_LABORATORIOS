@@ -5,7 +5,7 @@ y el método crear_reserva() que genera la Reserva asociada en estado "Pendiente
 """
 from django.db import models
 from django.core.exceptions import ValidationError
-from datetime import timedelta
+from datetime import timedelta, date
 from users.models import Usuario
 from laboratorio.models import Laboratorio, Modulo, HorarioLaboratorio
 from inventario.models import Insumo
@@ -92,6 +92,9 @@ class SolicitudReserva(models.Model):
 
     def clean(self):
         errors = {}
+
+        if self.fecha_reserva and self.fecha_reserva.date() < date.today():
+            errors['fecha_reserva'] = 'La fecha de reserva no puede ser anterior a hoy.'
 
         # Validación de profesor
         if self.tipo_solicitante == 'profesor':
@@ -218,7 +221,7 @@ class SolicitudReserva(models.Model):
                 )
 
     def asignar_modulos_automaticamente(self):
-        if self.tipo_solicitante == 'profesor' and self.curso:
+        if self.tipo_solicitante == 'profesor' and self.necesita_modulo and self.curso:
             cantidad_necesaria = self.curso.cantidad_estudiantes
 
             modulos_disponibles = Modulo.objects.filter(
