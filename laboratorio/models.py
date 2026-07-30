@@ -91,6 +91,15 @@ class Modulo(models.Model):
     nombre = models.CharField(max_length=100)
     capacidad = models.PositiveIntegerField()
     disponible = models.BooleanField(default=True)
+    ZONA_CHOICES = [
+        ('izquierda', 'Zona Izquierda'),
+        ('centro-top', 'Centro Superior'),
+        ('centro-mid', 'Centro Medio'),
+        ('centro-bot', 'Centro Inferior'),
+        ('derecha', 'Zona Derecha'),
+        ('inferior', 'Zona Inferior'),
+    ]
+    zona = models.CharField(max_length=20, choices=ZONA_CHOICES, default='centro-mid')
     motivo_no_disponible = models.CharField(  # ← nuevo
         max_length=300,
         blank=True,

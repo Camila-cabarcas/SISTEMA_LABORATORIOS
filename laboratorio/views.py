@@ -672,6 +672,7 @@ def modulos_disponibles_publica_api(request, id):
             'estado':      estado,
             'color':       color_map.get(estado, 'secondary'),
             'seleccionable': estado == 'disponible',
+            'zona':        modulo.zona,
         })
 
     return JsonResponse({'modulos': modulos})

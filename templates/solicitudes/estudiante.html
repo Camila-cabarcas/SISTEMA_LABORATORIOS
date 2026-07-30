@@ -93,6 +93,7 @@
                     <label class="form-label small mb-1">Hora inicio</label>
                     <div class="d-flex gap-1">
                         <select id="est-hora-inicio-h" class="form-select form-select-sm" style="width:80px;">
+                            <option value="" selected>--</option>
                             <option value="06">06</option>
                             <option value="07">07</option>
                             <option value="08">08</option>
@@ -109,6 +110,7 @@
                         </select>
                         <span class="align-self-center">:</span>
                         <select id="est-hora-inicio-m" class="form-select form-select-sm" style="width:75px;">
+                            <option value="" selected>--</option>
                             <option value="00">00</option>
                             <option value="05">05</option>
                             <option value="10">10</option>
@@ -128,6 +130,7 @@
                     <label class="form-label small mb-1">Hora fin</label>
                     <div class="d-flex gap-1">
                         <select id="est-hora-fin-h" class="form-select form-select-sm" style="width:80px;">
+                            <option value="" selected>--</option>
                             <option value="06">06</option>
                             <option value="07">07</option>
                             <option value="08">08</option>
@@ -144,6 +147,7 @@
                         </select>
                         <span class="align-self-center">:</span>
                         <select id="est-hora-fin-m" class="form-select form-select-sm" style="width:75px;">
+                            <option value="" selected>--</option>
                             <option value="00">00</option>
                             <option value="05">05</option>
                             <option value="10">10</option>
@@ -345,15 +349,29 @@ function fechaReservaEsHoy() {
 
 // ── Selector de horario ─────────────────────────────────────────
 function validarHorarioEst() {
-    const hI = parseInt(document.getElementById('est-hora-inicio-h').value);
-    const mI = parseInt(document.getElementById('est-hora-inicio-m').value);
-    const hF = parseInt(document.getElementById('est-hora-fin-h').value);
-    const mF = parseInt(document.getElementById('est-hora-fin-m').value);
+    const error  = document.getElementById('horario-error-est');
+    const rawHI = document.getElementById('est-hora-inicio-h').value;
+    const rawMI = document.getElementById('est-hora-inicio-m').value;
+    const rawHF = document.getElementById('est-hora-fin-h').value;
+    const rawMF = document.getElementById('est-hora-fin-m').value;
+
+    // Nada se preselecciona: mientras falte alguna de las 4 partes, no hay
+    // horario que validar todavía (no es un error, solo está incompleto).
+    if (!rawHI || !rawMI || !rawHF || !rawMF) {
+        error.classList.add('d-none');
+        document.getElementById('id_hora_inicio').value = '';
+        document.getElementById('id_hora_fin').value = '';
+        return false;
+    }
+
+    const hI = parseInt(rawHI);
+    const mI = parseInt(rawMI);
+    const hF = parseInt(rawHF);
+    const mF = parseInt(rawMF);
 
     const inicio = hI * 60 + mI;
     const fin    = hF * 60 + mF;
     const diff   = fin - inicio;
-    const error  = document.getElementById('horario-error-est');
 
     const ahora    = new Date();
     const minAhora = ahora.getHours() * 60 + ahora.getMinutes();
@@ -426,25 +444,29 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
     const selectHF = document.getElementById(prefijo + 'hora-fin-h');
     const selectMF = document.getElementById(prefijo + 'hora-fin-m');
 
-    // Deshabilitar horas pasadas en inicio
+    // Deshabilitar horas pasadas en inicio (no toca la opción vacía "--")
     Array.from(selectHI.options).forEach(opt => {
+        if (!opt.value) return;
         const h = parseInt(opt.value);
         opt.disabled = h < horaActual;
         opt.style.color = h < horaActual ? '#ccc' : '';
     });
 
-    // Si la hora seleccionada ya pasó, avanzar al próximo disponible
-    if (parseInt(selectHI.value) < horaActual) {
-        selectHI.value = String(horaActual).padStart(2, '0');
-    }
+    // Nada elegido todavía: no hay nada que ya no vaya a pasar. No se fuerza
+    // ningún valor (el usuario debe elegir explícitamente) ni se acotan las
+    // opciones de hora fin, que dependen de la hora de inicio.
+    if (!selectHI.value) return;
 
     // Actualizar minutos de inicio
     Array.from(selectMI.options).forEach(opt => {
+        if (!opt.value) return;
         const m = parseInt(opt.value);
         const mismaHora = parseInt(selectHI.value) === horaActual;
         opt.disabled = mismaHora && m < minActual;
         opt.style.color = (mismaHora && m < minActual) ? '#ccc' : '';
     });
+
+    if (!selectMI.value) return;
 
     // Actualizar hora fin según inicio seleccionado
     const hI = parseInt(selectHI.value);
@@ -458,14 +480,19 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
     const maxDiff = maxHoras * 60;
 
     Array.from(selectHF.options).forEach(opt => {
+        if (!opt.value) return;
         const h = parseInt(opt.value);
-        const finMin = h * 60 + parseInt(selectMF.value);
+        const mfRaw = selectMF.value;
+        const finMin = h * 60 + (mfRaw ? parseInt(mfRaw) : 0);
         const diff = finMin - inicioMin;
         opt.disabled = diff < minDiff || diff > maxDiff || h * 60 > 18 * 60;
         opt.style.color = opt.disabled ? '#ccc' : '';
     });
 
+    if (!selectHF.value) return;
+
     Array.from(selectMF.options).forEach(opt => {
+        if (!opt.value) return;
         const m = parseInt(opt.value);
         const hF = parseInt(selectHF.value);
         const finMin = hF * 60 + m;
@@ -474,7 +501,10 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
         opt.style.color = opt.disabled ? '#ccc' : '';
     });
 
-    // Auto-seleccionar fin válido si el actual no es válido
+    if (!selectMF.value) return;
+
+    // Auto-corregir fin si el ya elegido dejó de ser válido (p.ej. tras
+    // cambiar la hora de inicio), sin forzar un valor cuando aún no hay nada.
     const hF = parseInt(selectHF.value);
     const mF = parseInt(selectMF.value);
     const finMin = hF * 60 + mF;
@@ -488,7 +518,7 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
         // Seleccionar el minuto más cercano disponible
         let mejorM = 0;
         Array.from(selectMF.options).forEach(opt => {
-            if (!opt.disabled && parseInt(opt.value) <= mIdeal) {
+            if (opt.value && !opt.disabled && parseInt(opt.value) <= mIdeal) {
                 mejorM = parseInt(opt.value);
             }
         });
@@ -497,7 +527,8 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
 }
 
 function onHorarioChangeEst() {
-    if (validarHorarioEst()) mostrarBtnModulosEst();
+    validarHorarioEst();
+    mostrarBtnModulosEst();
 }
 
 ['est-hora-inicio-h', 'est-hora-inicio-m', 'est-hora-fin-h'].forEach(id => {
@@ -514,30 +545,24 @@ document.getElementById('solicitud-form').addEventListener('submit', function(e)
     const horarioValido = validarHorarioEst();
     console.log('hora_inicio:', document.getElementById('id_hora_inicio').value);
     console.log('hora_fin:', document.getElementById('id_hora_fin').value);
-    if (!horarioValido) e.preventDefault();
+    if (!horarioValido) {
+        const rawHI = document.getElementById('est-hora-inicio-h').value;
+        const rawMI = document.getElementById('est-hora-inicio-m').value;
+        const rawHF = document.getElementById('est-hora-fin-h').value;
+        const rawMF = document.getElementById('est-hora-fin-m').value;
+        if (!rawHI || !rawMI || !rawHF || !rawMF) {
+            const error = document.getElementById('horario-error-est');
+            error.textContent = 'Selecciona la hora de inicio y de fin.';
+            error.classList.remove('d-none');
+        }
+        e.preventDefault();
+    }
 });
 
-function inicializarHorarioEst() {
-    const ahora = new Date();
-    let h = ahora.getHours();
-    let m = Math.ceil(ahora.getMinutes() / 5) * 5;
-    if (m === 60) { m = 0; h += 1; }
-    if (h < 6) { h = 6; m = 0; }
-    if (h > 18) { h = 18; m = 0; }
-
-    const hStr = String(h).padStart(2, '0');
-    const mStr = String(m).padStart(2, '0');
-    document.getElementById('est-hora-inicio-h').value = hStr;
-    document.getElementById('est-hora-inicio-m').value = mStr;
-
-    const hFin = Math.min(h + 2, 18);
-    document.getElementById('est-hora-fin-h').value = String(hFin).padStart(2, '0');
-    document.getElementById('est-hora-fin-m').value = mStr;
-
-    actualizarSelectoresHora('est-', MAX_HORAS_EST);
-    validarHorarioEst();
-}
-inicializarHorarioEst();
+// No se preselecciona ninguna hora: el usuario debe elegir explícitamente.
+// Solo se preparan las opciones (deshabilitar horas ya pasadas si la fecha
+// elegida es hoy).
+actualizarSelectoresHora('est-', MAX_HORAS_EST);
 
 // ── Validación de fecha ────────────────────────────────────────
 const fechaInput = document.getElementById('id_fecha_reserva');

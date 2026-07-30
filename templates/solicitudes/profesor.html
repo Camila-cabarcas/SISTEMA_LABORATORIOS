@@ -178,6 +178,7 @@
                     <label class="form-label small mb-1">Hora inicio</label>
                     <div class="d-flex gap-1">
                         <select id="prof-hora-inicio-h" class="form-select form-select-sm" style="width:80px;">
+                            <option value="" selected>--</option>
                             <option value="06">06</option>
                             <option value="07">07</option>
                             <option value="08">08</option>
@@ -194,6 +195,7 @@
                         </select>
                         <span class="align-self-center">:</span>
                         <select id="prof-hora-inicio-m" class="form-select form-select-sm" style="width:75px;">
+                            <option value="" selected>--</option>
                             <option value="00">00</option>
                             <option value="05">05</option>
                             <option value="10">10</option>
@@ -213,6 +215,7 @@
                     <label class="form-label small mb-1">Hora fin</label>
                     <div class="d-flex gap-1">
                         <select id="prof-hora-fin-h" class="form-select form-select-sm" style="width:80px;">
+                            <option value="" selected>--</option>
                             <option value="06">06</option>
                             <option value="07">07</option>
                             <option value="08">08</option>
@@ -229,6 +232,7 @@
                         </select>
                         <span class="align-self-center">:</span>
                         <select id="prof-hora-fin-m" class="form-select form-select-sm" style="width:75px;">
+                            <option value="" selected>--</option>
                             <option value="00">00</option>
                             <option value="05">05</option>
                             <option value="10">10</option>
@@ -435,15 +439,29 @@ function fechaReservaEsHoy() {
 
 // ── Selector de horario ─────────────────────────────────────────
 function validarHorarioProf() {
-    const hI = parseInt(document.getElementById('prof-hora-inicio-h').value);
-    const mI = parseInt(document.getElementById('prof-hora-inicio-m').value);
-    const hF = parseInt(document.getElementById('prof-hora-fin-h').value);
-    const mF = parseInt(document.getElementById('prof-hora-fin-m').value);
+    const error  = document.getElementById('horario-error-prof');
+    const rawHI = document.getElementById('prof-hora-inicio-h').value;
+    const rawMI = document.getElementById('prof-hora-inicio-m').value;
+    const rawHF = document.getElementById('prof-hora-fin-h').value;
+    const rawMF = document.getElementById('prof-hora-fin-m').value;
+
+    // Nada se preselecciona: mientras falte alguna de las 4 partes, no hay
+    // horario que validar todavía (no es un error, solo está incompleto).
+    if (!rawHI || !rawMI || !rawHF || !rawMF) {
+        error.classList.add('d-none');
+        document.getElementById('id_hora_inicio').value = '';
+        document.getElementById('id_hora_fin').value = '';
+        return false;
+    }
+
+    const hI = parseInt(rawHI);
+    const mI = parseInt(rawMI);
+    const hF = parseInt(rawHF);
+    const mF = parseInt(rawMF);
 
     const inicio = hI * 60 + mI;
     const fin    = hF * 60 + mF;
     const diff   = fin - inicio;
-    const error  = document.getElementById('horario-error-prof');
 
     const modoLibre = document.getElementById('modo_libre');
     const esLibre   = modoLibre && modoLibre.checked;
@@ -520,25 +538,29 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
     const selectHF = document.getElementById(prefijo + 'hora-fin-h');
     const selectMF = document.getElementById(prefijo + 'hora-fin-m');
 
-    // Deshabilitar horas pasadas en inicio
+    // Deshabilitar horas pasadas en inicio (no toca la opción vacía "--")
     Array.from(selectHI.options).forEach(opt => {
+        if (!opt.value) return;
         const h = parseInt(opt.value);
         opt.disabled = h < horaActual;
         opt.style.color = h < horaActual ? '#ccc' : '';
     });
 
-    // Si la hora seleccionada ya pasó, avanzar al próximo disponible
-    if (parseInt(selectHI.value) < horaActual) {
-        selectHI.value = String(horaActual).padStart(2, '0');
-    }
+    // Nada elegido todavía: no hay nada que ya no vaya a pasar. No se fuerza
+    // ningún valor (el usuario debe elegir explícitamente) ni se acotan las
+    // opciones de hora fin, que dependen de la hora de inicio.
+    if (!selectHI.value) return;
 
     // Actualizar minutos de inicio
     Array.from(selectMI.options).forEach(opt => {
+        if (!opt.value) return;
         const m = parseInt(opt.value);
         const mismaHora = parseInt(selectHI.value) === horaActual;
         opt.disabled = mismaHora && m < minActual;
         opt.style.color = (mismaHora && m < minActual) ? '#ccc' : '';
     });
+
+    if (!selectMI.value) return;
 
     // Actualizar hora fin según inicio seleccionado
     const hI = parseInt(selectHI.value);
@@ -552,14 +574,19 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
     const maxDiff = maxHoras * 60;
 
     Array.from(selectHF.options).forEach(opt => {
+        if (!opt.value) return;
         const h = parseInt(opt.value);
-        const finMin = h * 60 + parseInt(selectMF.value);
+        const mfRaw = selectMF.value;
+        const finMin = h * 60 + (mfRaw ? parseInt(mfRaw) : 0);
         const diff = finMin - inicioMin;
         opt.disabled = diff < minDiff || diff > maxDiff || h * 60 > 18 * 60;
         opt.style.color = opt.disabled ? '#ccc' : '';
     });
 
+    if (!selectHF.value) return;
+
     Array.from(selectMF.options).forEach(opt => {
+        if (!opt.value) return;
         const m = parseInt(opt.value);
         const hF = parseInt(selectHF.value);
         const finMin = hF * 60 + m;
@@ -568,7 +595,10 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
         opt.style.color = opt.disabled ? '#ccc' : '';
     });
 
-    // Auto-seleccionar fin válido si el actual no es válido
+    if (!selectMF.value) return;
+
+    // Auto-corregir fin si el ya elegido dejó de ser válido (p.ej. tras
+    // cambiar la hora de inicio), sin forzar un valor cuando aún no hay nada.
     const hF = parseInt(selectHF.value);
     const mF = parseInt(selectMF.value);
     const finMin = hF * 60 + mF;
@@ -582,7 +612,7 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
         // Seleccionar el minuto más cercano disponible
         let mejorM = 0;
         Array.from(selectMF.options).forEach(opt => {
-            if (!opt.disabled && parseInt(opt.value) <= mIdeal) {
+            if (opt.value && !opt.disabled && parseInt(opt.value) <= mIdeal) {
                 mejorM = parseInt(opt.value);
             }
         });
@@ -596,35 +626,130 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
     });
 });
 
-['prof-hora-inicio-h', 'prof-hora-inicio-m', 'prof-hora-fin-h', 'prof-hora-fin-m'].forEach(id => {
-    document.getElementById(id).addEventListener('change', validarHorarioProf);
-});
+// Validar horario cada vez que cambia cualquier selector
+document.getElementById('prof-hora-inicio-h').addEventListener('change', validarHorarioProf);
+document.getElementById('prof-hora-inicio-m').addEventListener('change', validarHorarioProf);
+document.getElementById('prof-hora-fin-h').addEventListener('change', validarHorarioProf);
+document.getElementById('prof-hora-fin-m').addEventListener('change', validarHorarioProf);
 
-document.getElementById('profesor-form').addEventListener('submit', function(e) {
-    if (!validarHorarioProf()) e.preventDefault();
-});
-
-function inicializarHorarioProf() {
-    const ahora = new Date();
-    let h = ahora.getHours();
-    let m = Math.ceil(ahora.getMinutes() / 5) * 5;
-    if (m === 60) { m = 0; h += 1; }
-    if (h < 6) { h = 6; m = 0; }
-    if (h > 18) { h = 18; m = 0; }
-
-    const hStr = String(h).padStart(2, '0');
-    const mStr = String(m).padStart(2, '0');
-    document.getElementById('prof-hora-inicio-h').value = hStr;
-    document.getElementById('prof-hora-inicio-m').value = mStr;
-
-    const hFin = Math.min(h + 2, 18);
-    document.getElementById('prof-hora-fin-h').value = String(hFin).padStart(2, '0');
-    document.getElementById('prof-hora-fin-m').value = mStr;
-
-    actualizarSelectoresHora('prof-', MAX_HORAS_PROF);
+function onHorarioChangeProf() {
     validarHorarioProf();
 }
-inicializarHorarioProf();
+
+['prof-hora-inicio-h', 'prof-hora-inicio-m', 'prof-hora-fin-h', 'prof-hora-fin-m'].forEach(id => {
+    document.getElementById(id).addEventListener('change', onHorarioChangeProf);
+});
+
+function cargarModulosProf() {
+    console.log('🔥 FUNCIÓN EJECUTADA');  
+    const modoLibre = document.getElementById('modo_libre').checked;
+    const laboratorio_id = modoLibre ?
+        document.getElementById('id_laboratorio_libre').value :
+        document.getElementById('id_laboratorio').value;
+    const fecha = document.getElementById('id_fecha_reserva').value;
+    const hora_inicio = document.getElementById('id_hora_inicio').value;
+    const hora_fin = document.getElementById('id_hora_fin').value;
+    const necesitaModulo = document.getElementById('id_necesita_modulo').checked;
+
+    if (!necesitaModulo || !laboratorio_id || !fecha || !hora_inicio || !hora_fin) {
+        document.getElementById('seccion-modulos-prof').style.display = 'none';
+        return;
+    }
+
+    document.getElementById('seccion-modulos-prof').style.display = 'block';
+
+    const urlModulosProf = `/laboratorio/${laboratorio_id}/modulos/disponibles-publica/?fecha=${fecha}&hora_inicio=${hora_inicio}&hora_fin=${hora_fin}`;
+    console.log('📡 cargarModulosProf: fetch URL =', urlModulosProf);
+
+    fetch(urlModulosProf)
+        .then(r => {
+            console.log('📡 cargarModulosProf: status HTTP =', r.status, r.ok ? '(ok)' : '(NO ok)');
+            return r.json();
+        })
+        .then(data => {
+            console.log('📦 cargarModulosProf: data recibida =', data);
+            console.log('📦 cargarModulosProf: data.modulos =', data.modulos, '— length =', data.modulos ? data.modulos.length : 'undefined');
+
+            ['form-zona-izquierda-prof','form-zona-centro-top-prof','form-zona-centro-mid-prof','form-zona-centro-bot-prof','form-zona-derecha-prof','form-zona-inferior-prof']
+                .forEach(id => {
+                    const zonaEl = document.getElementById(id);
+                    console.log('🧹 cargarModulosProf: limpiando zona', id, '— elemento existe?', !!zonaEl);
+                    zonaEl.innerHTML = '';
+                });
+
+            data.modulos.forEach(mod => {
+                console.log('🔲 cargarModulosProf: procesando módulo', mod);
+                const div = document.createElement('div');
+                div.className = 'modulo-form-seat ';
+
+                if (mod.estado === 'disponible') {
+                    div.classList.add('seleccionable', 'bg-success');
+                    div.style.color = 'white';
+                } else if (mod.estado === 'reservado') {
+                    div.classList.add('no-seleccionable', 'bg-warning');
+                    div.style.color = '#000';
+                } else {
+                    div.classList.add('no-seleccionable', 'bg-secondary');
+                    div.style.color = 'white';
+                }
+
+                div.innerHTML = `${mod.nombre}<div class="modulo-cap-form">Cap: ${mod.capacidad}</div>`;
+                div.dataset.moduloId = mod.id;
+
+                if (mod.estado === 'disponible') {
+                    div.addEventListener('click', function() {
+                        this.classList.toggle('bg-primary');
+                        this.classList.toggle('bg-success');
+                        guardarModulosSeleccionados();
+                    });
+                }
+
+                const zonaTargetId = `form-zona-${mod.zona}-prof`;
+                const zonaTarget = document.getElementById(zonaTargetId);
+                console.log('📍 cargarModulosProf: mod.zona =', mod.zona, '→ buscando #' + zonaTargetId, '— encontrado?', !!zonaTarget);
+                zonaTarget.appendChild(div);
+                console.log('✅ cargarModulosProf: módulo', mod.id, mod.nombre, 'insertado en', zonaTargetId);
+            });
+
+            console.log('🏁 cargarModulosProf: terminó de procesar', data.modulos.length, 'módulos');
+        })
+        .catch(e => console.error('❌ Error cargando módulos:', e, '— mensaje:', e.message));
+}
+
+function guardarModulosSeleccionados() {
+    const seleccionados = Array.from(document.querySelectorAll('.modulo-form-seat.bg-primary'))
+        .map(el => el.dataset.moduloId);
+    document.getElementById('modulos_ids_hidden_prof').value = seleccionados.join(',');
+}
+
+document.getElementById('id_necesita_modulo').addEventListener('change', cargarModulosProf);
+document.getElementById('id_laboratorio').addEventListener('change', cargarModulosProf);
+document.getElementById('id_laboratorio_libre').addEventListener('change', cargarModulosProf);
+document.getElementById('id_fecha_reserva').addEventListener('change', cargarModulosProf);
+document.getElementById('prof-hora-inicio-h').addEventListener('change', cargarModulosProf);
+document.getElementById('prof-hora-inicio-m').addEventListener('change', cargarModulosProf);
+document.getElementById('prof-hora-fin-h').addEventListener('change', cargarModulosProf);
+document.getElementById('prof-hora-fin-m').addEventListener('change', cargarModulosProf);
+
+document.getElementById('profesor-form').addEventListener('submit', function(e) {
+    if (!validarHorarioProf()) {
+        const rawHI = document.getElementById('prof-hora-inicio-h').value;
+        const rawMI = document.getElementById('prof-hora-inicio-m').value;
+        const rawHF = document.getElementById('prof-hora-fin-h').value;
+        const rawMF = document.getElementById('prof-hora-fin-m').value;
+        if (!rawHI || !rawMI || !rawHF || !rawMF) {
+            const error = document.getElementById('horario-error-prof');
+            error.textContent = 'Selecciona la hora de inicio y de fin.';
+            error.classList.remove('d-none');
+        }
+        e.preventDefault();
+    }
+});
+
+// No se preselecciona ninguna hora: el usuario debe elegir explícitamente.
+// Solo se preparan las opciones (deshabilitar horas ya pasadas si la fecha
+// elegida es hoy).
+actualizarSelectoresHora('prof-', MAX_HORAS_PROF);
 
 // ── Toggle de modalidad ────────────────────────────────────────
 function aplicarModo(esLibre) {
@@ -638,7 +763,7 @@ function aplicarModo(esLibre) {
     if (labNormal) labNormal.disabled = esLibre;
     if (labLibre)  labLibre.disabled  = !esLibre;
     validarHorarioProf();
-    mostrarBtnModulosProf();
+    cargarModulosProf();
 }
 
 document.querySelectorAll('input[name="modo_reserva"]').forEach(function(radio) {
@@ -648,151 +773,9 @@ const modoLibreRadio = document.getElementById('modo_libre');
 aplicarModo(modoLibreRadio && modoLibreRadio.checked);
 
 // ── Mapa de módulos ────────────────────────────────────────────
-let modulosSeleccionadosProf = new Set();
-let modulosDataProf = [];
-
-const checkModuloProf    = document.getElementById('id_necesita_modulo');
-const seccionModulosProf = document.getElementById('seccion-modulos-prof');
-
-if (checkModuloProf) {
-    checkModuloProf.addEventListener('change', function() {
-        seccionModulosProf.style.display = this.checked ? 'block' : 'none';
-        if (!this.checked) {
-            modulosSeleccionadosProf.clear();
-            document.getElementById('modulos_ids_hidden_prof').value = '';
-            limpiarZonasProf();
-        } else {
-            mostrarBtnModulosProf();
-        }
-    });
-    if (checkModuloProf.checked) seccionModulosProf.style.display = 'block';
-}
-
-function obtenerLabIdProf() {
-    const esLibre = modoLibreRadio && modoLibreRadio.checked;
-    const select  = document.getElementById(esLibre ? 'id_laboratorio_libre' : 'id_laboratorio');
-    return select ? select.value : '';
-}
-
-function mostrarBtnModulosProf() {
-    const labId  = obtenerLabIdProf();
-    const fecha  = document.getElementById('id_fecha_reserva').value;
-    const inicio = document.getElementById('id_hora_inicio').value;
-    const fin    = document.getElementById('id_hora_fin').value;
-    const btn    = document.getElementById('btn-cargar-modulos-prof');
-    if (btn) {
-        btn.style.display = (labId && fecha && inicio && fin) ? 'inline-block' : 'none';
-    }
-}
-
-const labNormalSelect = document.getElementById('id_laboratorio');
-const labLibreSelect  = document.getElementById('id_laboratorio_libre');
-if (labNormalSelect) labNormalSelect.addEventListener('change', mostrarBtnModulosProf);
-if (labLibreSelect)  labLibreSelect.addEventListener('change', mostrarBtnModulosProf);
-if (fechaInputProf)  fechaInputProf.addEventListener('change', mostrarBtnModulosProf);
-const btnCargarModulosProf = document.getElementById('btn-cargar-modulos-prof');
-if (btnCargarModulosProf) btnCargarModulosProf.addEventListener('click', cargarModulosProf);
-
-function cargarModulosProf() {
-    const labId  = obtenerLabIdProf();
-    const fecha  = document.getElementById('id_fecha_reserva').value;
-    const inicio = document.getElementById('id_hora_inicio').value;
-    const fin    = document.getElementById('id_hora_fin').value;
-    if (!labId || !fecha) { alert('Selecciona laboratorio y fecha primero.'); return; }
-
-    fetch(`/laboratorio/${labId}/modulos/disponibles-publica/?fecha=${fecha}&hora_inicio=${inicio}&hora_fin=${fin}`)
-        .then(r => r.json())
-        .then(data => {
-            modulosDataProf = data.modulos;
-            document.getElementById('modulos-placeholder-prof').style.display = 'none';
-            renderModulosLabProf();
-        });
-}
-
-function limpiarZonasProf() {
-    ['form-zona-izquierda-prof','form-zona-centro-top-prof','form-zona-centro-mid-prof',
-     'form-zona-centro-bot-prof','form-zona-derecha-prof','form-zona-inferior-prof'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = '';
-    });
-}
-
-function renderModulosLabProf() {
-    limpiarZonasProf();
-    const total    = modulosDataProf.length;
-    const porLado  = Math.max(2, Math.floor(total * 0.18));
-    const porFila  = Math.max(2, Math.floor(total * 0.18));
-    const restante = total - porLado * 2 - porFila;
-    const centroT  = Math.floor(restante * 0.33);
-    const centroB  = Math.floor(restante * 0.33);
-    const centroM  = restante - centroT - centroB;
-
-    const zonas = [
-        { id: 'form-zona-izquierda-prof',  count: porLado },
-        { id: 'form-zona-centro-top-prof', count: centroT },
-        { id: 'form-zona-centro-mid-prof', count: centroM },
-        { id: 'form-zona-centro-bot-prof', count: centroB },
-        { id: 'form-zona-derecha-prof',    count: porLado },
-        { id: 'form-zona-inferior-prof',   count: porFila },
-    ];
-
-    let idx = 0;
-    zonas.forEach(zona => {
-        const c = document.getElementById(zona.id);
-        if (!c) return;
-        for (let i = 0; i < zona.count && idx < total; i++, idx++) {
-            c.appendChild(crearModuloSeatProf(modulosDataProf[idx]));
-        }
-    });
-    const cm = document.getElementById('form-zona-centro-mid-prof');
-    while (idx < total) { cm.appendChild(crearModuloSeatProf(modulosDataProf[idx])); idx++; }
-
-    actualizarHiddenProf();
-}
-
-function crearModuloSeatProf(m) {
-    const seleccionado  = modulosSeleccionadosProf.has(m.id);
-    const seleccionable = m.seleccionable;
-    const div = document.createElement('div');
-
-    div.className = `modulo-form-seat ${seleccionable ? 'seleccionable' : 'no-seleccionable'}`;
-    div.style.background = seleccionado ? '#0d6efd' :
-                           m.color === 'success' ? '#198754' :
-                           m.color === 'warning'  ? '#ffc107' : '#6c757d';
-    div.style.color = (m.color === 'warning' && !seleccionado) ? '#333' : 'white';
-    if (seleccionado) div.style.outline = '3px solid #0a58ca';
-    div.innerHTML = `
-        <span>${m.nombre}</span>
-        <span class="modulo-cap-form">Cap. ${m.capacidad}</span>
-    `;
-
-    if (seleccionable) {
-        div.addEventListener('click', function() {
-            if (modulosSeleccionadosProf.has(m.id)) {
-                modulosSeleccionadosProf.delete(m.id);
-            } else {
-                modulosSeleccionadosProf.add(m.id);
-            }
-            renderModulosLabProf();
-        });
-    }
-    return div;
-}
-
-function actualizarHiddenProf() {
-    const ids = Array.from(modulosSeleccionadosProf);
-    document.getElementById('modulos_ids_hidden_prof').value = ids.join(',');
-    const lista   = document.getElementById('modulos-seleccionados-lista-prof');
-    const nombres = document.getElementById('modulos-seleccionados-nombres-prof');
-    if (ids.length > 0) {
-        lista.classList.remove('d-none');
-        nombres.textContent = modulosDataProf
-            .filter(m => modulosSeleccionadosProf.has(m.id))
-            .map(m => m.nombre).join(', ');
-    } else {
-        lista.classList.add('d-none');
-    }
-}
+// El mapa se carga y se dibuja desde cargarModulosProf() (ver arriba),
+// disparado automáticamente al completar necesita_modulo + laboratorio +
+// fecha + horario — ya no depende de un botón "Ver disponibilidad".
 
 // ── Validación de cédula ───────────────────────────────────────
 document.getElementById('id_cedula').addEventListener('input', function(e) {
