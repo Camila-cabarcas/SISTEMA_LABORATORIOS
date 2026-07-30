@@ -22,6 +22,14 @@ main {
     min-height: 70vh;
 }
 
+/* ── Layout ─────────────────────────────────────────────────── */
+/* El <main> ya trae la utilidad my-4 (con !important) para el margen
+   vertical, así que aquí solo hace falta ajustar el padding horizontal. */
+.container-fluid {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
 /* ── Navbar ─────────────────────────────────────────────────── */
 .navbar-brand {
     font-weight: 700;
@@ -131,15 +139,25 @@ a.card:hover {
 /* ── Tablas ─────────────────────────────────────────────────── */
 .table {
     --bs-table-hover-bg: rgba(44, 110, 155, .06);
+    font-size: .95rem;
+    /* Las listas ya envuelven la tabla en una card con su propio padding
+       (card p-4); dejar el margen inferior de la tabla en 0 evita un
+       doble espacio antes del borde de la card. */
+    margin-bottom: 0;
 }
 
 .table thead th {
-    text-transform: uppercase;
-    font-size: .75rem;
-    letter-spacing: .4px;
-    color: #5c6f7c;
-    border-bottom-width: 2px;
+    background-color: var(--sl-primary);
+    color: #fff;
+    font-weight: 600;
+    padding: 12px;
+    border-bottom-width: 0;
     white-space: nowrap;
+}
+
+.table td {
+    padding: 10px 12px;
+    vertical-align: middle;
 }
 
 /* ── Badges de estado ───────────────────────────────────────── */

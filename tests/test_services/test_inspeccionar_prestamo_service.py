@@ -32,7 +32,11 @@ def test_iniciar_inspeccion_crea_items(reserva_con_prestamo, usuario_admin):
 
     inspecciones = InspeccionItem.objects.filter(prestamo=reserva_con_prestamo.prestamo)
     assert inspecciones.count() == 1
-    assert inspecciones.first().prestamo_item_id == reserva_con_prestamo.prestamo_item.id
+    
+    # AQUÍ: Verificar primero que existe
+    inspeccion = inspecciones.first()
+    assert inspeccion is not None  # ← Agregá esto
+    assert inspeccion.prestamo_item_id == reserva_con_prestamo.prestamo_item.id
 
 
 def test_finalizar_inspeccion_validar_todos(reserva_con_prestamo, usuario_admin, insumo, laboratorio):
