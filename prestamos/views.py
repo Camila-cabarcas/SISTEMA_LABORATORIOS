@@ -78,6 +78,79 @@ def lista_prestamos(request):
 
 
 @rol_requerido('Administrador', 'Laboratorio')
+def exportar_prestamos_excel(request):
+    if request.method != 'POST':
+        return redirect('lista_prestamos')
+
+    import io
+    from datetime import date
+
+    from django.http import FileResponse
+
+    from utils.excel_export import export_prestamos_excel
+
+    prestamos = Prestamo.objects.select_related('estado', 'reserva').prefetch_related(
+        'prestamoitem_set'
+    ).order_by('-fecha_entrega')
+
+    estado_filtro = request.POST.get('estado', '')
+    fecha_inicio  = request.POST.get('fecha_inicio', '')
+    fecha_fin     = request.POST.get('fecha_fin', '')
+
+    if estado_filtro:
+        prestamos = prestamos.filter(estado__nombre=estado_filtro)
+    if fecha_inicio:
+        prestamos = prestamos.filter(fecha_entrega__date__gte=fecha_inicio)
+    if fecha_fin:
+        prestamos = prestamos.filter(fecha_entrega__date__lte=fecha_fin)
+
+    logger.info(f"exportar_prestamos_excel | usuario={request.user.email}")
+
+    wb = export_prestamos_excel(prestamos)
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'prestamos_{date.today().isoformat()}.xlsx',
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
+
+@rol_requerido('Administrador', 'Laboratorio')
+def exportar_inspecciones_excel(request):
+    if request.method != 'POST':
+        return redirect('lista_prestamos')
+
+    import io
+    from datetime import date
+
+    from django.http import FileResponse
+
+    from utils.excel_export import export_inspecciones_excel
+
+    inspecciones = InspeccionItem.objects.select_related(
+        'prestamo', 'prestamo_item__item_inventario'
+    ).order_by('-fecha_inspeccion')
+
+    logger.info(f"exportar_inspecciones_excel | usuario={request.user.email}")
+
+    wb = export_inspecciones_excel(inspecciones)
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'inspecciones_{date.today().isoformat()}.xlsx',
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
+
+@rol_requerido('Administrador', 'Laboratorio')
 def crear_prestamo(request, reserva_id):
 
     from reservas.models import Reserva, ReservaInsumo

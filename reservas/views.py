@@ -361,6 +361,48 @@ def aprobar_reserva(request, id):
 
 
 @rol_requerido('Administrador', 'Laboratorio')
+def exportar_reservas_excel(request):
+    if request.method != 'POST':
+        return redirect('lista_reservas')
+
+    import io
+    from datetime import date
+
+    from django.http import FileResponse
+
+    from utils.excel_export import export_reservas_excel
+
+    reservas = Reserva.objects.select_related('estado').prefetch_related(
+        'solicitud', 'solicitud__laboratorio', 'solicitud__modulos_asignados'
+    ).order_by('-fecha_reserva')
+
+    estado_filtro = request.POST.get('estado', '')
+    fecha_inicio  = request.POST.get('fecha_inicio', '')
+    fecha_fin     = request.POST.get('fecha_fin', '')
+
+    if estado_filtro:
+        reservas = reservas.filter(estado__nombre=estado_filtro)
+    if fecha_inicio:
+        reservas = reservas.filter(fecha_reserva__date__gte=fecha_inicio)
+    if fecha_fin:
+        reservas = reservas.filter(fecha_reserva__date__lte=fecha_fin)
+
+    logger.info(f"exportar_reservas_excel | usuario={request.user.email}")
+
+    wb = export_reservas_excel(reservas)
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'reservas_{date.today().isoformat()}.xlsx',
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
+
+@rol_requerido('Administrador', 'Laboratorio')
 def reservas_para_prestamo(request):
     ahora = datetime.now()
     reservas = Reserva.objects.filter(

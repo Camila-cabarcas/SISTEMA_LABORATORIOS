@@ -11,12 +11,16 @@ from .views import (
     cambiar_estado_prestamo,
     iniciar_inspeccion,
     inspeccionar_prestamo,
-    marcar_devuelto
+    marcar_devuelto,
+    exportar_prestamos_excel,
+    exportar_inspecciones_excel,
 )
 
 urlpatterns = [
     path('', lista_prestamos, name='lista_prestamos'),
     path('crear/', crear_prestamo, name='crear_prestamo'),
+    path('exportar-excel/', exportar_prestamos_excel, name='exportar_prestamos_excel'),
+    path('exportar-inspecciones-excel/', exportar_inspecciones_excel, name='exportar_inspecciones_excel'),
     path('<int:id>/', detalle_prestamo, name='detalle_prestamo'),
     path('<int:id>/estado/', cambiar_estado_prestamo, name='cambiar_estado_prestamo'),
     path('crear/<int:reserva_id>/', crear_prestamo, name='crear_prestamo'),

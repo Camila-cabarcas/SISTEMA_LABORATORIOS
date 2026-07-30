@@ -11,12 +11,14 @@ from .views import (
     aprobar_reserva,
     reservas_para_prestamo,
     horarios_disponibles,
-    eliminar_insumo_reserva
+    eliminar_insumo_reserva,
+    exportar_reservas_excel,
 )
 
 urlpatterns = [
     path('', lista_reservas, name='lista_reservas'),
     path('crear/', crear_reserva, name='crear_reserva'),
+    path('exportar-excel/', exportar_reservas_excel, name='exportar_reservas_excel'),
     path('para-prestamo/', reservas_para_prestamo, name='reservas_para_prestamo'),
     path('horarios/', horarios_disponibles, name='horarios_disponibles'),
     path('<int:id>/', detalle_reserva, name='detalle_reserva'),
