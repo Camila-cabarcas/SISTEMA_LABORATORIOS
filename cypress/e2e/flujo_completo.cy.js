@@ -55,10 +55,19 @@ function horarioDesdeAhora() {
   if (horas < 6) { horas = 6; minutos = 0; }
   if (horas > 15) { horas = 15; minutos = 0; }
 
-  const inicioDate = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), horas, minutos, 0, 0);
-  const yyyy = ahora.getFullYear();
-  const mm = String(ahora.getMonth() + 1).padStart(2, '0');
-  const dd = String(ahora.getDate()).padStart(2, '0');
+  // El laboratorio solo abre lunes-viernes (el formulario de estudiante
+  // rechaza sábado/domingo con "is-invalid" — ver la validación de fecha en
+  // solicitudes/estudiante.html). Si el test corre en fin de semana, se
+  // avanza al próximo lunes para que la fecha sea válida.
+  const fechaBase = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const diaSemana = fechaBase.getDay(); // 0 = domingo, 6 = sábado
+  if (diaSemana === 6) fechaBase.setDate(fechaBase.getDate() + 2);
+  else if (diaSemana === 0) fechaBase.setDate(fechaBase.getDate() + 1);
+
+  const inicioDate = new Date(fechaBase.getFullYear(), fechaBase.getMonth(), fechaBase.getDate(), horas, minutos, 0, 0);
+  const yyyy = fechaBase.getFullYear();
+  const mm = String(fechaBase.getMonth() + 1).padStart(2, '0');
+  const dd = String(fechaBase.getDate()).padStart(2, '0');
 
   return {
     fecha: `${yyyy}-${mm}-${dd}`,
