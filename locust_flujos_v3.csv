@@ -1514,3 +1514,254 @@ modulos_multiples,4080305225,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
 inspeccion_no_entregado,6376607321,16:30,2026-08-03T16:30:50.564734,creada,2026-08-03T16:30:50.564734,0.0,2026-08-03T16:30:50.727561,0.162827,creado,,2026-08-03T16:30:51.390316,2026-08-03T18:30:50.548784,0.662755,-7199.158468,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
 modulos_multiples,7885175854,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
 inspeccion_danado,1295298166,16:30,2026-08-03T16:30:53.505811,creada,2026-08-03T16:30:53.505811,0.0,2026-08-03T16:30:53.873901,0.36809,creado,,2026-08-03T16:30:55.174299,2026-08-03T18:30:53.493273,1.300398,-7198.318974,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,4055468581,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,5374645208,16:30,2026-08-03T16:30:56.723978,creada,2026-08-03T16:30:56.723978,0.0,2026-08-03T16:30:57.709086,0.985108,creado,,2026-08-03T16:30:58.075829,2026-08-03T18:30:56.703746,0.366743,-7198.627917,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,7638737474,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+modulos_multiples,6624104432,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,1435424621,16:31,2026-08-03T16:31:00.356919,creada,2026-08-03T16:31:00.356919,0.0,2026-08-03T16:31:00.516633,0.159714,creado,anticipada_inmediata,2026-08-03T16:31:00.737775,2026-08-03T18:31:00.343862,0.221142,-7199.606087,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,5479352509,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,2566223220,16:31,2026-08-03T16:31:03.413749,creada,2026-08-03T16:31:03.413749,0.0,2026-08-03T16:31:03.587105,0.173356,creado,,2026-08-03T16:31:04.327043,2026-08-03T18:31:03.400683,0.739938,-7199.07364,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,1816495846,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,2818564675,16:31,2026-08-03T16:31:05.536285,creada,2026-08-03T16:31:05.536285,0.0,2026-08-03T16:31:05.799922,0.263637,creado,anticipada_inmediata,2026-08-03T16:31:06.275698,2026-08-03T18:31:05.523066,0.475776,-7199.247368,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,3902422200,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+modulos_multiples,6023747110,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_no_entregado,3513541765,16:31,2026-08-03T16:31:08.447857,creada,2026-08-03T16:31:08.447857,0.0,2026-08-03T16:31:08.968500,0.520643,creado,,2026-08-03T16:31:09.132331,2026-08-03T18:31:08.433698,0.163831,-7199.301367,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,8896040413,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_no_entregado,3750995659,16:31,2026-08-03T16:31:10.376781,creada,2026-08-03T16:31:10.376781,0.0,2026-08-03T16:31:10.671029,0.294248,creado,,2026-08-03T16:31:11.040528,2026-08-03T18:31:10.363892,0.369499,-7199.323364,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,9075163762,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,8477141768,16:31,2026-08-03T16:31:11.707104,creada,2026-08-03T16:31:11.707104,0.0,2026-08-03T16:31:12.276028,0.568924,creado,,2026-08-03T16:31:14.318858,2026-08-03T18:31:11.690142,2.04283,-7197.371284,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,2943113958,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,4649329066,16:31,2026-08-03T16:31:14.652673,creada,2026-08-03T16:31:14.652673,0.0,2026-08-03T16:31:15.228109,0.575436,creado,,2026-08-03T16:31:15.880547,2026-08-03T18:31:14.625179,0.652438,-7198.744632,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,3911749036,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,9739565247,16:31,2026-08-03T16:31:16.833259,creada,2026-08-03T16:31:16.833259,0.0,2026-08-03T16:31:17.024197,0.190938,creado,,2026-08-03T16:31:17.365246,2026-08-03T18:31:16.814835,0.341049,-7199.449589,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,7542012038,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,1536085774,16:31,2026-08-03T16:31:19.071142,creada,2026-08-03T16:31:19.071142,0.0,2026-08-03T16:31:19.261172,0.19003,creado,,2026-08-03T16:31:19.686523,2026-08-03T18:31:19.055600,0.425351,-7199.369077,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,4782732093,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,9867143570,16:31,2026-08-03T16:31:21.703435,creada,2026-08-03T16:31:21.703435,0.0,2026-08-03T16:31:21.932484,0.229049,creado,anticipada_inmediata,2026-08-03T16:31:22.635512,2026-08-03T18:31:21.688816,0.703028,-7199.053304,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,1458667109,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+modulos_multiples,6921783808,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,7662842827,16:31,2026-08-03T16:31:24.413559,creada,2026-08-03T16:31:24.413559,0.0,2026-08-03T16:31:24.692194,0.278635,creado,anticipada_inmediata,2026-08-03T16:31:25.099847,2026-08-03T18:31:24.397650,0.407653,-7199.297803,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,8126201534,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,2295565954,16:31,2026-08-03T16:31:26.029028,creada,2026-08-03T16:31:26.029028,0.0,2026-08-03T16:31:26.278036,0.249008,creado,,2026-08-03T16:31:26.569443,2026-08-03T18:31:26.013474,0.291407,-7199.444031,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,2064069677,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,3377958495,16:31,2026-08-03T16:31:29.185644,creada,2026-08-03T16:31:29.185644,0.0,2026-08-03T16:31:29.398592,0.212948,creado,anticipada_inmediata,2026-08-03T16:31:29.599353,2026-08-03T18:31:29.171971,0.200761,-7199.572618,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,8425553225,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,1643230063,16:31,2026-08-03T16:31:30.537399,creada,2026-08-03T16:31:30.537399,0.0,2026-08-03T16:31:30.756523,0.219124,creado,anticipada_inmediata,2026-08-03T16:31:31.393127,2026-08-03T18:31:30.523130,0.636604,-7199.130003,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,5845492198,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,4770606303,16:31,2026-08-03T16:31:32.159252,creada,2026-08-03T16:31:32.159252,0.0,2026-08-03T16:31:32.364088,0.204836,creado,,2026-08-03T16:31:32.904429,2026-08-03T18:31:32.143380,0.540341,-7199.238951,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,3482621571,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+modulos_multiples,7542014919,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,2757256681,16:31,2026-08-03T16:31:34.220863,creada,2026-08-03T16:31:34.220863,0.0,2026-08-03T16:31:34.428743,0.20788,creado,,2026-08-03T16:31:35.036303,2026-08-03T18:31:34.207487,0.60756,-7199.171184,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,3088182461,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,4435944324,16:31,2026-08-03T16:31:36.803092,creada,2026-08-03T16:31:36.803092,0.0,2026-08-03T16:31:37.002381,0.199289,creado,,2026-08-03T16:31:37.434471,2026-08-03T18:31:36.784286,0.43209,-7199.349815,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,4004826783,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_no_entregado,5577519531,16:31,2026-08-03T16:31:38.195822,creada,2026-08-03T16:31:38.195822,0.0,2026-08-03T16:31:38.397474,0.201652,creado,,2026-08-03T16:31:38.929838,2026-08-03T18:31:38.180766,0.532364,-7199.250928,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+estudiante,6803667433,16:31,2026-08-03T16:31:39.917438,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,2743936567,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,1747887987,16:31,2026-08-03T16:31:39.934671,creada,2026-08-03T16:31:39.934671,0.0,2026-08-03T16:31:40.241472,0.306801,creado,,2026-08-03T16:31:40.917174,2026-08-03T18:31:39.907946,0.675702,-7198.990772,,0,0,0,sin_item,,,,,,,,sin_item
+estudiante,5563675960,16:31,2026-08-03T16:31:41.183186,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,3984726168,16:31,2026-08-03T16:31:41.238451,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,9264363971,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+estudiante,1471323509,16:31,2026-08-03T16:31:42.858700,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,4651864107,16:31,2026-08-03T16:31:43.131030,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_no_entregado,4966602391,16:31,2026-08-03T16:31:42.690223,creada,2026-08-03T16:31:42.690223,0.0,2026-08-03T16:31:42.923016,0.232793,creado,,2026-08-03T16:31:43.498578,2026-08-03T18:31:42.675656,0.575562,-7199.177078,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,5419537408,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+estudiante,8100004690,16:26,2026-08-03T16:31:44.266040,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+devolucion_anticipada,7252739032,16:31,2026-08-03T16:31:44.427128,creada,2026-08-03T16:31:44.427128,0.0,2026-08-03T16:31:44.597640,0.170512,creado,anticipada_inmediata,2026-08-03T16:31:44.757010,2026-08-03T18:31:44.408136,0.15937,-7199.651126,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,9858390159,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+estudiante,2289935006,16:31,2026-08-03T16:31:45.342159,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,8658642839,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+estudiante,3909227769,16:31,2026-08-03T16:31:46.989942,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_danado,6709520337,16:31,2026-08-03T16:31:47.340662,creada,2026-08-03T16:31:47.340662,0.0,2026-08-03T16:31:47.528860,0.188198,creado,,2026-08-03T16:31:48.570830,2026-08-03T18:31:47.321027,1.04197,-7198.750197,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,3222704542,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+modulos_multiples,3661441370,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,7872736197,16:31,2026-08-03T16:31:50.357201,creada,2026-08-03T16:31:50.357201,0.0,2026-08-03T16:31:50.638782,0.281581,creado,,2026-08-03T16:31:50.955817,2026-08-03T18:31:50.343983,0.317035,-7199.388166,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,3701475200,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,3706200354,16:31,2026-08-03T16:31:52.753458,creada,2026-08-03T16:31:52.753458,0.0,2026-08-03T16:31:52.982611,0.229153,creado,anticipada_inmediata,2026-08-03T16:31:53.422292,2026-08-03T18:31:52.723831,0.439681,-7199.301539,temprana,0,0,0,,,,,,,,,completo
+devolucion_anticipada,8423750078,16:31,2026-08-03T16:31:54.709267,creada,2026-08-03T16:31:54.709267,0.0,2026-08-03T16:31:54.967495,0.258228,creado,anticipada_inmediata,2026-08-03T16:31:55.418514,2026-08-03T18:31:54.695704,0.451019,-7199.27719,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,5316565812,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+modulos_multiples,8137008768,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,3471990411,16:31,2026-08-03T16:31:56.950565,creada,2026-08-03T16:31:56.950565,0.0,2026-08-03T16:31:57.329524,0.378959,creado,,2026-08-03T16:31:57.718087,2026-08-03T18:31:56.937024,0.388563,-7199.218937,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,7081371938,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,3281587316,16:31,2026-08-03T16:31:59.085121,creada,2026-08-03T16:31:59.085121,0.0,2026-08-03T16:31:59.643141,0.55802,creado,anticipada_inmediata,2026-08-03T16:32:00.613002,2026-08-03T18:31:59.066406,0.969861,-7198.453404,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,8055880393,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_no_entregado,4278827401,16:32,2026-08-03T16:32:02.652165,creada,2026-08-03T16:32:02.652165,0.0,2026-08-03T16:32:02.852311,0.200146,creado,,2026-08-03T16:32:03.522987,2026-08-03T18:32:02.629571,0.670676,-7199.106584,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,2057896300,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,2823990108,16:32,2026-08-03T16:32:05.520484,creada,2026-08-03T16:32:05.520484,0.0,2026-08-03T16:32:05.722783,0.202299,creado,,2026-08-03T16:32:06.586441,2026-08-03T18:32:05.505769,0.863658,-7198.919328,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,5853739256,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,8480281728,16:32,2026-08-03T16:32:07.075561,creada,2026-08-03T16:32:07.075561,0.0,2026-08-03T16:32:07.382338,0.306777,creado,,2026-08-03T16:32:07.823292,2026-08-03T18:32:07.062290,0.440954,-7199.238998,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,9524338381,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_no_entregado,2921749924,16:32,2026-08-03T16:32:10.306836,creada,2026-08-03T16:32:10.306836,0.0,2026-08-03T16:32:10.492293,0.185457,creado,,2026-08-03T16:32:10.827504,2026-08-03T18:32:10.293950,0.335211,-7199.466446,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,3140778946,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,4376535868,16:32,2026-08-03T16:32:11.891340,creada,2026-08-03T16:32:11.891340,0.0,2026-08-03T16:32:12.080479,0.189139,creado,,2026-08-03T16:32:12.639463,2026-08-03T18:32:11.878484,0.558984,-7199.239021,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+devolucion_anticipada,4558781705,16:32,2026-08-03T16:32:13.603765,creada,2026-08-03T16:32:13.603765,0.0,2026-08-03T16:32:13.803867,0.200102,creado,anticipada_inmediata,2026-08-03T16:32:14.398193,2026-08-03T18:32:13.589507,0.594326,-7199.191314,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,3739913614,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,9292914603,16:32,2026-08-03T16:32:15.055929,creada,2026-08-03T16:32:15.055929,0.0,2026-08-03T16:32:15.312102,0.256173,creado,,2026-08-03T16:32:15.600325,2026-08-03T18:32:15.031338,0.288223,-7199.431013,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,9348802591,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,6104472014,16:32,2026-08-03T16:32:17.010629,creada,2026-08-03T16:32:17.010629,0.0,2026-08-03T16:32:17.186387,0.175758,creado,anticipada_inmediata,2026-08-03T16:32:17.556108,2026-08-03T18:32:16.993806,0.369721,-7199.437698,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,3321591274,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,6571179888,16:32,2026-08-03T16:32:19.137395,creada,2026-08-03T16:32:19.137395,0.0,2026-08-03T16:32:19.383560,0.246165,creado,,2026-08-03T16:32:20.004259,2026-08-03T18:32:19.122549,0.620699,-7199.11829,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,4419408663,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+modulos_multiples,1357720404,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,4007470872,16:32,2026-08-03T16:32:22.339790,creada,2026-08-03T16:32:22.339790,0.0,2026-08-03T16:32:22.536127,0.196337,creado,anticipada_inmediata,2026-08-03T16:32:22.970197,2026-08-03T18:32:22.326577,0.43407,-7199.35638,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,1100558567,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,6037342800,16:32,2026-08-03T16:32:23.915686,creada,2026-08-03T16:32:23.915686,0.0,2026-08-03T16:32:24.103911,0.188225,creado,anticipada_inmediata,2026-08-03T16:32:24.759249,2026-08-03T18:32:23.901290,0.655338,-7199.142041,temprana,0,0,0,,,,,,,,,completo
+devolucion_anticipada,3374094090,16:32,2026-08-03T16:32:25.754817,creada,2026-08-03T16:32:25.754817,0.0,2026-08-03T16:32:26.061624,0.306807,creado,anticipada_inmediata,2026-08-03T16:32:26.441413,2026-08-03T18:32:25.740585,0.379789,-7199.299172,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,7636298263,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+modulos_multiples,7046666298,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,8900934164,16:32,2026-08-03T16:32:28.606599,creada,2026-08-03T16:32:28.606599,0.0,2026-08-03T16:32:29.155815,0.549216,creado,anticipada_inmediata,2026-08-03T16:32:30.000470,2026-08-03T18:32:28.591563,0.844655,-7198.591093,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,2672643370,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,3410063027,16:32,2026-08-03T16:32:31.055328,creada,2026-08-03T16:32:31.055328,0.0,2026-08-03T16:32:31.256574,0.201246,creado,,2026-08-03T16:32:31.848493,2026-08-03T18:32:31.038135,0.591919,-7199.189642,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,2983758863,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,6767222374,16:32,2026-08-03T16:32:32.843303,creada,2026-08-03T16:32:32.843303,0.0,2026-08-03T16:32:33.026339,0.183036,creado,,2026-08-03T16:32:34.244566,2026-08-03T18:32:32.830802,1.218227,-7198.586236,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,8658261824,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,7552910029,16:32,2026-08-03T16:32:34.855910,creada,2026-08-03T16:32:34.855910,0.0,2026-08-03T16:32:35.037370,0.18146,creado,anticipada_inmediata,2026-08-03T16:32:35.532365,2026-08-03T18:32:34.841960,0.494995,-7199.309595,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,4885313235,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,1351637531,16:32,2026-08-03T16:32:37.475485,creada,2026-08-03T16:32:37.475485,0.0,2026-08-03T16:32:37.662710,0.187225,creado,,2026-08-03T16:32:38.319742,2026-08-03T18:32:37.457162,0.657032,-7199.13742,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,4473037722,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,2332984943,16:32,2026-08-03T16:32:40.127855,creada,2026-08-03T16:32:40.127855,0.0,2026-08-03T16:32:40.317546,0.189691,creado,anticipada_inmediata,2026-08-03T16:32:40.826298,2026-08-03T18:32:40.102233,0.508752,-7199.275935,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,6144024388,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_no_entregado,6148569553,16:32,2026-08-03T16:32:42.422504,creada,2026-08-03T16:32:42.422504,0.0,2026-08-03T16:32:42.629372,0.206868,creado,,2026-08-03T16:32:43.403091,2026-08-03T18:32:42.407308,0.773719,-7199.004217,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,4452316035,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,5257583638,16:32,2026-08-03T16:32:45.176603,creada,2026-08-03T16:32:45.176603,0.0,2026-08-03T16:32:45.436773,0.26017,creado,anticipada_inmediata,2026-08-03T16:32:46.685711,2026-08-03T18:32:45.160218,1.248938,-7198.474507,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,5714490288,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,7145073899,16:32,2026-08-03T16:32:47.823509,creada,2026-08-03T16:32:47.823509,0.0,2026-08-03T16:32:48.092213,0.268704,creado,,2026-08-03T16:32:49.195834,2026-08-03T18:32:47.801605,1.103621,-7198.605771,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,1391445383,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+modulos_multiples,9484829760,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_no_entregado,9220561339,16:32,2026-08-03T16:32:50.166137,creada,2026-08-03T16:32:50.166137,0.0,2026-08-03T16:32:50.509955,0.343818,creado,,2026-08-03T16:32:51.817971,2026-08-03T18:32:50.146752,1.308016,-7198.328781,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+inspeccion_no_entregado,6611126094,16:32,2026-08-03T16:32:52.509744,creada,2026-08-03T16:32:52.509744,0.0,2026-08-03T16:32:52.751296,0.241552,creado,,2026-08-03T16:32:53.319145,2026-08-03T18:32:52.478841,0.567849,-7199.159696,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,8302956606,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,9923450964,16:32,2026-08-03T16:32:55.762761,creada,2026-08-03T16:32:55.762761,0.0,2026-08-03T16:32:55.967313,0.204552,creado,,2026-08-03T16:32:56.478413,2026-08-03T18:32:55.747553,0.5111,-7199.26914,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,6403287495,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,3956828633,16:32,2026-08-03T16:32:58.010852,creada,2026-08-03T16:32:58.010852,0.0,2026-08-03T16:32:58.294986,0.284134,creado,anticipada_inmediata,2026-08-03T16:32:59.361434,2026-08-03T18:32:57.996333,1.066448,-7198.634899,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,6441344023,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_no_entregado,7547759662,16:32,2026-08-03T16:32:59.927310,creada,2026-08-03T16:32:59.927310,0.0,2026-08-03T16:33:00.448973,0.521663,creado,,2026-08-03T16:33:00.990412,2026-08-03T18:32:59.909976,0.541439,-7198.919564,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,6335277835,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,8517726060,16:33,2026-08-03T16:33:01.619921,creada,2026-08-03T16:33:01.619921,0.0,2026-08-03T16:33:02.037340,0.417419,creado,anticipada_inmediata,2026-08-03T16:33:03.505534,2026-08-03T18:33:01.595176,1.468194,-7198.089642,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,9191329999,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,4285584076,16:33,2026-08-03T16:33:03.974917,creada,2026-08-03T16:33:03.974917,0.0,2026-08-03T16:33:04.181529,0.206612,creado,,2026-08-03T16:33:04.901465,2026-08-03T18:33:03.958107,0.719936,-7199.056642,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,9244730786,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,9268497993,16:33,2026-08-03T16:33:05.285152,creada,2026-08-03T16:33:05.285152,0.0,2026-08-03T16:33:05.575287,0.290135,creado,anticipada_inmediata,2026-08-03T16:33:07.155522,2026-08-03T18:33:05.264498,1.580235,-7198.108976,temprana,0,0,0,,,,,,,,,completo
+inspeccion_no_entregado,3548875367,16:33,2026-08-03T16:33:06.730137,creada,2026-08-03T16:33:06.730137,0.0,2026-08-03T16:33:07.140367,0.41023,creado,,2026-08-03T16:33:07.406626,2026-08-03T18:33:06.712704,0.266259,-7199.306078,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,9580413267,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,5204204375,16:33,2026-08-03T16:33:08.305651,creada,2026-08-03T16:33:08.305651,0.0,2026-08-03T16:33:08.520910,0.215259,creado,,2026-08-03T16:33:09.156297,2026-08-03T18:33:08.291031,0.635387,-7199.134734,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+devolucion_anticipada,7993276836,16:33,2026-08-03T16:33:10.309449,creada,2026-08-03T16:33:10.309449,0.0,2026-08-03T16:33:10.490360,0.180911,creado,anticipada_inmediata,2026-08-03T16:33:10.841080,2026-08-03T18:33:10.294641,0.35072,-7199.453561,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,9531323541,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,4731212550,16:33,2026-08-03T16:33:12.747786,creada,2026-08-03T16:33:12.747786,0.0,2026-08-03T16:33:12.924881,0.177095,creado,,2026-08-03T16:33:13.099410,2026-08-03T18:33:12.734444,0.174529,-7199.635034,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,6890420306,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+prestamo_directo,5606744792,16:28,2026-08-03T16:28:13.163461,creada,2026-08-03T16:28:13.163461,0.0,2026-08-03T16:28:13.405535,0.242074,creado,a_tiempo,2026-08-03T16:33:13.734163,2026-08-03T18:28:13.148234,300.328628,-6899.414071,temprana,0,0,0,,,,,,,,,completo
+devolucion_anticipada,7926779472,16:33,2026-08-03T16:33:14.072916,creada,2026-08-03T16:33:14.072916,0.0,2026-08-03T16:33:14.274129,0.201213,creado,anticipada_inmediata,2026-08-03T16:33:14.850921,2026-08-03T18:33:14.055281,0.576792,-7199.20436,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,7929828777,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+modulos_multiples,9392635056,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,5890279432,16:33,2026-08-03T16:33:16.676690,creada,2026-08-03T16:33:16.676690,0.0,2026-08-03T16:33:16.895935,0.219245,creado,anticipada_inmediata,2026-08-03T16:33:18.246678,2026-08-03T18:33:16.654883,1.350743,-7198.408205,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,4069266497,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,6359010822,16:33,2026-08-03T16:33:18.577979,creada,2026-08-03T16:33:18.577979,0.0,2026-08-03T16:33:18.914300,0.336321,creado,,2026-08-03T16:33:19.810108,2026-08-03T18:33:18.555436,0.895808,-7198.745328,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,9110431014,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,6657816224,16:33,2026-08-03T16:33:20.960558,creada,2026-08-03T16:33:20.960558,0.0,2026-08-03T16:33:21.133055,0.172497,creado,,2026-08-03T16:33:21.879761,2026-08-03T18:33:20.945470,0.746706,-7199.065709,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,3558808211,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,1063349690,16:33,2026-08-03T16:33:24.020254,creada,2026-08-03T16:33:24.020254,0.0,2026-08-03T16:33:24.269796,0.249542,creado,anticipada_inmediata,2026-08-03T16:33:25.693618,2026-08-03T18:33:24.004780,1.423822,-7198.311162,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,4933291667,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,9063710353,16:33,2026-08-03T16:33:26.820996,creada,2026-08-03T16:33:26.820996,0.0,2026-08-03T16:33:27.045800,0.224804,creado,,2026-08-03T16:33:27.569437,2026-08-03T18:33:26.805148,0.523637,-7199.235711,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,9999942222,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+estudiante,4384698390,16:33,2026-08-03T16:33:28.708758,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,4540178389,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,7104210248,16:33,2026-08-03T16:33:28.062264,creada,2026-08-03T16:33:28.062264,0.0,2026-08-03T16:33:28.613406,0.551142,creado,anticipada_inmediata,2026-08-03T16:33:30.021761,2026-08-03T18:33:28.051739,1.408355,-7198.029978,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,2817145207,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+estudiante,1308089027,16:28,2026-08-03T16:33:31.560451,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+devolucion_anticipada,8879843970,16:33,2026-08-03T16:33:31.163465,creada,2026-08-03T16:33:31.163465,0.0,2026-08-03T16:33:31.392411,0.228946,creado,anticipada_inmediata,2026-08-03T16:33:32.702089,2026-08-03T18:33:31.150910,1.309678,-7198.448821,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,8469290020,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+profesor_registrado,3212872377,16:33,2026-08-03T16:33:35.834246,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,7634879456,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,3558895265,16:33,2026-08-03T16:33:33.047291,creada,2026-08-03T16:33:33.047291,0.0,2026-08-03T16:33:33.262928,0.215637,creado,anticipada_inmediata,2026-08-03T16:33:37.871353,2026-08-03T18:33:33.033261,4.608425,-7195.161908,temprana,0,0,0,,,,,,,,,completo
+inspeccion_danado,2480573825,16:33,2026-08-03T16:33:35.910913,creada,2026-08-03T16:33:35.910913,0.0,2026-08-03T16:33:37.928550,2.017637,creado,,2026-08-03T16:33:38.423698,2026-08-03T18:33:35.384087,0.495148,-7196.960389,,0,0,0,sin_item,,,,,,,,sin_item
+estudiante,9004018657,16:33,2026-08-03T16:33:38.756075,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+profesor_registrado,1181414359,16:18,2026-08-03T16:33:39.963398,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,8885004302,16:33,2026-08-03T16:33:39.897188,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+devolucion_anticipada,6651617629,16:33,2026-08-03T16:33:39.694975,creada,2026-08-03T16:33:39.694975,0.0,2026-08-03T16:33:39.997926,0.302951,creado,anticipada_inmediata,2026-08-03T16:33:40.364667,2026-08-03T18:33:39.680858,0.366741,-7199.316191,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,2755483142,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+estudiante,2349989826,16:08,2026-08-03T16:33:41.534307,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,7965679345,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+profesor_registrado,9982619106,16:33,2026-08-03T16:33:42.065952,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,9099043649,16:33,2026-08-03T16:33:42.327166,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_no_entregado,6876110422,16:33,2026-08-03T16:33:41.334346,creada,2026-08-03T16:33:41.334346,0.0,2026-08-03T16:33:41.522267,0.187921,creado,,2026-08-03T16:33:42.494173,2026-08-03T18:33:41.317831,0.971906,-7198.823658,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+estudiante,5943028433,16:33,2026-08-03T16:33:43.046208,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,7424213023,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+estudiante,3199615508,16:33,2026-08-03T16:33:44.213893,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+devolucion_anticipada,2608826781,16:33,2026-08-03T16:33:43.963932,creada,2026-08-03T16:33:43.963932,0.0,2026-08-03T16:33:44.212894,0.248962,creado,anticipada_inmediata,2026-08-03T16:33:44.522243,2026-08-03T18:33:43.948256,0.309349,-7199.426013,temprana,0,0,0,,,,,,,,,completo
+estudiante,9646418581,16:33,2026-08-03T16:33:44.660368,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+profesor_registrado,5597770267,16:28,2026-08-03T16:33:44.824303,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,7154708330,16:33,2026-08-03T16:33:45.580349,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,2963702014,16:08,2026-08-03T16:33:46.452541,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,5862283521,16:33,2026-08-03T16:33:46.730857,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,5609929663,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_no_entregado,9120288066,16:33,2026-08-03T16:33:46.490334,creada,2026-08-03T16:33:46.490334,0.0,2026-08-03T16:33:46.686689,0.196355,creado,,2026-08-03T16:33:47.728486,2026-08-03T18:33:46.470773,1.041797,-7198.742287,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+estudiante,5319707485,16:08,2026-08-03T16:33:47.915560,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,4337466474,16:33,2026-08-03T16:33:48.991841,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,4361497372,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+estudiante,1389743947,16:08,2026-08-03T16:33:49.508462,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_no_entregado,9037799520,16:33,2026-08-03T16:33:49.109849,creada,2026-08-03T16:33:49.109849,0.0,2026-08-03T16:33:49.282645,0.172796,creado,,2026-08-03T16:33:49.650260,2026-08-03T18:33:49.095361,0.367615,-7199.445101,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+estudiante,8593304806,16:33,2026-08-03T16:33:50.570786,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,2862233980,16:28,2026-08-03T16:33:50.666874,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+prestamo_directo,5361953309,16:28,2026-08-03T16:28:50.567235,creada,2026-08-03T16:28:50.567235,0.0,2026-08-03T16:28:50.757549,0.190314,creado,a_tiempo,2026-08-03T16:33:50.956636,2026-08-03T18:28:50.553160,300.199087,-6899.596524,temprana,0,0,0,,,,,,,,,completo
+cancelacion_reserva_aprobada,2285397296,16:28,2026-08-03T16:33:38.614187,creada,2026-08-03T16:33:50.423841,11.809654,,,,,,,,,,,,,,True,2026-08-03T16:33:51.177892,cancelada_tras_aprobacion_por_laboratorista,,,,,cancelada
+inspeccion_no_entregado,4014492045,16:33,2026-08-03T16:33:51.231695,creada,2026-08-03T16:33:51.231695,0.0,2026-08-03T16:33:51.533854,0.302159,creado,,2026-08-03T16:33:51.992906,2026-08-03T18:33:51.218897,0.459052,-7199.225991,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,3095754023,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+estudiante,3432236066,16:28,2026-08-03T16:33:52.266657,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,8005643356,16:33,2026-08-03T16:33:52.354398,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,7453015490,16:33,2026-08-03T16:33:52.633976,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_no_entregado,7614505131,16:33,2026-08-03T16:33:52.867593,creada,2026-08-03T16:33:52.867593,0.0,2026-08-03T16:33:53.021682,0.154089,creado,,2026-08-03T16:33:53.268618,2026-08-03T18:33:52.852534,0.246936,-7199.583916,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,1676012802,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+estudiante,7513477019,16:08,2026-08-03T16:33:55.177186,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,3741165383,16:28,2026-08-03T16:33:55.524981,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,9530304367,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+estudiante,3567904290,16:33,2026-08-03T16:33:56.844449,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+estudiante,2364732280,16:28,2026-08-03T16:33:57.511673,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,5750138896,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,9818608703,16:33,2026-08-03T16:33:58.073714,creada,2026-08-03T16:33:58.073714,0.0,2026-08-03T16:33:58.247171,0.173457,creado,,2026-08-03T16:33:58.836014,2026-08-03T18:33:58.060103,0.588843,-7199.224089,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,1678933885,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+estudiante,4177558713,16:34,2026-08-03T16:34:00.237641,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_danado,2314663274,16:34,2026-08-03T16:34:00.688439,creada,2026-08-03T16:34:00.688439,0.0,2026-08-03T16:34:00.860675,0.172236,creado,,2026-08-03T16:34:01.184545,2026-08-03T18:34:00.673684,0.32387,-7199.489139,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,1442869437,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,7084441351,16:33,2026-08-03T16:33:34.181650,creada,2026-08-03T16:33:49.028117,14.846467,2026-08-03T16:34:02.005715,12.977598,creado,anticipada_inmediata,2026-08-03T16:34:02.534767,2026-08-03T19:33:34.161078,0.529052,-10771.626311,temprana,0,0,0,,,,,,,,,completo
+estudiante,3700659402,16:09,2026-08-03T16:34:03.298673,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_danado,4035335217,16:34,2026-08-03T16:34:02.245686,creada,2026-08-03T16:34:02.245686,0.0,2026-08-03T16:34:02.524215,0.278529,creado,,2026-08-03T16:34:04.171382,2026-08-03T18:34:02.229713,1.647167,-7198.058331,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,8669050971,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,9914735795,16:34,2026-08-03T16:34:03.862713,creada,2026-08-03T16:34:03.862713,0.0,2026-08-03T16:34:04.100234,0.237521,creado,,2026-08-03T16:34:04.486788,2026-08-03T18:34:03.847845,0.386554,-7199.361057,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+estudiante,5934957095,16:09,2026-08-03T16:34:04.929880,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,7277069146,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,6666031576,16:34,2026-08-03T16:34:05.892432,creada,2026-08-03T16:34:05.892432,0.0,2026-08-03T16:34:06.088874,0.196442,creado,anticipada_inmediata,2026-08-03T16:34:07.567862,2026-08-03T18:34:05.877873,1.478988,-7198.310011,temprana,0,0,0,,,,,,,,,completo
+estudiante,1138848336,16:34,2026-08-03T16:34:07.643900,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_danado,4000966152,16:34,2026-08-03T16:34:07.728485,creada,2026-08-03T16:34:07.728485,0.0,2026-08-03T16:34:07.910892,0.182407,creado,,2026-08-03T16:34:08.354375,2026-08-03T18:34:07.709246,0.443483,-7199.354871,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,9347042934,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+modulos_multiples,2375677460,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+estudiante,4384274462,16:34,2026-08-03T16:34:10.638334,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_no_entregado,5556636728,16:34,2026-08-03T16:34:10.675759,creada,2026-08-03T16:34:10.675759,0.0,2026-08-03T16:34:10.865016,0.189257,creado,,2026-08-03T16:34:11.341868,2026-08-03T18:34:10.653489,0.476852,-7199.311621,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+modulos_multiples,7042183396,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,5806303576,16:34,2026-08-03T16:34:12.680541,creada,2026-08-03T16:34:12.680541,0.0,2026-08-03T16:34:12.978074,0.297533,creado,,2026-08-03T16:34:13.368373,2026-08-03T18:34:12.660654,0.390299,-7199.292281,,0,0,0,sin_item,,,,,,,,sin_item
+estudiante,2650683884,16:19,2026-08-03T16:34:13.745286,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,8252910541,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+estudiante,6548667749,16:34,2026-08-03T16:34:15.548710,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_danado,8050579578,16:08,2026-08-03T16:33:41.055828,creada,2026-08-03T16:33:54.801992,13.746164,2026-08-03T16:34:15.426659,20.624667,creado,,2026-08-03T16:34:15.988755,2026-08-03T18:08:41.038219,0.562096,-5665.049464,,0,0,0,sin_item,,,,,,,,sin_item
+devolucion_anticipada,8156536498,16:34,2026-08-03T16:34:15.601633,creada,2026-08-03T16:34:15.601633,0.0,2026-08-03T16:34:15.788860,0.187227,creado,anticipada_inmediata,2026-08-03T16:34:16.536300,2026-08-03T18:34:15.588675,0.74744,-7199.052375,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,5329092523,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+devolucion_anticipada,6194887588,16:33,2026-08-03T16:33:35.933148,creada,2026-08-03T16:33:49.717510,13.784362,2026-08-03T16:34:17.134681,27.417171,creado,anticipada_inmediata,2026-08-03T16:34:18.112074,2026-08-03T19:33:35.799239,0.977393,-10757.687165,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,7615479355,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_danado,2960441689,16:34,2026-08-03T16:34:18.369947,creada,2026-08-03T16:34:18.369947,0.0,2026-08-03T16:34:18.593731,0.223784,creado,,2026-08-03T16:34:19.162011,2026-08-03T18:34:18.331674,0.56828,-7199.169663,,0,0,0,sin_item,,,,,,,,sin_item
+inspeccion_danado,5450738418,16:34,2026-08-03T16:34:19.806495,creada,2026-08-03T16:34:19.806495,0.0,2026-08-03T16:34:19.995779,0.189284,creado,,2026-08-03T16:34:20.350413,2026-08-03T18:34:19.792953,0.354634,-7199.44254,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,2378120777,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+modulos_multiples,3596261797,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,8228986420,16:34,2026-08-03T16:34:22.835081,creada,2026-08-03T16:34:22.835081,0.0,2026-08-03T16:34:22.999079,0.163998,creado,anticipada_inmediata,2026-08-03T16:34:23.665395,2026-08-03T18:34:22.820151,0.666316,-7199.154756,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,9274623442,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,3276332426,16:34,2026-08-03T16:34:25.943403,creada,2026-08-03T16:34:25.943403,0.0,2026-08-03T16:34:26.118127,0.174724,creado,anticipada_inmediata,2026-08-03T16:34:26.270786,2026-08-03T18:34:25.930319,0.152659,-7199.659533,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,4832567040,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+inspeccion_danado,3464746724,16:34,2026-08-03T16:34:27.693279,creada,2026-08-03T16:34:27.693279,0.0,2026-08-03T16:34:27.853407,0.160128,creado,,2026-08-03T16:34:28.492442,2026-08-03T18:34:27.674032,0.639035,-7199.18159,,0,0,0,sin_item,,,,,,,,sin_item
+modulos_multiples,3464316561,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+estudiante,6968764865,16:34,2026-08-03T16:34:29.044225,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+modulos_multiples,4101727731,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+estudiante,2534125300,16:34,2026-08-03T16:34:30.308420,rechazada_validacion,,,,,,,,,,,,,,,,,,,,,,,incompleto
+inspeccion_no_entregado,8791395790,16:34,2026-08-03T16:34:29.810901,creada,2026-08-03T16:34:29.810901,0.0,2026-08-03T16:34:30.012602,0.201701,creado,,2026-08-03T16:34:30.407876,2026-08-03T18:34:29.793229,0.395274,-7199.385353,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo
+devolucion_anticipada,5696614482,16:34,2026-08-03T16:34:31.255005,creada,2026-08-03T16:34:31.255005,0.0,2026-08-03T16:34:31.435752,0.180747,creado,anticipada_inmediata,2026-08-03T16:34:31.696305,2026-08-03T18:34:31.240756,0.260553,-7199.544451,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,1710598269,,,,,,,,,,,,,,,,,,,,,,,,3,0,rechazada_validacion
+devolucion_anticipada,3193827523,16:34,2026-08-03T16:34:33.304427,creada,2026-08-03T16:34:33.304427,0.0,2026-08-03T16:34:33.533204,0.228777,creado,anticipada_inmediata,2026-08-03T16:34:34.420888,2026-08-03T18:34:33.283818,0.887684,-7198.86293,temprana,0,0,0,,,,,,,,,completo
+modulos_multiples,3711266481,,,,,,,,,,,,,,,,,,,,,,,,2,0,rechazada_validacion
+inspeccion_no_entregado,1721363233,16:34,2026-08-03T16:34:35.477945,creada,2026-08-03T16:34:35.477945,0.0,2026-08-03T16:34:36.288634,0.810689,creado,,2026-08-03T16:34:36.989140,2026-08-03T18:34:35.461786,0.700506,-7198.472646,,0,0,0,None -> None (sin cambio esperado; no existe "Perdido"),,,,,,,,completo

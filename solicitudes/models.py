@@ -5,7 +5,7 @@ y el método crear_reserva() que genera la Reserva asociada en estado "Pendiente
 """
 from django.db import models
 from django.core.exceptions import ValidationError
-from datetime import timedelta, date
+from datetime import timedelta, date, time
 from users.models import Usuario
 from laboratorio.models import Laboratorio, Modulo, HorarioLaboratorio
 from inventario.models import Insumo
@@ -118,12 +118,22 @@ class SolicitudReserva(models.Model):
         # Validación de horario
         if self.hora_inicio is not None and self.hora_fin is not None:
 
+            # Reservas que empiezan a las 16:00 o después siempre terminan
+            # exactamente a las 18:00 (cierre del laboratorio) sin importar
+            # cuánto haya pedido el solicitante ni la duración resultante
+            # (puede quedar en minutos) — así una solicitud tardía sigue
+            # siendo válida en vez de chocar con el mínimo de 2 horas de
+            # más abajo, que solo aplica antes de las 16:00.
+            solicitud_tardia = self.hora_inicio >= time(16, 0)
+            if solicitud_tardia:
+                self.hora_fin = time(18, 0)
+
             if self.hora_fin <= self.hora_inicio:
                 errors['hora_fin'] = 'La hora de fin debe ser posterior a la hora de inicio.'
 
             duracion = self._calcular_duracion()
 
-            if duracion < timedelta(hours=2):
+            if not solicitud_tardia and duracion < timedelta(hours=2):
                 errors['hora_fin'] = 'El préstamo debe ser mínimo 2 horas.'
 
             max_horas = 8 if self.tipo_solicitante == 'profesor' else 4

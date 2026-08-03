@@ -562,9 +562,18 @@ class EstudianteConReservaEnHora(HttpUser):
         hora_str = hora_inicio.strftime('%H:%M')
         hoy = momento_slot.date()
 
-        margen_horas = max(2.0, min(4.0, (18 * 60 - hora_inicio.hour * 60 - hora_inicio.minute) / 60.0))
-        duracion_horas = random.choice([h for h in [2, 2.5, 3, 3.5, 4] if h <= margen_horas]) if margen_horas >= 2 else 2
-        hora_fin = (momento_slot + timedelta(hours=duracion_horas)).time()
+        # SolicitudReserva.clean() (ver solicitudes/models.py) fuerza
+        # hora_fin=18:00 sin importar la duración cuando hora_inicio queda
+        # a las 16:00 o después (regla de negocio: última media hora antes
+        # del cierre sigue siendo reservable, aunque la duración resultante
+        # quede por debajo del mínimo normal de 2h). Antes de las 16:00 la
+        # duración sigue siendo libre entre 2 y 4 horas.
+        if hora_inicio >= hora_inicio.replace(hour=16, minute=0):
+            hora_fin = hora_inicio.replace(hour=18, minute=0)
+        else:
+            margen_horas = min(4.0, (18 * 60 - hora_inicio.hour * 60 - hora_inicio.minute) / 60.0)
+            duracion_horas = random.choice([h for h in [2, 2.5, 3, 3.5, 4] if h <= margen_horas])
+            hora_fin = (datetime.combine(hoy, hora_inicio) + timedelta(hours=duracion_horas)).time()
 
         cedula = nueva_cedula()
         nombre = nuevo_nombre()
@@ -928,9 +937,15 @@ class ProfesorRegistradoConReserva(HttpUser):
         hora_str = hora_inicio.strftime('%H:%M')
         hoy = momento_slot.date()
 
-        margen_horas = max(2.0, min(4.0, (18 * 60 - hora_inicio.hour * 60 - hora_inicio.minute) / 60.0))
-        duracion_horas = random.choice([h for h in [2, 2.5, 3, 3.5, 4] if h <= margen_horas]) if margen_horas >= 2 else 2
-        hora_fin = (momento_slot + timedelta(hours=duracion_horas)).time()
+        # Ver el comentario equivalente en EstudianteConReservaEnHora:
+        # SolicitudReserva.clean() fuerza hora_fin=18:00 (sin importar la
+        # duración) cuando hora_inicio queda a las 16:00 o después.
+        if hora_inicio >= hora_inicio.replace(hour=16, minute=0):
+            hora_fin = hora_inicio.replace(hour=18, minute=0)
+        else:
+            margen_horas = min(4.0, (18 * 60 - hora_inicio.hour * 60 - hora_inicio.minute) / 60.0)
+            duracion_horas = random.choice([h for h in [2, 2.5, 3, 3.5, 4] if h <= margen_horas])
+            hora_fin = (datetime.combine(hoy, hora_inicio) + timedelta(hours=duracion_horas)).time()
 
         cedula = nueva_cedula()
         insumo_id = obtener_insumo_id(self.client)
@@ -1010,7 +1025,15 @@ class ProfesorInvitadoConReserva(HttpUser):
         hora_inicio = momento_slot.time().replace(second=0, microsecond=0)
         hora_str = hora_inicio.strftime('%H:%M')
         hoy = momento_slot.date()
-        hora_fin = (momento_slot + timedelta(hours=random.choice([2, 3, 4]))).time()
+        # El camino reserva_libre guarda la SolicitudReserva directo (sin
+        # ProfesorSolicitudForm), así que SolicitudReserva.clean() nunca
+        # corre para este flujo y técnicamente aceptaría cualquier hora_fin
+        # — igual se respeta la misma regla de las 16:00→18:00 para que el
+        # dato reportado sea realista, no porque la app lo fuera a rechazar.
+        if hora_inicio >= hora_inicio.replace(hour=16, minute=0):
+            hora_fin = hora_inicio.replace(hour=18, minute=0)
+        else:
+            hora_fin = (momento_slot + timedelta(hours=random.choice([2, 3, 4]))).time()
 
         cedula = nueva_cedula()
         nombre = nuevo_nombre()
@@ -1092,7 +1115,13 @@ class LaboratoristaConPrestamoDirecto(HttpUser):
 
         ahora = datetime.now()
         hora_inicio = ahora.time().replace(second=0, microsecond=0)
-        hora_fin = (ahora + timedelta(hours=2)).time()
+        # /reservas/crear/ también guarda la SolicitudReserva directo (sin
+        # form), así que clean() tampoco corre acá — se aplica la misma
+        # regla de las 16:00→18:00 solo por realismo del dato reportado.
+        if hora_inicio >= hora_inicio.replace(hour=16, minute=0):
+            hora_fin = hora_inicio.replace(hour=18, minute=0)
+        else:
+            hora_fin = (ahora + timedelta(hours=2)).time()
         cedula = nueva_cedula()
         nombre = nuevo_nombre()
         insumo_id = obtener_insumo_id(self.client)
@@ -1344,7 +1373,14 @@ class CancelacionDeSolicitud(HttpUser):
         momento_slot = datetime.now() + timedelta(minutes=offset_min)
         hora_inicio = momento_slot.time().replace(second=0, microsecond=0)
         hoy = momento_slot.date()
-        hora_fin = (momento_slot + timedelta(hours=2)).time()
+        # Este flujo SÍ pasa por /solicitudes/estudiante/ (EstudianteSolicitudForm),
+        # que SÍ corre SolicitudReserva.clean() — sin esto, un hora_inicio
+        # después de las 16:00 con 2h fijas se rechazaría y la solicitud
+        # nunca llegaría a intentarse cancelar.
+        if hora_inicio >= hora_inicio.replace(hour=16, minute=0):
+            hora_fin = hora_inicio.replace(hour=18, minute=0)
+        else:
+            hora_fin = (momento_slot + timedelta(hours=2)).time()
         cedula = nueva_cedula()
 
         resp = self.client.get('/solicitudes/estudiante/', name='/solicitudes/estudiante/ [GET]')
@@ -1624,7 +1660,14 @@ class MultiplosModulosEnMismaReserva(HttpUser):
         momento_slot = datetime.now() + timedelta(minutes=offset_min)
         hora_inicio = momento_slot.time().replace(second=0, microsecond=0)
         hoy = momento_slot.date()
-        hora_fin = (momento_slot + timedelta(hours=3)).time()
+        # Este flujo también pasa por /solicitudes/profesor/ (ProfesorSolicitudForm
+        # → SÍ corre clean()); la duración no afecta la asignación de
+        # módulos en sí, así que forzar 18:00 después de las 16:00 no
+        # compromete lo que este flujo realmente quiere probar.
+        if hora_inicio >= hora_inicio.replace(hour=16, minute=0):
+            hora_fin = hora_inicio.replace(hour=18, minute=0)
+        else:
+            hora_fin = (momento_slot + timedelta(hours=3)).time()
         cedula = nueva_cedula()
 
         resp = self.client.get('/solicitudes/profesor/', name='/solicitudes/profesor/ [GET]')
