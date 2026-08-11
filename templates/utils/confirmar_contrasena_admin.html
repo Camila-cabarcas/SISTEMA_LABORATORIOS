@@ -1,0 +1,76 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white">
+                <i class="fa-solid fa-lock me-2"></i>Acción protegida — requiere contraseña admin
+            </div>
+            <div class="card-body">
+
+                {% if titulo_accion or objeto %}
+                <div class="alert alert-warning mb-4">
+                    {% if titulo_accion %}
+                    <p class="mb-1"><strong>Estás a punto de:</strong> {{ titulo_accion }}</p>
+                    {% endif %}
+                    {% if objeto %}
+                    <p class="mb-1"><strong>Objeto:</strong> {{ objeto }}</p>
+                    {% endif %}
+                    <p class="mb-0 small">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                        Esta acción no se puede deshacer.
+                    </p>
+                </div>
+                {% endif %}
+
+                <p class="text-muted mb-4">
+                    Ingresa tu contraseña admin para continuar
+                    (se pide cada vez, no queda una sesión temporal).
+                </p>
+
+                {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i>{{ error }}
+                </div>
+                {% endif %}
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    {% for clave, valor in campos_originales %}
+                    <input type="hidden" name="{{ clave }}" value="{{ valor }}">
+                    {% endfor %}
+
+                    <div class="mb-3">
+                        <label for="admin_password" class="form-label">Contraseña admin</label>
+                        <input
+                            type="password"
+                            id="admin_password"
+                            name="admin_password"
+                            class="form-control"
+                            placeholder="Ingresa tu contraseña admin"
+                            required
+                            autofocus
+                        >
+                        <small class="text-muted">
+                            No es tu contraseña de login — es la contraseña admin que configuraste aparte.
+                        </small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fa-solid fa-check me-2"></i>Verificar y confirmar
+                        </button>
+                        <a href="javascript:history.back()" class="btn btn-secondary">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

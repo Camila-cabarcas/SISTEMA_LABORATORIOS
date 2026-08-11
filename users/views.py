@@ -3,11 +3,16 @@ views.py — users
 Vistas para listar, crear, editar y desactivar usuarios del sistema (solo Administrador),
 y gestión completa de profesores (Administrador o Encargado).
 """
+import logging
+
+from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
-from users.decorators import rol_requerido
+from users.decorators import rol_requerido, requiere_contrasena_admin
 from .models import Usuario, Rol, ProgramaAcademico
 from .forms import UsuarioForm, EditarUsuarioForm, ProfesorForm, EditarProfesorForm, ProgramaAcademicoForm
+
+logger_acceso_admin = logging.getLogger('acceso_admin')
 
 
 @rol_requerido('Administrador')
@@ -82,6 +87,10 @@ def editar_usuario(request, id):
 
 
 @rol_requerido('Administrador')
+@requiere_contrasena_admin(
+    titulo_accion='Desactivar',
+    get_contexto=lambda r, *a, **kw: f"Usuario - {Usuario.objects.get(id=kw['id']).username}",
+)
 def desactivar_usuario(request, id):
 
     usuario = get_object_or_404(Usuario, id=id)
@@ -91,6 +100,7 @@ def desactivar_usuario(request, id):
         usuario.is_active = False
         usuario.save()
 
+        messages.success(request, f'Usuario "{usuario.username}" desactivado.')
         return redirect('lista_usuarios')
 
     return render(
@@ -104,6 +114,35 @@ def desactivar_usuario(request, id):
 
 def sin_permiso(request):
     return render(request, 'users/sin_permiso.html')
+
+
+@rol_requerido('Administrador', 'Laboratorio')
+def cambiar_contrasena_admin(request):
+    """
+    Permite crear o cambiar la contraseña admin (distinta de la de login).
+    Exige la contraseña de login actual para confirmar identidad antes de
+    guardar la nueva contraseña admin.
+    """
+    if request.method == 'POST':
+        password_login = request.POST.get('password_login', '')
+        password_admin_nueva = request.POST.get('password_admin_nueva', '')
+        password_admin_confirma = request.POST.get('password_admin_confirma', '')
+
+        if not request.user.check_password(password_login):
+            messages.error(request, 'Contraseña de login incorrecta.')
+        elif password_admin_nueva != password_admin_confirma:
+            messages.error(request, 'Las contraseñas admin no coinciden.')
+        elif len(password_admin_nueva) < 8:
+            messages.error(request, 'La contraseña admin debe tener mínimo 8 caracteres.')
+        else:
+            request.user.set_admin_password(password_admin_nueva)
+            logger_acceso_admin.info(
+                '%s configuró/cambió su contraseña admin', request.user.username,
+            )
+            messages.success(request, 'Contraseña admin actualizada correctamente.')
+            return redirect('cambiar_contrasena_admin')
+
+    return render(request, 'users/cambiar_contrasena_admin.html')
 
 
 # ── Gestión de profesores ────────────────────────────────────────────────────
@@ -238,6 +277,10 @@ def editar_programa(request, id):
 
 
 @rol_requerido('Administrador')
+@requiere_contrasena_admin(
+    titulo_accion='Eliminar',
+    get_contexto=lambda r, *a, **kw: f"Programa - {ProgramaAcademico.objects.get(id=kw['id']).nombre}",
+)
 def eliminar_programa(request, id):
     from solicitudes.models import SolicitudReserva, SolicitudRegistroProfesor
     programa = get_object_or_404(ProgramaAcademico, id=id)
@@ -248,7 +291,9 @@ def eliminar_programa(request, id):
                 SolicitudRegistroProfesor.objects.filter(programa=programa.nombre).exists()):
             error = 'No se puede eliminar: hay registros vinculados a este programa.'
         else:
+            nombre = programa.nombre
             programa.delete()
+            messages.success(request, f'Programa "{nombre}" eliminado.')
             return redirect('lista_programas')
     return render(request, 'programas/confirmar_eliminar_programa.html', {
         'programa': programa,

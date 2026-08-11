@@ -39,10 +39,12 @@ class Command(BaseCommand):
         from users.models import Usuario, Rol
         from solicitudes.models import Curso
 
+        # Obtener datos base
         laboratorio = Laboratorio.objects.get(nombre='Laboratorio E2E')
         insumo = Insumo.objects.get(nombre='Insumo E2E')
         admin = Usuario.objects.get(username='e2e_admin')
 
+        # Crear/asegurar profesor registrado
         rol_docente = Rol.objects.get(nombre='Docente')
         profesor, _ = Usuario.objects.get_or_create(
             username='e2e_profesor',
@@ -61,6 +63,7 @@ class Command(BaseCommand):
         profesor.set_password('E2eProfesor!2026')
         profesor.save()
 
+        # Crear curso para el profesor
         Curso.objects.get_or_create(
             codigo='CURSO-E2E-101',
             defaults={
@@ -70,6 +73,7 @@ class Command(BaseCommand):
             }
         )
 
+        # Crear módulos en diferentes zonas
         zonas = ['izquierda', 'centro-top', 'centro-mid', 'centro-bot', 'derecha', 'inferior']
         for i, zona in enumerate(zonas, start=1):
             Modulo.objects.get_or_create(
@@ -78,6 +82,7 @@ class Command(BaseCommand):
                 defaults={'capacidad': 4, 'disponible': True, 'zona': zona}
             )
 
+        # Crear reservas de prueba
         estado_pendiente = EstadoReserva.objects.get(nombre='Pendiente')
         reserva_aprobar, _ = Reserva.objects.get_or_create(
             codigo='LOCUST-RESERVA-APROBAR',
@@ -90,6 +95,7 @@ class Command(BaseCommand):
             defaults={'fecha_reserva': timezone.now(), 'estado': estado_aprobada}
         )
 
+        # Crear préstamo de prueba
         estado_activo_prestamo = EstadoPrestamo.objects.get(nombre='Activo')
         prestamo, prestamo_creado = Prestamo.objects.get_or_create(
             codigo='LOCUST-PRESTAMO',
@@ -102,16 +108,21 @@ class Command(BaseCommand):
 
         if prestamo_creado:
             item = ItemInventario.objects.filter(insumo=insumo).first()
-            PrestamoItem.objects.create(prestamo=prestamo, item_inventario=item)
+            if item:
+                PrestamoItem.objects.create(prestamo=prestamo, item_inventario=item)
 
-        # seed_e2e solo crea 3 ítems (pensados para la suite Cypress, que
-        # nunca presta más de uno a la vez). Los flujos v3 de locustfile.py
-        # que sí enlazan insumos a la reserva (para poder inspeccionar
-        # ítems reales) comparten este mismo pool entre TODOS los usuarios
-        # virtuales concurrentes — con solo 3 se agota casi de inmediato
-        # bajo carga. Se añaden más, con código propio, sin tocar el seed
-        # que usa Cypress.
-        estado_disponible = ItemInventario.objects.filter(insumo=insumo).first().estado
+        # ✅ ARREGLADO: Verificar que existe item antes de acceder a .estado
+        item = ItemInventario.objects.filter(insumo=insumo).first()
+        if item:
+            estado_disponible = item.estado
+        else:
+            # Si no hay items, usar estado por defecto
+            from inventario.models import EstadoItem
+            estado_disponible = EstadoItem.objects.get(nombre='Disponible')
+
+        # Crear ítems adicionales para pruebas de carga
+        # seed_e2e solo crea 3 ítems (pensados para la suite Cypress)
+        # Bajo carga con múltiples usuarios concurrentes se agotan rápido
         for i in range(1, 26):
             ItemInventario.objects.get_or_create(
                 codigo=f'LOCUST-ITEM-{i:03d}',
@@ -122,6 +133,7 @@ class Command(BaseCommand):
                 }
             )
 
+        # Imprimir variables de entorno
         self.stdout.write(self.style.SUCCESS(
             'Datos de carga listos. Variables de entorno para locustfile.py '
             '(los valores mostrados son también los defaults del archivo):\n'

@@ -93,5 +93,13 @@ AUTH_USER_MODEL = 'users.Usuario'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 
+# El tag por defecto de messages.error() es 'error', pero Bootstrap no
+# tiene una clase alert-error — la mapeamos a alert-danger para que
+# {{ message.tags }} en base_general.html produzca una clase real.
+from django.contrib.messages import constants as message_constants
+MESSAGE_TAGS = {
+    message_constants.ERROR: 'danger',
+}
+
 from .logging_config import LOGGING
 

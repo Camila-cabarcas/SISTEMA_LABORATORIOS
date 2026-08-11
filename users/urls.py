@@ -9,6 +9,7 @@ from .views import (
     editar_usuario,
     desactivar_usuario,
     sin_permiso,
+    cambiar_contrasena_admin,
     lista_profesores,
     crear_profesor,
     detalle_profesor,
@@ -26,6 +27,7 @@ urlpatterns = [
     path('<int:id>/editar/', editar_usuario, name='editar_usuario'),
     path('<int:id>/desactivar/', desactivar_usuario, name='desactivar_usuario'),
     path('sin-permiso/', sin_permiso, name='sin_permiso'),
+    path('cambiar-contrasena-admin/', cambiar_contrasena_admin, name='cambiar_contrasena_admin'),
     # Profesores
     path('profesores/', lista_profesores, name='lista_profesores'),
     path('profesores/crear/', crear_profesor, name='crear_profesor'),

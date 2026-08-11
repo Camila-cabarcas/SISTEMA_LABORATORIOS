@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile users/decorators.py users/views.py solicitudes/views.py inventario/views.py config/settings.py)",
+      "Bash(python manage.py shell -c ' *)"
+    ]
+  }
+}

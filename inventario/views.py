@@ -3,8 +3,9 @@ views.py — inventario
 Vistas para gestionar insumos, ítems físicos, movimientos de inventario e historial por ítem.
 """
 from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.db.models import Count, Q
-from users.decorators import rol_requerido
+from users.decorators import rol_requerido, requiere_contrasena_admin
 
 from .models import (
     Insumo,
@@ -64,10 +65,16 @@ def inicio(request):
 
 
 @rol_requerido('Administrador')
+@requiere_contrasena_admin(
+    titulo_accion='Eliminar',
+    get_contexto=lambda r, *a, **kw: f"Insumo - {Insumo.objects.get(id=kw['id']).nombre}",
+)
 def eliminar_insumo(request, id):
 
     insumo = Insumo.objects.get(id=id)
+    nombre = insumo.nombre
     insumo.delete()
+    messages.success(request, f'Insumo "{nombre}" eliminado.')
     return redirect('/inventario/')
 
 

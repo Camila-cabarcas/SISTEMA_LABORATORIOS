@@ -3,12 +3,13 @@ views.py — solicitudes
 Vistas públicas de solicitud para estudiante y profesor, APIs de insumos y cursos, y página de confirmación.
 """
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from users.models import Usuario, ProgramaAcademico
-from users.decorators import rol_requerido
+from users.decorators import rol_requerido, requiere_contrasena_admin
 from inventario.models import Insumo
 from .models import SolicitudReserva, Curso, SolicitudInsumo, SolicitudRegistroProfesor, SolicitudRegistroCurso
 from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm, CursoForm
@@ -527,9 +528,15 @@ def editar_curso(request, id):
 
 
 @rol_requerido('Administrador', 'Laboratorio')
+@requiere_contrasena_admin(
+    titulo_accion='Eliminar',
+    get_contexto=lambda r, *a, **kw: f"Curso - {Curso.objects.get(id=kw['id']).nombre}",
+)
 def eliminar_curso(request, id):
     curso = get_object_or_404(Curso, id=id)
     if request.method == 'POST':
+        nombre = curso.nombre
         curso.delete()
+        messages.success(request, f'Curso "{nombre}" eliminado.')
         return redirect('lista_cursos')
     return render(request, 'solicitudes/eliminar_curso.html', {'curso': curso})

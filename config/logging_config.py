@@ -29,9 +29,28 @@ LOGGING = {
             'formatter': 'estandar',
             'encoding': 'utf-8',
         },
+        # Auditoría separada del control de acceso con contraseña admin
+        # (users.decorators.requiere_contrasena_admin) — en su propio
+        # archivo para no mezclarse con el log general de la app.
+        'acceso_admin_archivo': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'acceso_admin.log',
+            'maxBytes': 10 * 1024 * 1024,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'estandar',
+            'encoding': 'utf-8',
+        },
     },
     'root': {
         'handlers': ['archivo'],
         'level': 'INFO',
+    },
+    'loggers': {
+        'acceso_admin': {
+            'handlers': ['acceso_admin_archivo'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }

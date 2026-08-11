@@ -1,0 +1,90 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="fa-solid fa-key me-2"></i>Cambiar contraseña admin
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Esta contraseña se usa para confirmar acciones administrativas sensibles
+                    (eliminar, desactivar, etc.). Es distinta de tu contraseña de login.
+                </p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}" role="alert">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% if user.tiene_admin_password %}
+                <p class="small text-muted">
+                    <i class="fa-solid fa-circle-check text-success me-1"></i>
+                    Ya tienes una contraseña admin configurada — este formulario la reemplaza.
+                </p>
+                {% else %}
+                <p class="small text-muted">
+                    <i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>
+                    Todavía no configuras una contraseña admin.
+                </p>
+                {% endif %}
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="password_login" class="form-label">Contraseña de login (actual)</label>
+                        <input
+                            type="password"
+                            id="password_login"
+                            name="password_login"
+                            class="form-control"
+                            placeholder="Tu contraseña de login"
+                            required
+                        >
+                        <small class="text-muted">Requerida para confirmar tu identidad.</small>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <label for="password_admin_nueva" class="form-label">Nueva contraseña admin</label>
+                        <input
+                            type="password"
+                            id="password_admin_nueva"
+                            name="password_admin_nueva"
+                            class="form-control"
+                            placeholder="Mínimo 8 caracteres"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password_admin_confirma" class="form-label">Confirmar contraseña admin</label>
+                        <input
+                            type="password"
+                            id="password_admin_confirma"
+                            name="password_admin_confirma"
+                            class="form-control"
+                            placeholder="Repite la nueva contraseña admin"
+                            required
+                        >
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save me-2"></i>Guardar contraseña admin
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
