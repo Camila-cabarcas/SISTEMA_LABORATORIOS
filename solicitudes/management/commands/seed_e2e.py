@@ -38,7 +38,7 @@ class Command(BaseCommand):
         for nombre in ['Activo', 'En Inspección', 'Devuelto', 'Retrasado']:
             EstadoPrestamo.objects.get_or_create(nombre=nombre)
 
-        for nombre in ['Disponible', 'Prestado', 'Dañado', 'Mantenimiento', 'Baja']:
+        for nombre in ['Disponible', 'Prestado', 'Dañado', 'Mantenimiento', 'Baja', 'Perdido']:
             EstadoItem.objects.get_or_create(nombre=nombre)
 
         estado_activo_insumo, _ = EstadoInsumo.objects.get_or_create(nombre='Activo')

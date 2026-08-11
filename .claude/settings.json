@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(python -m py_compile users/decorators.py users/views.py solicitudes/views.py inventario/views.py config/settings.py)",
-      "Bash(python manage.py shell -c ' *)"
+      "Bash(python manage.py shell -c ' *)",
+      "Bash(python -m py_compile inventario/migrations/0005_estadoitem_perdido.py prestamos/services/inspeccionar_prestamo_service.py solicitudes/management/commands/seed_e2e.py)",
+      "Bash(python manage.py migrate inventario)",
+      "Bash(python manage.py test prestamos -v 2)",
+      "Bash(python manage.py test)"
     ]
   }
 }

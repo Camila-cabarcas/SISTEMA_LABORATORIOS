@@ -75,6 +75,7 @@ class FinalizarInspeccionService:
 
             estado_disponible = EstadoItem.objects.filter(nombre='Disponible').first()
             estado_danado = EstadoItem.objects.filter(nombre='Dañado').first()
+            estado_perdido = EstadoItem.objects.filter(nombre='Perdido').first()
 
             for inspeccion in inspecciones:
                 item_inventario = inspeccion.prestamo_item.item_inventario
@@ -84,7 +85,14 @@ class FinalizarInspeccionService:
                 elif inspeccion.estado_inspeccion == 'danado' and estado_danado:
                     item_inventario.estado = estado_danado
                     item_inventario.save()
-                # no_entregado: sin cambio de estado
+                elif inspeccion.estado_inspeccion == 'no_entregado' and estado_perdido:
+                    item_inventario.estado = estado_perdido
+                    item_inventario.save()
+                    logger.info(
+                        f"FinalizarInspeccionService.finalizar | "
+                        f"item {item_inventario.codigo} marcado como Perdido | "
+                        f"prestamo_id={prestamo_id}"
+                    )
 
             prestamo.estado = EstadoPrestamo.objects.get(nombre='Devuelto')
             prestamo.fecha_devolucion = timezone.now()
