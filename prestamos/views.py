@@ -178,7 +178,7 @@ def crear_prestamo(request, reserva_id):
     items_por_insumo = {}
 
     for ri in insumos_reserva:
-        items_disponibles = ItemInventario.objects.filter(
+        items_disponibles = ItemInventario.activos.filter(
             insumo=ri.insumo,
             estado__nombre='Disponible'
         )
@@ -192,10 +192,15 @@ def crear_prestamo(request, reserva_id):
             estado=EstadoPrestamo.objects.get(nombre='Activo')
         )
 
-        # Guardar los ítems seleccionados
+        # Guardar los ítems seleccionados. .activos (no .objects): un ítem
+        # soft-deleted no debe poder prestarse aunque alguien arme el POST
+        # a mano con su id — el formulario ya no lo ofrece, pero esto lo
+        # bloquea también a ese nivel.
         items_seleccionados = request.POST.getlist('items')
         for item_id in items_seleccionados:
-            item = ItemInventario.objects.get(id=item_id)
+            item = ItemInventario.activos.filter(id=item_id).first()
+            if not item:
+                continue
             PrestamoItem.objects.create(
                 prestamo=prestamo,
                 item_inventario=item

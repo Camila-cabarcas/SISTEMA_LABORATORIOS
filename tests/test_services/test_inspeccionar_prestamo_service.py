@@ -33,7 +33,6 @@ def test_iniciar_inspeccion_crea_items(reserva_con_prestamo, usuario_admin):
     inspecciones = InspeccionItem.objects.filter(prestamo=reserva_con_prestamo.prestamo)
     assert inspecciones.count() == 1
     
-    # AQUÍ: Verificar primero que existe
     inspeccion = inspecciones.first()
     assert inspeccion is not None  # ← Agregá esto
     assert inspeccion.prestamo_item_id == reserva_con_prestamo.prestamo_item.id
@@ -92,12 +91,14 @@ def test_finalizar_actualiza_estado_danado(reserva_con_prestamo, usuario_admin):
     assert reserva_con_prestamo.item.estado.nombre == 'Dañado'
 
 
-def test_finalizar_no_entregado_sin_cambio(reserva_con_prestamo, usuario_admin):
+def test_finalizar_no_entregado_marca_perdido(reserva_con_prestamo, usuario_admin):
+    """Antes, 'no_entregado' no cambiaba el estado del ítem (bug encontrado
+    con Locust); ahora debe quedar en 'Perdido' — ver
+    inspeccionar_prestamo_service.py y la migración 0005_estadoitem_perdido."""
     InspeccionarPrestamoService().iniciar_inspeccion(
         prestamo_id=reserva_con_prestamo.prestamo.id,
         usuario=usuario_admin,
     )
-    estado_previo_id = reserva_con_prestamo.item.estado_id
     InspeccionItem.objects.filter(prestamo=reserva_con_prestamo.prestamo).update(
         estado_inspeccion='no_entregado'
     )
@@ -105,7 +106,7 @@ def test_finalizar_no_entregado_sin_cambio(reserva_con_prestamo, usuario_admin):
     FinalizarInspeccionService().finalizar(prestamo_id=reserva_con_prestamo.prestamo.id)
 
     reserva_con_prestamo.item.refresh_from_db()
-    assert reserva_con_prestamo.item.estado_id == estado_previo_id
+    assert reserva_con_prestamo.item.estado.nombre == 'Perdido'
 
 
 def test_finalizar_marca_devuelto(reserva_con_prestamo, usuario_admin):

@@ -6,11 +6,67 @@
     Historial del Ítem: {{ item.codigo }}
 </h1>
 
+{% if item.is_deleted %}
+<div class="alert alert-warning">
+    <i class="fa-solid fa-trash me-2"></i>
+    <strong>Este ítem fue marcado como eliminado el:</strong>
+    {{ item.deleted_at|date:"d/m/Y H:i" }}
+</div>
+{% endif %}
+
 <div class="card p-4 mb-4">
     <h5>Información del ítem</h5>
     <p><strong>Insumo:</strong> {{ item.insumo.nombre }}</p>
     <p><strong>Estado actual:</strong> {{ item.estado.nombre }}</p>
     <p><strong>Fecha registro:</strong> {{ item.fecha_registro }}</p>
+</div>
+
+<div class="card p-4 mb-4">
+
+    <h2>Préstamos e inspecciones</h2>
+
+    {% if prestamos %}
+
+    <table class="table table-striped">
+
+        <thead>
+            <tr>
+                <th>Préstamo</th>
+                <th>Fecha de entrega</th>
+                <th>Estado del préstamo</th>
+                <th>Resultado de inspección</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for prestamo_item in prestamos %}
+            {% with inspeccion=prestamo_item.inspecciones.first %}
+            <tr>
+                <td>
+                    <a href="/prestamos/{{ prestamo_item.prestamo.id }}/">
+                        {{ prestamo_item.prestamo.codigo }}
+                    </a>
+                </td>
+                <td>{{ prestamo_item.prestamo.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                <td>{{ prestamo_item.prestamo.estado.nombre }}</td>
+                <td>
+                    {% if inspeccion %}
+                        <span class="badge bg-info">{{ inspeccion.get_estado_inspeccion_display }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Sin inspeccionar</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+    {% else %}
+    <p class="text-muted">Este ítem no tiene préstamos registrados.</p>
+    {% endif %}
+
 </div>
 
 <div class="card p-4">

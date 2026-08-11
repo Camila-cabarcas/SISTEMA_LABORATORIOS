@@ -6,7 +6,15 @@
       "Bash(python -m py_compile inventario/migrations/0005_estadoitem_perdido.py prestamos/services/inspeccionar_prestamo_service.py solicitudes/management/commands/seed_e2e.py)",
       "Bash(python manage.py migrate inventario)",
       "Bash(python manage.py test prestamos -v 2)",
-      "Bash(python manage.py test)"
+      "Bash(python manage.py test)",
+      "Bash(python -m py_compile inventario/views.py inventario/urls.py inventario/tests.py)",
+      "Bash(python manage.py test inventario -v 2)",
+      "Bash(python -m pytest tests/ -v)",
+      "Bash(python -m pytest tests/)",
+      "Bash(rm inventario/migrations/0006_iteminventario_deleted_at.py)",
+      "Bash(python manage.py makemigrations inventario)",
+      "Bash(python -m py_compile inventario/models.py inventario/views.py inventario/migrations/0006_iteminventario_deleted_at.py prestamos/forms.py prestamos/views.py solicitudes/views.py laboratorio/views.py config/views.py)",
+      "Bash(python -m py_compile inventario/tests.py)"
     ]
   }
 }

@@ -2,10 +2,14 @@
 views.py — inventario
 Vistas para gestionar insumos, ítems físicos, movimientos de inventario e historial por ítem.
 """
-from django.shortcuts import render, redirect
+import logging
+
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Count, Q
 from users.decorators import rol_requerido, requiere_contrasena_admin
+
+logger_acceso_admin = logging.getLogger('acceso_admin')
 
 from .models import (
     Insumo,
@@ -39,7 +43,7 @@ def inicio(request):
     insumos = Insumo.objects.select_related('estado').annotate(
         cantidad_disponible_count=Count(
             'items',
-            filter=Q(items__estado__nombre='Disponible')
+            filter=Q(items__estado__nombre='Disponible', items__deleted_at__isnull=True)
         )
     )
 
@@ -121,7 +125,7 @@ def items_inventario(request):
     else:
         form = ItemInventarioForm()
 
-    items = ItemInventario.objects.all()
+    items = ItemInventario.activos.all()
 
     return render(
         request,
@@ -195,18 +199,62 @@ def editar_item(request, id):
 
 @rol_requerido('Administrador', 'Laboratorio')
 def historial_item(request, id):
+    # .objects (no .activos): un ítem eliminado (soft-delete) debe seguir
+    # siendo consultable acá — ese es justamente el punto de no borrarlo de
+    # verdad.
+    item = get_object_or_404(ItemInventario, id=id)
 
-    item = ItemInventario.objects.get(id=id)
+    prestamos = item.prestamoitem_set.select_related(
+        'prestamo', 'prestamo__estado'
+    ).prefetch_related('inspecciones').order_by('-id')
 
     movimientos = MovimientoInventario.objects.filter(
         item_inventario=item
-    ).order_by('-fecha')
+    ).select_related('tipo_movimiento').order_by('-fecha')
 
     return render(
         request,
         'inventario/historial_item.html',
         {
             'item': item,
-            'movimientos': movimientos
+            'prestamos': prestamos,
+            'movimientos': movimientos,
         }
     )
+
+
+# requiere_contrasena_admin ya exige estar autenticado y tener rol
+# Administrador/Laboratorio (ver users/decorators.py) — no hace falta
+# apilar rol_requerido encima, a diferencia de eliminar_insumo, que ya
+# traía su propio rol_requerido de antes y se dejó tal cual.
+@requiere_contrasena_admin(
+    titulo_accion='Eliminar',
+    get_contexto=lambda r, *a, **kw: f"Item - {ItemInventario.objects.get(id=kw['id']).codigo}",
+)
+def eliminar_item_inventario(request, id):
+    """
+    Soft-delete de un ItemInventario: marca deleted_at en vez de borrar la
+    fila. PrestamoItem/MovimientoInventario/InspeccionItem cuelgan de este
+    ítem con on_delete=CASCADE — un delete() de verdad se llevaría por
+    delante el historial de préstamos e inspecciones de este ítem
+    específico, no solo el ítem. El soft-delete evita eso: el ítem
+    desaparece de las listas y de la selección para nuevos préstamos, pero
+    su historial sigue accesible en historial_item.
+    """
+    item = get_object_or_404(ItemInventario, id=id)
+
+    if item.is_deleted():
+        messages.info(request, f'Item "{item.codigo}" ya estaba eliminado.')
+        return redirect('/inventario/items/')
+
+    codigo = item.codigo
+    insumo = item.insumo.nombre
+
+    item.soft_delete()
+
+    logger_acceso_admin.info(
+        'Admin %s marcó como eliminado el item %s (%s)', request.user.username, codigo, insumo,
+    )
+
+    messages.success(request, f'Item "{codigo}" eliminado correctamente.')
+    return redirect('/inventario/items/')

@@ -452,7 +452,7 @@ def buscar_insumos(request):
         estado_disponible = EstadoItem.objects.filter(nombre='Disponible').first()
         cantidad_disponible = 0
         if estado_disponible:
-            cantidad_disponible = ItemInventario.objects.filter(
+            cantidad_disponible = ItemInventario.activos.filter(
                 insumo=i, estado=estado_disponible
             ).count()
 

@@ -27,7 +27,7 @@ def catalogos(db):
         EstadoReserva.objects.get_or_create(nombre=nombre)
     for nombre in ['Activo', 'En Inspección', 'Devuelto', 'Retrasado']:
         EstadoPrestamo.objects.get_or_create(nombre=nombre)
-    for nombre in ['Disponible', 'Prestado', 'Dañado']:
+    for nombre in ['Disponible', 'Prestado', 'Dañado', 'Perdido']:
         EstadoItem.objects.get_or_create(nombre=nombre)
     for nombre in ['Prestado', 'Devuelto']:
         TipoMovimiento.objects.get_or_create(nombre=nombre)

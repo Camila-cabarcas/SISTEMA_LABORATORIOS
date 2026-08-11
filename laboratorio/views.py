@@ -93,7 +93,7 @@ def crear_laboratorio(request):
 def detalle_laboratorio(request, id):
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
-    items = ItemInventario.objects.filter(laboratorio=laboratorio)
+    items = ItemInventario.activos.filter(laboratorio=laboratorio)
     is_admin = request.user.rol.nombre == 'Administrador'
 
     cuenta_lab          = laboratorio.encargados.filter(username__startswith='lab_').first()

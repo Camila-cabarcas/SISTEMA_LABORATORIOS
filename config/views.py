@@ -13,9 +13,9 @@ def dashboard(request):
     rol = request.user.rol.nombre if request.user.rol else None
 
     if rol == 'Administrador':
-        context['total_items'] = ItemInventario.objects.count()
-        context['items_disponibles'] = ItemInventario.objects.filter(estado__nombre='Disponible').count()
-        context['items_prestados'] = ItemInventario.objects.filter(estado__nombre='Prestado').count()
+        context['total_items'] = ItemInventario.activos.count()
+        context['items_disponibles'] = ItemInventario.activos.filter(estado__nombre='Disponible').count()
+        context['items_prestados'] = ItemInventario.activos.filter(estado__nombre='Prestado').count()
         context['prestamos_activos'] = Prestamo.objects.filter(estado__nombre='Activo').count()
         context['reservas_pendientes'] = Reserva.objects.filter(estado__nombre='Pendiente').count()
         context['alertas_stock'] = [

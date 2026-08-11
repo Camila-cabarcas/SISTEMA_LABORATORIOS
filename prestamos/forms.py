@@ -60,6 +60,6 @@ class PrestamoItemForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['item_inventario'].queryset = ItemInventario.objects.filter(
+        self.fields['item_inventario'].queryset = ItemInventario.activos.filter(
             estado__nombre='Disponible'
         )
