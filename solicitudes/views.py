@@ -2,6 +2,8 @@
 views.py — solicitudes
 Vistas públicas de solicitud para estudiante y profesor, APIs de insumos y cursos, y página de confirmación.
 """
+import logging
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,37 +13,28 @@ from django.db.models import Q
 from users.models import Usuario, ProgramaAcademico
 from users.decorators import rol_requerido, requiere_contrasena_admin
 from inventario.models import Insumo
-from .models import SolicitudReserva, Curso, SolicitudInsumo, SolicitudRegistroProfesor, SolicitudRegistroCurso
+from .models import SolicitudReserva, Curso, SolicitudRegistroProfesor
 from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm, CursoForm
+from .services.solicitud_reserva_service import CrearSolicitudReservaService, ValidarSolicitudReservaService
+from .services.registro_profesor_service import (
+    AprobarCursoService,
+    AprobarSolicitudRegistroProfesorService,
+    CrearSolicitudRegistroProfesorService,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def solicitud_estudiante(request):
     if request.method == 'POST':
         form = EstudianteSolicitudForm(None, request.POST)
         if form.is_valid():
-            solicitud = form.save()
-
-            if solicitud.necesita_modulo:
-                from laboratorio.models import Modulo
-                ids = [
-                    int(x) for x in request.POST.get('modulos_ids', '').split(',')
-                    if x.strip().isdigit()
-                ]
-                if ids:
-                    modulos = Modulo.objects.filter(
-                        id__in=ids[:1],
-                        laboratorio=solicitud.laboratorio,
-                        disponible=True,
-                    )
-                    solicitud.modulos_asignados.set(modulos)
-
-            try:
-                reserva = solicitud.crear_reserva()
-            except Exception as e:
-                print(f"Error creando reserva: {e}")
+            CrearSolicitudReservaService.crear_desde_estudiante(
+                form, modulos_ids_str=request.POST.get('modulos_ids', ''),
+            )
             return redirect('/solicitudes/exitosa/?tipo=estudiante')
         else:
-            print(f"DEBUG: form inválido, errores={form.errors}")
+            logger.debug("solicitud_estudiante | form inválido | errores=%s", form.errors)
     else:
         form = EstudianteSolicitudForm(None)
 
@@ -54,125 +47,44 @@ def solicitud_profesor(request):
         es_libre = request.POST.get('reserva_libre') == '1'
 
         if es_libre:
-            from laboratorio.models import Laboratorio, Modulo
-            from datetime import datetime as dt
-
-            nombre          = request.POST.get('nombre', '').strip()
-            cedula          = request.POST.get('cedula', '').strip()
-            nombre_grupo    = request.POST.get('nombre_grupo', '').strip()
-            cantidad_str    = request.POST.get('cantidad_asistentes', '').strip()
-            descripcion     = request.POST.get('descripcion_actividad', '').strip()
-            lab_id          = request.POST.get('laboratorio', '')
-            fecha_str       = request.POST.get('fecha_reserva', '')
-            hora_ini_str    = request.POST.get('hora_inicio', '')
-            hora_fin_str    = request.POST.get('hora_fin', '')
-            observaciones   = request.POST.get('observaciones', '')
-            necesita_modulo = request.POST.get('necesita_modulo') == 'on'
+            datos_libres = dict(
+                nombre=request.POST.get('nombre', '').strip(),
+                cedula=request.POST.get('cedula', '').strip(),
+                nombre_grupo=request.POST.get('nombre_grupo', '').strip(),
+                cantidad_asistentes_str=request.POST.get('cantidad_asistentes', '').strip(),
+                descripcion=request.POST.get('descripcion_actividad', '').strip(),
+                laboratorio_id=request.POST.get('laboratorio', ''),
+                fecha_str=request.POST.get('fecha_reserva', ''),
+                hora_inicio_str=request.POST.get('hora_inicio', ''),
+                hora_fin_str=request.POST.get('hora_fin', ''),
+                observaciones=request.POST.get('observaciones', ''),
+                necesita_modulo=request.POST.get('necesita_modulo') == 'on',
+                modulos_ids_str=request.POST.get('modulos_ids', ''),
+                insumos_ids_str=request.POST.get('insumos_ids', ''),
+                insumos_cantidades_str=request.POST.get('insumos_cantidades', ''),
+            )
 
             errores_libres = []
-
-            if not nombre:
-                errores_libres.append('El nombre del profesor es requerido.')
-            if not cedula or not cedula.isdigit():
-                errores_libres.append('La cédula es requerida y debe contener solo números.')
-            if not nombre_grupo:
-                errores_libres.append('El nombre del grupo o actividad es requerido.')
-            if not cantidad_str or not cantidad_str.isdigit() or int(cantidad_str) < 1:
-                errores_libres.append('La cantidad de asistentes debe ser un número positivo.')
-            if not descripcion:
-                errores_libres.append('La descripción de la actividad es requerida.')
-            if not lab_id:
-                errores_libres.append('Selecciona un laboratorio.')
-            if not fecha_str:
-                errores_libres.append('Selecciona una fecha.')
+            try:
+                ValidarSolicitudReservaService.validar(
+                    nombre=datos_libres['nombre'],
+                    cedula=datos_libres['cedula'],
+                    nombre_grupo=datos_libres['nombre_grupo'],
+                    cantidad_asistentes_str=datos_libres['cantidad_asistentes_str'],
+                    descripcion=datos_libres['descripcion'],
+                    laboratorio_id=datos_libres['laboratorio_id'],
+                    fecha_str=datos_libres['fecha_str'],
+                    hora_inicio_str=datos_libres['hora_inicio_str'],
+                    hora_fin_str=datos_libres['hora_fin_str'],
+                )
+            except ValidationError as e:
+                errores_libres = list(e.messages)
             else:
-                from datetime import datetime as _dt_check
                 try:
-                    if _dt_check.strptime(fecha_str, '%Y-%m-%d').date() < _dt_check.now().date():
-                        errores_libres.append('La fecha de reserva no puede ser anterior a hoy.')
-                except ValueError:
-                    errores_libres.append('Fecha inválida.')
-            if not hora_ini_str:
-                errores_libres.append('Selecciona la hora de inicio.')
-            if not hora_fin_str:
-                errores_libres.append('Selecciona la hora de fin.')
-
-            if not errores_libres:
-                try:
-                    laboratorio     = Laboratorio.objects.get(id=int(lab_id))
-                    fecha_dt        = dt.strptime(fecha_str, '%Y-%m-%d')
-                    hora_inicio_obj = dt.strptime(hora_ini_str, '%H:%M').time()
-                    hora_fin_obj    = dt.strptime(hora_fin_str, '%H:%M').time()
-                    cantidad        = int(cantidad_str)
-
-                    from django.db.models import Q
-                    partes = nombre.split()
-                    query = Q()
-                    for p in partes:
-                        query |= (Q(first_name__icontains=p) |
-                                  Q(last_name__icontains=p)  |
-                                  Q(username__icontains=p))
-                    usuario = Usuario.objects.filter(query, rol__nombre='Docente').first()
-
-                    solicitud = SolicitudReserva(
-                        tipo_solicitante='profesor',
-                        nombre=nombre,
-                        cedula=cedula,
-                        programa=nombre_grupo,
-                        reserva_libre=True,
-                        descripcion_actividad=descripcion,
-                        cantidad_asistentes_libre=cantidad,
-                        laboratorio=laboratorio,
-                        fecha_reserva=fecha_dt,
-                        hora_inicio=hora_inicio_obj,
-                        hora_fin=hora_fin_obj,
-                        necesita_modulo=necesita_modulo,
-                        observaciones=observaciones,
-                        usuario=usuario,
-                    )
-                    solicitud.save()
-
-                    if necesita_modulo:
-                        modulos_ids_str = request.POST.get('modulos_ids', '')
-                        if modulos_ids_str:
-                            modulos_ids = [
-                                int(x) for x in modulos_ids_str.split(',')
-                                if x.strip().isdigit()
-                            ]
-                            modulos = Modulo.objects.filter(
-                                id__in=modulos_ids,
-                                laboratorio=laboratorio,
-                                disponible=True,
-                            )
-                        else:
-                            modulos = Modulo.objects.filter(
-                                laboratorio=laboratorio,
-                                disponible=True
-                            )[:cantidad]
-                        solicitud.modulos_asignados.set(modulos)
-
-                    ids_str       = request.POST.get('insumos_ids', '')
-                    cantidades_str = request.POST.get('insumos_cantidades', '')
-                    if ids_str:
-                        from inventario.models import Insumo as InsumoModel
-                        ids       = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
-                        cantidades = [int(x) for x in cantidades_str.split(',') if x.strip().isdigit()]
-                        for insumo_id, cant in zip(ids, cantidades):
-                            try:
-                                insumo_obj = InsumoModel.objects.get(id=insumo_id)
-                                SolicitudInsumo.objects.create(
-                                    solicitud=solicitud,
-                                    insumo=insumo_obj,
-                                    cantidad=cant
-                                )
-                            except InsumoModel.DoesNotExist:
-                                pass
-
-                    solicitud.crear_reserva()
+                    CrearSolicitudReservaService.crear_libre(**datos_libres)
                     return redirect('/solicitudes/exitosa/?tipo=profesor')
-
                 except Exception as e:
-                    errores_libres.append(f'Error al procesar la solicitud: {e}')
+                    errores_libres = [f'Error al procesar la solicitud: {e}']
 
             programas = ProgramaAcademico.objects.filter(activo=True)
             return render(request, 'solicitudes/profesor.html', {
@@ -187,11 +99,7 @@ def solicitud_profesor(request):
             form = ProfesorSolicitudForm(request.POST)
             if form.is_valid():
                 try:
-                    solicitud = form.save()
-                    try:
-                        solicitud.crear_reserva()
-                    except Exception as e:
-                        print(f"ERROR crear_reserva profesor: {e}")
+                    CrearSolicitudReservaService.crear_desde_profesor(form)
                     return redirect('/solicitudes/exitosa/?tipo=profesor')
                 except ValidationError as e:
                     form.add_error(None, e.message if hasattr(e, 'message') else str(e))
@@ -275,72 +183,20 @@ def registro_profesor_publico(request):
     if request.method == 'POST':
         post_data = request.POST
 
-        nombre   = request.POST.get('nombre', '').strip()
-        apellido = request.POST.get('apellido', '').strip()
-        cedula   = request.POST.get('cedula', '').strip()
-        correo   = request.POST.get('correo', '').strip()
-        programa = request.POST.get('programa', '').strip()
-
-        nombres_curso    = request.POST.getlist('curso_nombre')
-        codigos_curso    = request.POST.getlist('curso_codigo')
-        cantidades_curso = request.POST.getlist('curso_cantidad')
-
-        if not nombre:
-            errores.append('El nombre es requerido.')
-        if not apellido:
-            errores.append('El apellido es requerido.')
-        if not cedula:
-            errores.append('La cédula es requerida.')
-        elif not cedula.isdigit():
-            errores.append('La cédula debe contener solo números.')
-        elif SolicitudRegistroProfesor.objects.filter(
-            cedula=cedula, estado__in=['pendiente', 'aprobada']
-        ).exists():
-            errores.append(
-                f'Ya existe una solicitud pendiente o aprobada con la cédula {cedula}.'
+        try:
+            CrearSolicitudRegistroProfesorService.crear(
+                nombre=request.POST.get('nombre', '').strip(),
+                apellido=request.POST.get('apellido', '').strip(),
+                cedula=request.POST.get('cedula', '').strip(),
+                correo=request.POST.get('correo', '').strip(),
+                programa=request.POST.get('programa', '').strip(),
+                nombres_curso=request.POST.getlist('curso_nombre'),
+                codigos_curso=request.POST.getlist('curso_codigo'),
+                cantidades_curso=request.POST.getlist('curso_cantidad'),
             )
-
-        cursos_validos = []
-        for i, (nombre_c, codigo_c, cantidad_c) in enumerate(
-            zip(nombres_curso, codigos_curso, cantidades_curso), 1
-        ):
-            nombre_c   = nombre_c.strip()
-            codigo_c   = codigo_c.strip()
-            cantidad_c = cantidad_c.strip()
-            if not nombre_c and not codigo_c and not cantidad_c:
-                continue
-            if not nombre_c:
-                errores.append(f'Falta el nombre en el curso {i}.')
-            elif not codigo_c:
-                errores.append(f'Falta el código en el curso {i}.')
-            elif not cantidad_c:
-                errores.append(f'Falta la cantidad de estudiantes en el curso {i}.')
-            elif not cantidad_c.isdigit() or int(cantidad_c) < 1:
-                errores.append(f'La cantidad del curso {i} debe ser un número positivo.')
-            else:
-                cursos_validos.append({
-                    'nombre': nombre_c,
-                    'codigo': codigo_c,
-                    'cantidad_estudiantes': int(cantidad_c),
-                })
-
-        if not cursos_validos and not [e for e in errores if 'curso' in e.lower()]:
-            errores.append('Debes agregar al menos un curso.')
-
-        if not errores:
-            solicitud = SolicitudRegistroProfesor.objects.create(
-                nombre=nombre,
-                apellido=apellido,
-                cedula=cedula,
-                correo=correo,
-                programa=programa,
-            )
-            for curso in cursos_validos:
-                SolicitudRegistroCurso.objects.create(
-                    solicitud_profesor=solicitud,
-                    **curso
-                )
             return redirect('/solicitudes/exitosa/?tipo=registro_profesor')
+        except ValidationError as e:
+            errores = list(e.messages)
 
     programas = ProgramaAcademico.objects.filter(activo=True)
     return render(request, 'solicitudes/registro_profesor.html', {
@@ -360,68 +216,23 @@ def lista_solicitudes_profesores(request):
 
 @rol_requerido('Administrador')
 def detalle_solicitud_profesor(request, id):
-    import secrets
-    from users.models import Rol
     solicitud = get_object_or_404(SolicitudRegistroProfesor, id=id)
 
     if request.method == 'POST':
         accion = request.POST.get('accion')
+        curso_id = request.POST.get('curso_id')
 
-        if accion == 'aprobar_profesor' and solicitud.estado == 'pendiente':
-            cedula   = solicitud.cedula
-            base     = f"doc_{cedula}"
-            username = base
-            counter  = 2
-            while Usuario.objects.filter(username=username).exists():
-                username = f"{base}_{counter}"
-                counter += 1
-
-            usuario = Usuario(
-                username=username,
-                first_name=solicitud.nombre,
-                last_name=solicitud.apellido,
-                email=solicitud.correo,
-                codigo=solicitud.cedula,
-                programa=solicitud.programa,
-                is_active=True,
-            )
-            usuario.set_password(secrets.token_urlsafe(16))
-            usuario.rol = Rol.objects.filter(nombre='Docente').first()
-            usuario.save()
-
-            solicitud.usuario_creado = usuario
-            solicitud.estado = 'aprobada'
-            solicitud.save()
-
-        elif accion == 'rechazar_profesor' and solicitud.estado == 'pendiente':
-            solicitud.estado = 'rechazada'
-            solicitud.save()
-            solicitud.cursos_solicitados.update(estado='rechazada')
-
-        elif accion == 'aprobar_curso' and solicitud.estado == 'aprobada':
-            curso_id = request.POST.get('curso_id')
-            solicitud_curso = get_object_or_404(
-                SolicitudRegistroCurso, id=curso_id, solicitud_profesor=solicitud
-            )
-            if solicitud_curso.estado == 'pendiente' and solicitud.usuario_creado:
-                curso = Curso.objects.create(
-                    nombre=solicitud_curso.nombre,
-                    codigo=solicitud_curso.codigo,
-                    cantidad_estudiantes=solicitud_curso.cantidad_estudiantes,
-                    profesor=solicitud.usuario_creado,
-                )
-                solicitud_curso.curso_creado = curso
-                solicitud_curso.estado = 'aprobada'
-                solicitud_curso.save()
-
-        elif accion == 'rechazar_curso' and solicitud.estado == 'aprobada':
-            curso_id = request.POST.get('curso_id')
-            solicitud_curso = get_object_or_404(
-                SolicitudRegistroCurso, id=curso_id, solicitud_profesor=solicitud
-            )
-            if solicitud_curso.estado == 'pendiente':
-                solicitud_curso.estado = 'rechazada'
-                solicitud_curso.save()
+        try:
+            if accion == 'aprobar_profesor':
+                AprobarSolicitudRegistroProfesorService.aprobar(id)
+            elif accion == 'rechazar_profesor':
+                AprobarSolicitudRegistroProfesorService.rechazar(id)
+            elif accion == 'aprobar_curso':
+                AprobarCursoService.aprobar(id, curso_id)
+            elif accion == 'rechazar_curso':
+                AprobarCursoService.rechazar(id, curso_id)
+        except ValidationError as e:
+            messages.error(request, e.message if hasattr(e, 'message') else str(e))
 
         return redirect('detalle_solicitud_profesor', id=id)
 

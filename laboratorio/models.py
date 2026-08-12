@@ -2,6 +2,7 @@
 models.py — laboratorio
 Define Laboratorio, HorarioLaboratorio, EventoLaboratorio y Modulo con sus estados de disponibilidad.
 """
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -56,6 +57,12 @@ class HorarioLaboratorio(models.Model):
         blank=True
     )
 
+    def clean(self):
+        if self.hora_inicio and self.hora_fin and self.hora_fin <= self.hora_inicio:
+            raise ValidationError({
+                'hora_fin': 'La hora de fin debe ser posterior a la hora de inicio.'
+            })
+
     def __str__(self):
         return f"{self.laboratorio.nombre} - {self.dia} {self.hora_inicio}-{self.hora_fin}"
 
@@ -79,8 +86,15 @@ class EventoLaboratorio(models.Model):
     creado_por = models.ForeignKey(
         'users.Usuario',
         on_delete=models.SET_NULL,
-        null=True
+        null=True,
+        blank=True,
     )
+
+    def clean(self):
+        if self.inicio and self.fin and self.fin <= self.inicio:
+            raise ValidationError({
+                'fin': 'La hora de fin debe ser posterior a la hora de inicio.'
+            })
 
     def __str__(self):
         return f"{self.titulo} - {self.inicio}"
@@ -111,6 +125,10 @@ class Modulo(models.Model):
         related_name='modulos'
     )
 
+    def clean(self):
+        if self.capacidad is not None and self.capacidad < 1:
+            raise ValidationError({'capacidad': 'La capacidad debe ser al menos 1.'})
+
     def __str__(self):
         return f"{self.nombre} ({self.laboratorio.nombre})"
 
@@ -137,6 +155,14 @@ class Laboratorista(models.Model):
 
     class Meta:
         ordering = ['apellido', 'nombre']
+
+    def clean(self):
+        validas = {clave for clave, _ in self.RESPONSABILIDADES_CHOICES}
+        invalidas = set(self.responsabilidades or []) - validas
+        if invalidas:
+            raise ValidationError({
+                'responsabilidades': f'Responsabilidad(es) no válida(s): {", ".join(sorted(invalidas))}.'
+            })
 
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
@@ -169,6 +195,14 @@ class LaboratoristaLab(models.Model):
         unique_together = ('laboratorista', 'laboratorio')
         ordering = ['laboratorio', 'tipo']
 
+    def clean(self):
+        if self.tipo == 'encargado':
+            ya_tiene_encargado = LaboratoristaLab.objects.filter(
+                laboratorio=self.laboratorio, tipo='encargado',
+            ).exclude(pk=self.pk).exists()
+            if ya_tiene_encargado:
+                raise ValidationError('Este laboratorio ya tiene un encargado.')
+
     def __str__(self):
         return f"{self.laboratorista} — {self.laboratorio} ({self.tipo})"
 
@@ -192,6 +226,12 @@ class HistorialModulo(models.Model):
 
     class Meta:
         ordering = ['-fecha_inicio']
+
+    def clean(self):
+        if self.fecha_fin and self.fecha_inicio and self.fecha_fin < self.fecha_inicio:
+            raise ValidationError({
+                'fecha_fin': 'La fecha de fin no puede ser anterior a la fecha de inicio.'
+            })
 
     def __str__(self):
         return f"{self.modulo.nombre} — {self.motivo} ({self.fecha_inicio.strftime('%d/%m/%Y')})"

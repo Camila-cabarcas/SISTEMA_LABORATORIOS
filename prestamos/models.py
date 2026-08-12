@@ -2,6 +2,7 @@
 models.py — prestamos
 Define Prestamo, PrestamoItem y EstadoPrestamo, vinculados a una reserva aprobada y a ítems de inventario.
 """
+from django.core.exceptions import ValidationError
 from django.db import models
 from users.models import Usuario
 from reservas.models import Reserva
@@ -39,6 +40,12 @@ class Prestamo(models.Model):
         null=True,
         blank=True
     )
+
+    def clean(self):
+        if self.fecha_devolucion and self.fecha_entrega and self.fecha_devolucion < self.fecha_entrega:
+            raise ValidationError({
+                'fecha_devolucion': 'La fecha de devolución no puede ser anterior a la fecha de entrega.'
+            })
 
     def generar_codigo(self):
         from solicitudes.models import SolicitudReserva
@@ -85,6 +92,14 @@ class PrestamoItem(models.Model):
         on_delete=models.CASCADE
     )
 
+    def clean(self):
+        if self.prestamo_id and self.item_inventario_id:
+            ya_existe = PrestamoItem.objects.filter(
+                prestamo_id=self.prestamo_id, item_inventario_id=self.item_inventario_id,
+            ).exclude(pk=self.pk).exists()
+            if ya_existe:
+                raise ValidationError('Este ítem ya está en el préstamo.')
+
     def __str__(self):
         return self.item_inventario.codigo
 
@@ -128,6 +143,11 @@ class InspeccionItem(models.Model):
 
     class Meta:
         ordering = ['-fecha_inspeccion']
+
+    def clean(self):
+        if self.prestamo_item_id and self.prestamo_id:
+            if self.prestamo_item.prestamo_id != self.prestamo_id:
+                raise ValidationError('El ítem de préstamo no pertenece a este préstamo.')
 
     def __str__(self):
         return f"{self.prestamo_item} — {self.get_estado_inspeccion_display()}"

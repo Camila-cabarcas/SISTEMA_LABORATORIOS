@@ -2,6 +2,7 @@
 models.py — reservas
 Define Reserva, ReservaInsumo y EstadoReserva; calcula hora_limite_retiro y fecha_devolucion al guardar.
 """
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
@@ -44,6 +45,12 @@ class Reserva(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     codigo = models.CharField(max_length=50, unique=True, blank=True, default='')
+
+    def clean(self):
+        if self.fecha_devolucion and self.fecha_reserva and self.fecha_devolucion <= self.fecha_reserva:
+            raise ValidationError({
+                'fecha_devolucion': 'La fecha de devolución debe ser posterior a la fecha de reserva.'
+            })
 
     def generar_codigo(self):
         solicitud = self.solicitud.first()
@@ -88,6 +95,10 @@ class ReservaInsumo(models.Model):
     )
 
     cantidad = models.PositiveIntegerField()
+
+    def clean(self):
+        if self.cantidad is not None and self.cantidad < 1:
+            raise ValidationError({'cantidad': 'La cantidad debe ser al menos 1.'})
 
     def __str__(self):
         return f"{self.insumo.nombre}"

@@ -7,6 +7,7 @@ ItemInventario se MARCA como eliminado (deleted_at) sin borrar la fila ni su
 historial de préstamos — a diferencia del delete() físico de antes, que
 borraba en cascada PrestamoItem/InspeccionItem/MovimientoInventario.
 """
+from django.core.exceptions import ValidationError
 from django.test import TestCase, Client
 from django.utils import timezone
 
@@ -175,3 +176,36 @@ class EliminarItemInventarioTests(TestCase):
         self.item.soft_delete()
 
         self.assertTrue(PrestamoItem.objects.filter(item_inventario=self.item).exists())
+
+
+class ModelosCleanValidationTests(TestCase):
+    """clean() de Insumo e ItemInventario."""
+
+    def setUp(self):
+        self.estado_disponible = EstadoItem.objects.get_or_create(nombre='Disponible')[0]
+
+    # -- Insumo -------------------------------------------------------------
+
+    def test_insumo_stock_minimo_no_negativo_es_valido(self):
+        insumo = Insumo(nombre='Multímetro', descripcion='Para tests', stock_minimo=0)
+        insumo.full_clean()
+
+    def test_insumo_stock_minimo_negativo_es_invalido(self):
+        insumo = Insumo(nombre='Multímetro', descripcion='Para tests', stock_minimo=-1)
+        with self.assertRaises(ValidationError):
+            insumo.full_clean()
+
+    # -- ItemInventario ---------------------------------------------------
+
+    def test_item_codigo_no_vacio_es_valido(self):
+        insumo = Insumo.objects.create(nombre='Multímetro', descripcion='Para tests')
+        item = ItemInventario(codigo='ITEM-001', insumo=insumo, estado=self.estado_disponible)
+        item.full_clean()
+
+    def test_item_codigo_solo_espacios_es_invalido(self):
+        # CharField(blank=False) por sí solo no rechaza un string de solo
+        # espacios — clean() sí lo hace.
+        insumo = Insumo.objects.create(nombre='Multímetro', descripcion='Para tests')
+        item = ItemInventario(codigo='   ', insumo=insumo, estado=self.estado_disponible)
+        with self.assertRaises(ValidationError):
+            item.full_clean()

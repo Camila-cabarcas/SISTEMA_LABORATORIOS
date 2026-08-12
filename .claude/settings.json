@@ -14,7 +14,15 @@
       "Bash(rm inventario/migrations/0006_iteminventario_deleted_at.py)",
       "Bash(python manage.py makemigrations inventario)",
       "Bash(python -m py_compile inventario/models.py inventario/views.py inventario/migrations/0006_iteminventario_deleted_at.py prestamos/forms.py prestamos/views.py solicitudes/views.py laboratorio/views.py config/views.py)",
-      "Bash(python -m py_compile inventario/tests.py)"
+      "Bash(python -m py_compile inventario/tests.py)",
+      "Bash(python -c ' *)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\camil\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-camil-Favorites-Downloads-sistema-laboratorios\\\\31febf91-47c2-4f0a-912a-09fcac11177e\\\\scratchpad\")",
+      "Bash(curl -s -o /dev/null -w \"server status: %{http_code}\\\\n\" http://localhost:8000/login/)",
+      "Bash(npx cypress *)",
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('laboratorio/views.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('laboratorio/services/modulo_service.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('solicitudes/views.py', encoding='utf-8'\\).read\\(\\)\\)\")"
     ]
   }
 }

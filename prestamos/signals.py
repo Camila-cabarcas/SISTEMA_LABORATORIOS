@@ -1,78 +1,25 @@
 """
 signals.py — prestamos
-Actualiza el estado de los ítems y registra movimientos al crear un PrestamoItem o cambiar el estado de un Prestamo.
+Dispara MutacionInventarioService al crear un PrestamoItem o al cambiar el
+estado de un Prestamo. La lógica de negocio (qué cambia en el inventario y
+por qué) vive en prestamos/services/mutacion_inventario_service.py — estas
+señales solo conectan el ciclo de vida del modelo con esa llamada explícita,
+no contienen lógica propia.
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
 from .models import Prestamo, PrestamoItem
-from inventario.models import MovimientoInventario, TipoMovimiento, EstadoItem
+from .services.mutacion_inventario_service import MutacionInventarioService
 
 
 @receiver(post_save, sender=PrestamoItem)
-def registrar_movimiento_item(sender, instance, created, **kwargs):
-
-    if not created:
-        return
-
-    tipo = TipoMovimiento.objects.get(nombre='Prestado')
-    estado_prestado = EstadoItem.objects.get(nombre='Prestado')
-
-    item = instance.item_inventario
-    item.estado = estado_prestado
-    item._desde_prestamo = True
-    item.save()
-
-    MovimientoInventario.objects.create(
-        item_inventario=item,
-        usuario=instance.prestamo.responsable,
-        tipo_movimiento=tipo,
-        observacion=f'Préstamo #{instance.prestamo.pk} - Activo'
-    )
+def al_crear_prestamo_item(sender, instance, created, **kwargs):
+    if created:
+        MutacionInventarioService.marcar_item_en_prestamo(instance)
 
 
 @receiver(post_save, sender=Prestamo)
-def registrar_movimiento_estado(sender, instance, created, **kwargs):
-
-    if created:
-        return
-
-    mapa_estados = {
-        'DEVUELTO': ('Devuelto', 'Disponible'),
-        'RETRASADO': ('Prestado', 'Prestado'),
-    }
-
-    estado_nombre = instance.estado.nombre.upper()
-
-    if estado_nombre not in mapa_estados:
-        return
-
-    tipo_nombre, estado_item_nombre = mapa_estados[estado_nombre]
-    tipo = TipoMovimiento.objects.get(nombre=tipo_nombre)
-    estado_item = EstadoItem.objects.get(nombre=estado_item_nombre)
-
-    items = PrestamoItem.objects.filter(prestamo=instance)
-
-    # Si el préstamo pasó por el flujo de inspección, el estado de cada ítem
-    # ya fue asignado individualmente (bien/dañado/no_entregado) por
-    # marcar_devuelto — no lo pisamos con el estado genérico de abajo.
-    from .models import InspeccionItem
-    tiene_inspeccion = (
-        estado_nombre == 'DEVUELTO'
-        and InspeccionItem.objects.filter(prestamo=instance).exists()
-    )
-
-    for prestamo_item in items:
-
-        item = prestamo_item.item_inventario
-
-        if not tiene_inspeccion:
-            item.estado = estado_item
-            item._desde_prestamo = True
-            item.save()
-
-        MovimientoInventario.objects.create(
-            item_inventario=item,
-            usuario=instance.responsable,
-            tipo_movimiento=tipo,
-            observacion=f'Préstamo #{instance.pk} - {instance.estado.nombre}'
-        )
+def al_cambiar_estado_prestamo(sender, instance, created, **kwargs):
+    if not created:
+        MutacionInventarioService.procesar_cambio_estado_prestamo(instance)

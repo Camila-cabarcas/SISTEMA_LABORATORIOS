@@ -22,6 +22,15 @@ class Curso(models.Model):
     )
     cantidad_estudiantes = models.PositiveIntegerField()
 
+    def clean(self):
+        errors = {}
+        if self.cantidad_estudiantes is not None and self.cantidad_estudiantes < 1:
+            errors['cantidad_estudiantes'] = 'La cantidad de estudiantes debe ser al menos 1.'
+        if self.profesor_id and (not self.profesor.rol or self.profesor.rol.nombre != 'Docente'):
+            errors['profesor'] = 'El profesor debe tener rol Docente.'
+        if errors:
+            raise ValidationError(errors)
+
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
 
@@ -345,6 +354,12 @@ class SolicitudRegistroCurso(models.Model):
         on_delete=models.SET_NULL, related_name='solicitud_origen'
     )
 
+    def clean(self):
+        if self.cantidad_estudiantes is not None and self.cantidad_estudiantes < 1:
+            raise ValidationError({
+                'cantidad_estudiantes': 'La cantidad de estudiantes debe ser al menos 1.'
+            })
+
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
 
@@ -362,6 +377,10 @@ class SolicitudInsumo(models.Model):
     )
 
     cantidad = models.PositiveIntegerField(default=1)
+
+    def clean(self):
+        if self.cantidad is not None and self.cantidad < 1:
+            raise ValidationError({'cantidad': 'La cantidad debe ser al menos 1.'})
 
     def __str__(self):
         return f"{self.solicitud.id} - {self.insumo.nombre} x{self.cantidad}"

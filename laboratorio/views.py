@@ -9,6 +9,7 @@ from users.decorators import rol_requerido
 from users.models import Usuario
 from .models import Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab
 from .forms import LaboratorioForm
+from .services.modulo_service import ModuloEstadoService
 from inventario.models import ItemInventario
 from reservas.models import ReservaInsumo
 from prestamos.models import PrestamoItem
@@ -247,8 +248,6 @@ def eliminar_evento(request, id):
 @rol_requerido('Administrador', 'Laboratorio')
 def mapa_laboratorio(request, id):
     from datetime import date, datetime, time, timedelta
-    from django.utils import timezone
-    from solicitudes.models import SolicitudReserva
     from laboratorio.models import HistorialModulo
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
@@ -295,28 +294,25 @@ def mapa_laboratorio(request, id):
 
     modulos_data = []
     if filtro_valido:
-        solicitudes = SolicitudReserva.objects.filter(
-            laboratorio=laboratorio,
-            fecha_reserva__date=fecha,
-            reserva__estado__nombre__in=['Pendiente', 'Aprobada'],
-            necesita_modulo=True,
-        ).select_related(
-            'reserva__estado', 'usuario'
-        ).prefetch_related('modulos_asignados').filter(
-            hora_inicio__lt=hora_fin_filtro,
-            hora_fin__gt=hora_inicio_filtro,
+        solicitudes = ModuloEstadoService.solicitudes_del_laboratorio(
+            laboratorio, fecha, hora_inicio_filtro, hora_fin_filtro,
         )
+        modulo_solicitudes = ModuloEstadoService.agrupar_por_modulo(solicitudes)
 
-        modulo_solicitudes = {}
-        for sol in solicitudes:
-            for modulo in sol.modulos_asignados.all():
-                modulo_solicitudes.setdefault(modulo.id, []).append(sol)
+        color_map = {'disponible': 'success', 'ocupado': 'danger', 'reservado': 'warning', 'inactivo': 'secondary'}
 
         for modulo in laboratorio.modulos.all():
             soles = modulo_solicitudes.get(modulo.id, [])
+            estado = ModuloEstadoService.obtener_estado(modulo, soles, fecha)
+            solicitud_info = None
+            motivo = ''
 
-            if not modulo.disponible:
-                solicitud_info = None
+            if estado == 'inactivo':
+                # Si la inactivación fue programada para el futuro (ver
+                # HistorialModulo) y `fecha` es anterior a que empiece, el
+                # módulo se muestra disponible hoy en vez de inactivo — esto
+                # es específico de este mapa, no forma parte del cálculo
+                # genérico de ModuloEstadoService.
                 registro_activo = HistorialModulo.objects.filter(
                     modulo=modulo,
                     fecha_fin__isnull=True
@@ -326,35 +322,13 @@ def mapa_laboratorio(request, id):
                     fecha_inicio_registro = registro_activo.fecha_inicio.date()
                     if fecha <= fecha_inicio_registro - timedelta(days=1):
                         estado = 'disponible'
-                        color  = 'success'
-                        motivo = ''
                     else:
-                        estado = 'inactivo'
-                        color  = 'secondary'
                         motivo = registro_activo.motivo
                 else:
-                    estado = 'inactivo'
-                    color  = 'secondary'
                     motivo = modulo.motivo_no_disponible
 
-            elif soles:
-                es_hoy = (fecha == date.today())
-                ahora  = timezone.now().time()
-
-                sol_activa = None
-                for sol in soles:
-                    if (sol.reserva and sol.reserva.estado
-                            and sol.reserva.estado.nombre == 'Aprobada'
-                            and es_hoy
-                            and sol.hora_inicio and sol.hora_fin
-                            and sol.hora_inicio <= ahora <= sol.hora_fin):
-                        sol_activa = sol
-                        break
-
-                sol_relevante = sol_activa if sol_activa else soles[0]
-                estado = 'ocupado' if sol_activa else 'reservado'
-                color  = 'danger'  if sol_activa else 'warning'
-                motivo = ''
+            elif estado in ('ocupado', 'reservado'):
+                sol_relevante = ModuloEstadoService.solicitud_relevante(soles, fecha)
 
                 if sol_relevante.nombre:
                     nombre_sol = sol_relevante.nombre
@@ -371,9 +345,9 @@ def mapa_laboratorio(request, id):
 
                 from prestamos.models import Prestamo
                 prestamo_info = None
-                if sol_activa and sol_activa.reserva:
+                if estado == 'ocupado' and sol_relevante.reserva:
                     prestamo = Prestamo.objects.filter(
-                        reserva=sol_activa.reserva
+                        reserva=sol_relevante.reserva
                     ).select_related('estado').first()
                     if prestamo:
                         prestamo_info = {
@@ -393,36 +367,23 @@ def mapa_laboratorio(request, id):
                     'prestamo':       prestamo_info,
                     'prestamo_id':    prestamo_info['id'] if prestamo_info else None,
                 }
-            else:
-                estado         = 'disponible'
-                color          = 'success'
-                solicitud_info = None
-                motivo         = ''
 
             modulos_data.append({
                 'modulo':    modulo,
                 'estado':    estado,
-                'color':     color,
+                'color':     color_map[estado],
                 'solicitud': solicitud_info,
                 'motivo':    motivo,
             })
     else:
-        modulos_data = []
         for modulo in laboratorio.modulos.all():
-            if not modulo.disponible:
-                estado = 'inactivo'
-                color  = 'secondary'
-                motivo = modulo.motivo_no_disponible
-            else:
-                estado = 'disponible'
-                color  = 'success'
-                motivo = ''
+            estado = ModuloEstadoService.obtener_estado(modulo, fecha=fecha)
             modulos_data.append({
                 'modulo':    modulo,
                 'estado':    estado,
-                'color':     color,
+                'color':     'secondary' if estado == 'inactivo' else 'success',
                 'solicitud': None,
-                'motivo':    motivo,
+                'motivo':    modulo.motivo_no_disponible if estado == 'inactivo' else '',
             })
 
     horas_disponibles = [
@@ -489,8 +450,6 @@ def toggle_modulo(request, lab_id, mod_id):
 @rol_requerido('Administrador', 'Laboratorio')
 def estado_modulos_api(request, id):
     from datetime import date, datetime, time
-    from django.utils import timezone
-    from solicitudes.models import SolicitudReserva
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
@@ -519,52 +478,22 @@ def estado_modulos_api(request, id):
     if hora_inicio_filtro and hora_fin_filtro and hora_fin_filtro <= hora_inicio_filtro:
         return JsonResponse({'error': 'La hora de fin debe ser posterior a la hora de inicio.'}, status=400)
 
-    solicitudes = SolicitudReserva.objects.filter(
-        laboratorio=laboratorio,
-        fecha_reserva__date=fecha,
-        reserva__estado__nombre__in=['Pendiente', 'Aprobada'],
-        necesita_modulo=True,
-    ).prefetch_related('modulos_asignados').select_related('reserva__estado')
+    solicitudes = ModuloEstadoService.solicitudes_del_laboratorio(
+        laboratorio, fecha, hora_inicio_filtro, hora_fin_filtro,
+    )
+    modulo_solicitudes = ModuloEstadoService.agrupar_por_modulo(solicitudes)
 
-    if hora_inicio_filtro and hora_fin_filtro:
-        solicitudes = solicitudes.filter(
-            hora_inicio__lt=hora_fin_filtro,
-            hora_fin__gt=hora_inicio_filtro,
-        )
-
-    modulo_solicitudes = {}
-    for sol in solicitudes:
-        for modulo in sol.modulos_asignados.all():
-            modulo_solicitudes.setdefault(modulo.id, []).append(sol)
-
-    es_hoy      = (fecha == date.today())
-    hora_actual = timezone.now().time()
+    color_map = {
+        'disponible': 'success',
+        'ocupado':    'danger',
+        'reservado':  'warning',
+        'inactivo':   'secondary',
+    }
 
     resultado = {}
     for modulo in laboratorio.modulos.all():
         soles = modulo_solicitudes.get(modulo.id, [])
-        if not modulo.disponible:
-            estado = 'inactivo'
-        elif soles:
-            sol_activa = None
-            for sol in soles:
-                if (sol.reserva and sol.reserva.estado
-                        and sol.reserva.estado.nombre == 'Aprobada'
-                        and es_hoy
-                        and sol.hora_inicio and sol.hora_fin
-                        and sol.hora_inicio <= hora_actual <= sol.hora_fin):
-                    sol_activa = sol
-                    break
-            estado = 'ocupado' if sol_activa else 'reservado'
-        else:
-            estado = 'disponible'
-
-        color_map = {
-            'disponible': 'success',
-            'ocupado':    'danger',
-            'reservado':  'warning',
-            'inactivo':   'secondary',
-        }
+        estado = ModuloEstadoService.obtener_estado(modulo, soles, fecha)
         resultado[modulo.id] = {
             'estado': estado,
             'color':  color_map[estado],
@@ -573,10 +502,37 @@ def estado_modulos_api(request, id):
     return JsonResponse(resultado)
 
 
+def _serializar_modulos_disponibles(laboratorio, fecha, incluir_zona=False):
+    """Estado del día completo (sin distinguir 'ocupado ahora mismo') para
+    cada módulo del laboratorio — compartido por modulos_disponibles_api y
+    su variante pública."""
+    solicitudes = ModuloEstadoService.solicitudes_del_laboratorio(laboratorio, fecha)
+    modulo_solicitudes = ModuloEstadoService.agrupar_por_modulo(solicitudes)
+
+    color_map = {'disponible': 'success', 'reservado': 'warning', 'inactivo': 'secondary'}
+
+    modulos = []
+    for modulo in laboratorio.modulos.all():
+        soles = modulo_solicitudes.get(modulo.id, [])
+        estado = ModuloEstadoService.obtener_estado(modulo, soles, fecha, evaluar_ahora=False)
+        data = {
+            'id':            modulo.id,
+            'nombre':        modulo.nombre,
+            'capacidad':     modulo.capacidad,
+            'estado':        estado,
+            'color':         color_map.get(estado, 'secondary'),
+            'seleccionable': estado == 'disponible',
+        }
+        if incluir_zona:
+            data['zona'] = modulo.zona
+        modulos.append(data)
+
+    return modulos
+
+
 @rol_requerido('Administrador', 'Laboratorio')
 def modulos_disponibles_api(request, id):
     from datetime import date, datetime
-    from solicitudes.models import SolicitudReserva
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
@@ -587,49 +543,13 @@ def modulos_disponibles_api(request, id):
     except (ValueError, TypeError):
         fecha = date.today()
 
-    solicitudes = SolicitudReserva.objects.filter(
-        laboratorio=laboratorio,
-        fecha_reserva__date=fecha,
-        reserva__estado__nombre__in=['Pendiente', 'Aprobada'],
-        necesita_modulo=True,
-    ).prefetch_related('modulos_asignados')
-
-    modulos_ocupados = set()
-    for sol in solicitudes:
-        for m in sol.modulos_asignados.all():
-            modulos_ocupados.add(m.id)
-
-    modulos = []
-    for modulo in laboratorio.modulos.all():
-        if not modulo.disponible:
-            estado = 'inactivo'
-        elif modulo.id in modulos_ocupados:
-            estado = 'reservado'
-        else:
-            estado = 'disponible'
-
-        color_map = {
-            'disponible': 'success',
-            'reservado':  'warning',
-            'inactivo':   'secondary',
-        }
-        modulos.append({
-            'id':          modulo.id,
-            'nombre':      modulo.nombre,
-            'capacidad':   modulo.capacidad,
-            'estado':      estado,
-            'color':       color_map.get(estado, 'secondary'),
-            'seleccionable': estado == 'disponible',
-        })
-
-    return JsonResponse({'modulos': modulos})
+    return JsonResponse({'modulos': _serializar_modulos_disponibles(laboratorio, fecha)})
 
 
 def modulos_disponibles_publica_api(request, id):
     """Igual que modulos_disponibles_api pero de acceso público (sin login),
     para el mapa de módulos del formulario público de estudiante."""
     from datetime import date, datetime
-    from solicitudes.models import SolicitudReserva
 
     laboratorio = get_object_or_404(Laboratorio, id=id)
 
@@ -639,42 +559,7 @@ def modulos_disponibles_publica_api(request, id):
     except (ValueError, TypeError):
         fecha = date.today()
 
-    solicitudes = SolicitudReserva.objects.filter(
-        laboratorio=laboratorio,
-        fecha_reserva__date=fecha,
-        reserva__estado__nombre__in=['Pendiente', 'Aprobada'],
-        necesita_modulo=True,
-    ).prefetch_related('modulos_asignados')
-
-    modulos_ocupados = set()
-    for sol in solicitudes:
-        for m in sol.modulos_asignados.all():
-            modulos_ocupados.add(m.id)
-
-    modulos = []
-    for modulo in laboratorio.modulos.all():
-        if not modulo.disponible:
-            estado = 'inactivo'
-        elif modulo.id in modulos_ocupados:
-            estado = 'reservado'
-        else:
-            estado = 'disponible'
-
-        color_map = {
-            'disponible': 'success',
-            'reservado':  'warning',
-            'inactivo':   'secondary',
-        }
-        modulos.append({
-            'id':          modulo.id,
-            'nombre':      modulo.nombre,
-            'capacidad':   modulo.capacidad,
-            'estado':      estado,
-            'color':       color_map.get(estado, 'secondary'),
-            'seleccionable': estado == 'disponible',
-            'zona':        modulo.zona,
-        })
-
+    modulos = _serializar_modulos_disponibles(laboratorio, fecha, incluir_zona=True)
     return JsonResponse({'modulos': modulos})
 
 

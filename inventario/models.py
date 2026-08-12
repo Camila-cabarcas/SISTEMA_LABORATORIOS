@@ -2,6 +2,7 @@
 models.py — inventario
 Define Insumo, ItemInventario, MovimientoInventario y los modelos de estado (EstadoItem, EstadoInsumo, TipoMovimiento).
 """
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -58,6 +59,10 @@ class Insumo(models.Model):
         if self.stock_minimo == 0:
             return False
         return self.cantidad_disponible() <= self.stock_minimo
+
+    def clean(self):
+        if self.stock_minimo is not None and self.stock_minimo < 0:
+            raise ValidationError({'stock_minimo': 'El stock mínimo no puede ser negativo.'})
 
     def __str__(self):
         return self.nombre
@@ -117,6 +122,10 @@ class ItemInventario(models.Model):
 
     def is_deleted(self):
         return self.deleted_at is not None
+
+    def clean(self):
+        if self.codigo is not None and not self.codigo.strip():
+            raise ValidationError({'codigo': 'El código no puede estar vacío.'})
 
     def __str__(self):
         return self.codigo
