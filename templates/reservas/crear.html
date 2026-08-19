@@ -395,9 +395,10 @@ function validarHorario() {
     const error  = document.getElementById('horario-error');
 
     const ahora    = new Date();
+    const esHoy    = fechaReservaEsHoy();
     const minAhora = ahora.getHours() * 60 + ahora.getMinutes();
 
-    if (inicio < minAhora) {
+    if (esHoy && inicio < minAhora) {
         error.textContent = 'La hora de inicio ya pasó.';
         error.classList.remove('d-none');
         return false;
@@ -447,10 +448,23 @@ function validarHorario() {
     return true;
 }
 
+function fechaReservaEsHoy() {
+    const el = document.getElementById('fecha-picker');
+    if (!el || !el.value) return true;
+    const ahora = new Date();
+    const hoyStr = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
+    return el.value === hoyStr;
+}
+
 function actualizarSelectoresHora(prefijo, maxHorasSel) {
     const ahora = new Date();
-    const horaActual = ahora.getHours();
-    const minActual  = ahora.getMinutes();
+    // Las restricciones de hora (deshabilitar horas "ya pasadas") solo tienen
+    // sentido si la reserva es para HOY. Si la fecha elegida es un día futuro,
+    // aplicar la hora actual del reloj las deja todas deshabilitadas fuera del
+    // horario 06:00-18:00 (p.ej. probando la reserva de mañana a las 22:00).
+    const esHoy       = fechaReservaEsHoy();
+    const horaActual  = esHoy ? ahora.getHours() : 6;
+    const minActual   = esHoy ? ahora.getMinutes() : 0;
 
     const selectHI = document.getElementById(prefijo + 'hora-inicio-h');
     const selectMI = document.getElementById(prefijo + 'hora-inicio-m');
@@ -460,8 +474,8 @@ function actualizarSelectoresHora(prefijo, maxHorasSel) {
     // Deshabilitar horas pasadas en inicio
     Array.from(selectHI.options).forEach(opt => {
         const h = parseInt(opt.value);
-        opt.disabled = h < horaActual;
-        opt.style.color = h < horaActual ? '#ccc' : '';
+        opt.disabled = esHoy && h < horaActual;
+        opt.style.color = (esHoy && h < horaActual) ? '#ccc' : '';
     });
 
     // Si la hora seleccionada ya pasó, avanzar al próximo disponible

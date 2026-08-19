@@ -542,8 +542,8 @@ function actualizarSelectoresHora(prefijo, maxHoras) {
     Array.from(selectHI.options).forEach(opt => {
         if (!opt.value) return;
         const h = parseInt(opt.value);
-        opt.disabled = h < horaActual;
-        opt.style.color = h < horaActual ? '#ccc' : '';
+        opt.disabled = esHoy && h < horaActual;
+        opt.style.color = (esHoy && h < horaActual) ? '#ccc' : '';
     });
 
     // Nada elegido todavía: no hay nada que ya no vaya a pasar. No se fuerza
