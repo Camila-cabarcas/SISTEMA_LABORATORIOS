@@ -191,6 +191,19 @@ class CrearSolicitudReservaService:
             observaciones=observaciones,
             usuario=usuario,
         )
+
+        # crear_libre no pasa por un ModelForm, así que SolicitudReserva.clean()
+        # nunca se invoca aquí (ver docstring de la clase) — el límite de
+        # solicitudes pendientes es una regla que sí queremos aplicar siempre,
+        # así que se valida explícitamente en vez de agregar full_clean() acá
+        # y arrastrar el resto de validaciones de clean() que este flujo
+        # deliberadamente no aplica.
+        if solicitud.limite_pendientes_alcanzado():
+            raise ValidationError(
+                'Ya tienes 2 reservas pendientes. Debes esperar a que sean '
+                'aprobadas o canceladas antes de crear una nueva.'
+            )
+
         solicitud.save()
 
         if necesita_modulo:

@@ -10,6 +10,16 @@
     <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
 </div>
 
+{% if errores %}
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        {% for error in errores %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 <div class="card p-4">
 
     <form method="POST">

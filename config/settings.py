@@ -6,11 +6,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- CONFIGURACIÓN DE SEGURIDAD (Aquí estaba el error) ---
 # DEBUG = True es para desarrollo. Si lo pones en False, debes configurar ALLOWED_HOSTS.
-DEBUG = True
+DEBUG = False
 
 SECRET_KEY = 'django-insecure-clave-temporal-para-desarrollo-123456789'
 
-ALLOWED_HOSTS = ['*'] # El asterisco permite cualquier conexión en desarrollo
+ALLOWED_HOSTS = ['localhost', '127.0.0.1'] # El asterisco permite cualquier conexión en desarrollo
 # ---------------------------------------------------------
 
 # Aplicaciones instaladas

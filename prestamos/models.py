@@ -41,11 +41,41 @@ class Prestamo(models.Model):
         blank=True
     )
 
+    ESTADOS_ACTIVOS = ['Activo', 'Retrasado', 'En Inspección']
+
     def clean(self):
         if self.fecha_devolucion and self.fecha_entrega and self.fecha_devolucion < self.fecha_entrega:
             raise ValidationError({
                 'fecha_devolucion': 'La fecha de devolución no puede ser anterior a la fecha de entrega.'
             })
+
+        if self.tiene_prestamo_activo():
+            raise ValidationError(
+                'Este usuario ya tiene un préstamo activo. No puede tener 2 préstamos simultáneos.'
+            )
+
+    def tiene_prestamo_activo(self):
+        """True si el solicitante de self.reserva (identificado por su
+        SolicitudReserva — usuario si es profesor, cédula si es estudiante)
+        ya tiene otro préstamo sin devolver. Solo aplica a préstamos nuevos:
+        cambiar el estado de un préstamo existente no debe autobloquearse."""
+        if self.pk is not None or not self.reserva_id:
+            return False
+
+        solicitud = self.reserva.solicitud.first()
+        if not solicitud:
+            return False
+
+        if solicitud.usuario_id:
+            filtro = {'reserva__solicitud__usuario_id': solicitud.usuario_id}
+        elif solicitud.cedula:
+            filtro = {'reserva__solicitud__cedula': solicitud.cedula}
+        else:
+            return False
+
+        return Prestamo.objects.filter(
+            estado__nombre__in=self.ESTADOS_ACTIVOS, **filtro
+        ).exists()
 
     def generar_codigo(self):
         from solicitudes.models import SolicitudReserva

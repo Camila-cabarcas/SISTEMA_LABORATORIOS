@@ -4,7 +4,8 @@ Define SolicitudReserva, SolicitudInsumo y Curso; contiene la lógica de validac
 y el método crear_reserva() que genera la Reserva asociada en estado "Pendiente".
 """
 from django.db import models
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
+from django.db.models import Q
 from datetime import timedelta, date, time
 from users.models import Usuario
 from laboratorio.models import Laboratorio, Modulo, HorarioLaboratorio
@@ -111,7 +112,6 @@ class SolicitudReserva(models.Model):
                 errors['nombre'] = 'Nombre y cédula son requeridos para profesores.'
 
             if self.nombre:
-                from django.db.models import Q
                 partes_nombre = self.nombre.split()
                 query = Q()
                 for parte in partes_nombre:
@@ -191,8 +191,34 @@ class SolicitudReserva(models.Model):
                         f'Tiempo disponible restante: {horas_r}h {minutos_r}min.'
                     )
 
+        if self.limite_pendientes_alcanzado():
+            errors[NON_FIELD_ERRORS] = (
+                'Ya tienes 2 reservas pendientes. Debes esperar a que sean '
+                'aprobadas o canceladas antes de crear una nueva.'
+            )
+
         if errors:
             raise ValidationError(errors)
+
+    def limite_pendientes_alcanzado(self):
+        """True si el solicitante (identificado por cédula si es estudiante,
+        o por usuario si es profesor — mismo criterio que la validación de
+        horas acumuladas por día de arriba) ya tiene 2 o más solicitudes
+        cuya Reserva sigue en estado "Pendiente". Solo aplica a solicitudes
+        nuevas: una ya guardada no cuenta contra su propio límite."""
+        if self.pk is not None:
+            return False
+
+        if self.tipo_solicitante == 'estudiante' and self.cedula:
+            filtro = Q(cedula=self.cedula, tipo_solicitante='estudiante')
+        elif self.tipo_solicitante == 'profesor' and self.usuario_id:
+            filtro = Q(usuario_id=self.usuario_id, tipo_solicitante='profesor')
+        else:
+            return False
+
+        return SolicitudReserva.objects.filter(
+            filtro, reserva__estado__nombre='Pendiente'
+        ).count() >= 2
 
     def _calcular_duracion(self):
         if self.hora_inicio is not None and self.hora_fin is not None:

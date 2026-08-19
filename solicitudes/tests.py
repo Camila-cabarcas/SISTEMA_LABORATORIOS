@@ -155,7 +155,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         solicitud, reserva = CrearSolicitudReservaService.crear_desde_estudiante(form)
 
         self.assertEqual(solicitud.tipo_solicitante, 'estudiante')
-        self.assertIsNotNone(reserva)
+        assert reserva is not None
         solicitud.refresh_from_db()
         self.assertEqual(solicitud.reserva_id, reserva.id)
         self.assertEqual(reserva.estado.nombre, 'Pendiente')
@@ -179,6 +179,38 @@ class CrearSolicitudReservaServiceTests(TestCase):
         )
 
         self.assertEqual(list(solicitud.modulos_asignados.all()), [self.modulo])
+
+    def test_reserva_pendiente_limite_2(self):
+        datos_base = {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'hora_inicio': '08:00',
+            'hora_fin': '10:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        }
+
+        # Dos solicitudes pendientes se crean sin problema (semanas distintas,
+        # mismo día de la semana, para reutilizar el HorarioLaboratorio del
+        # setUp sin chocar con el límite de horas acumuladas por día).
+        for semanas in (0, 1):
+            form = EstudianteSolicitudForm(None, dict(
+                datos_base, fecha_reserva=(self.fecha + timedelta(weeks=semanas)).isoformat(),
+            ))
+            self.assertTrue(form.is_valid(), form.errors)
+            _, reserva = CrearSolicitudReservaService.crear_desde_estudiante(form)
+            assert reserva is not None  # ← Pylance entiende
+            self.assertEqual(reserva.estado.nombre, 'Pendiente')
+
+        # La tercera solicitud pendiente del mismo estudiante debe rechazarse.
+        form_tercera = EstudianteSolicitudForm(None, dict(
+            datos_base, fecha_reserva=(self.fecha + timedelta(weeks=2)).isoformat(),
+        ))
+        self.assertFalse(form_tercera.is_valid())
+        errores = ' '.join(str(e) for e in form_tercera.errors.get('__all__', []))
+        self.assertIn('Ya tienes 2 reservas pendientes', errores)
 
     def test_crear_desde_profesor_crea_solicitud_y_reserva(self):
         docente = Usuario.objects.create_user(
@@ -204,7 +236,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         solicitud, reserva = CrearSolicitudReservaService.crear_desde_profesor(form)
 
         self.assertEqual(solicitud.tipo_solicitante, 'profesor')
-        self.assertIsNotNone(reserva)
+        assert reserva is not None
         self.assertEqual(solicitud.usuario_id, docente.id)
 
     def test_crear_libre_crea_solicitud_y_reserva(self):
@@ -222,7 +254,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
 
         self.assertTrue(solicitud.reserva_libre)
         self.assertEqual(solicitud.tipo_solicitante, 'profesor')
-        self.assertIsNotNone(reserva)
+        assert reserva is not None
         self.assertEqual(reserva.estado.nombre, 'Pendiente')
 
     def test_crear_libre_asigna_modulos_automaticamente_sin_ids(self):

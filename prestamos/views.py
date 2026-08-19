@@ -4,6 +4,7 @@ Vistas para listar, crear, ver detalle, cambiar estado y marcar como devuelto un
 """
 import logging
 
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from users.decorators import rol_requerido
 from .models import Prestamo, PrestamoItem, EstadoPrestamo, InspeccionItem
@@ -186,11 +187,26 @@ def crear_prestamo(request, reserva_id):
 
     if request.method == 'POST':
 
-        prestamo = Prestamo.objects.create(
+        prestamo = Prestamo(
             reserva=reserva,
             responsable=request.user,
             estado=EstadoPrestamo.objects.get(nombre='Activo')
         )
+
+        try:
+            prestamo.full_clean()
+        except ValidationError as e:
+            return render(
+                request,
+                'prestamos/crear.html',
+                {
+                    'reserva': reserva,
+                    'items_por_insumo': items_por_insumo,
+                    'errores': e.messages,
+                }
+            )
+
+        prestamo.save()
 
         # Guardar los ítems seleccionados. .activos (no .objects): un ítem
         # soft-deleted no debe poder prestarse aunque alguien arme el POST

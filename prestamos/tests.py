@@ -17,10 +17,12 @@ from django.test import TestCase
 from django.utils import timezone
 
 from inventario.models import EstadoItem, Insumo, ItemInventario, MovimientoInventario, TipoMovimiento
+from laboratorio.models import Laboratorio
 from prestamos.models import EstadoPrestamo, InspeccionItem, Prestamo, PrestamoItem
 from prestamos.services.inspeccionar_prestamo_service import FinalizarInspeccionService
 from prestamos.services.mutacion_inventario_service import MutacionInventarioService
 from reservas.models import EstadoReserva, Reserva
+from solicitudes.models import SolicitudReserva
 from users.models import Usuario
 
 
@@ -130,7 +132,7 @@ class MutacionInventarioServiceTests(TestCase):
         movimiento = MovimientoInventario.objects.filter(
             item_inventario=self.item, tipo_movimiento__nombre='Prestado',
         ).first()
-        self.assertIsNotNone(movimiento)
+        assert movimiento is not None
         self.assertEqual(movimiento.usuario, self.responsable)
 
     def test_marcar_item_en_prestamo_es_invocable_directamente(self):
@@ -262,6 +264,77 @@ class ModelosCleanValidationTests(TestCase):
         prestamo.fecha_devolucion = prestamo.fecha_entrega - timedelta(hours=1)
         with self.assertRaises(ValidationError):
             prestamo.full_clean()
+
+    def _crear_reserva_con_solicitud(self, cedula):
+        """A diferencia de _crear_prestamo (cuya Reserva no tiene
+        SolicitudReserva asociada), esta sí — es lo que tiene_prestamo_activo()
+        usa para identificar al solicitante de un préstamo nuevo."""
+        laboratorio = Laboratorio.objects.get_or_create(
+            nombre='Lab Clean Test', defaults={'ubicacion': 'X'},
+        )[0]
+        reserva = Reserva.objects.create(
+            fecha_reserva=timezone.now(),
+            estado=EstadoReserva.objects.get_or_create(nombre='Aprobada')[0],
+        )
+        SolicitudReserva.objects.create(
+            tipo_solicitante='estudiante',
+            cedula=cedula,
+            laboratorio=laboratorio,
+            fecha_reserva=timezone.now(),
+            reserva=reserva,
+        )
+        return reserva
+
+    def test_prestamo_activo_bloquea_segundo(self):
+        responsable = Usuario.objects.create(username='responsable_activo_test')
+        reserva_1 = self._crear_reserva_con_solicitud('111222333')
+        Prestamo.objects.create(
+            reserva=reserva_1, responsable=responsable,
+            estado=EstadoPrestamo.objects.get_or_create(nombre='Activo')[0],
+        )
+
+        reserva_2 = self._crear_reserva_con_solicitud('111222333')
+        segundo_prestamo = Prestamo(
+            reserva=reserva_2, responsable=responsable,
+            estado=EstadoPrestamo.objects.get_or_create(nombre='Activo')[0],
+        )
+
+        with self.assertRaises(ValidationError):
+            segundo_prestamo.full_clean()
+
+    def test_prestamo_de_otro_usuario_no_se_bloquea(self):
+        responsable = Usuario.objects.create(username='responsable_otro_test')
+        reserva_1 = self._crear_reserva_con_solicitud('111222333')
+        Prestamo.objects.create(
+            reserva=reserva_1, responsable=responsable,
+            estado=EstadoPrestamo.objects.get_or_create(nombre='Activo')[0],
+        )
+
+        reserva_2 = self._crear_reserva_con_solicitud('999888777')
+        otro_prestamo = Prestamo(
+            reserva=reserva_2, responsable=responsable,
+            estado=EstadoPrestamo.objects.get_or_create(nombre='Activo')[0],
+        )
+
+        otro_prestamo.full_clean()
+
+    def test_prestamo_activo_no_bloquea_tras_devolucion(self):
+        responsable = Usuario.objects.create(username='responsable_devuelto_test')
+        reserva_1 = self._crear_reserva_con_solicitud('111222333')
+        prestamo_1 = Prestamo.objects.create(
+            reserva=reserva_1, responsable=responsable,
+            estado=EstadoPrestamo.objects.get_or_create(nombre='Activo')[0],
+        )
+        prestamo_1.estado = EstadoPrestamo.objects.get_or_create(nombre='Devuelto')[0]
+        prestamo_1.save()
+
+        reserva_2 = self._crear_reserva_con_solicitud('111222333')
+        nuevo_prestamo = Prestamo(
+            reserva=reserva_2, responsable=responsable,
+            estado=EstadoPrestamo.objects.get_or_create(nombre='Activo')[0],
+        )
+
+        nuevo_prestamo.full_clean()
 
     # -- PrestamoItem -------------------------------------------------------
 
