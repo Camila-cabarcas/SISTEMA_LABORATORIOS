@@ -160,6 +160,39 @@ class CrearSolicitudReservaServiceTests(TestCase):
         self.assertEqual(solicitud.reserva_id, reserva.id)
         self.assertEqual(reserva.estado.nombre, 'Pendiente')
 
+    def test_crear_desde_estudiante_bloqueada_por_solapamiento_con_aprobada(self):
+        # El estudiante ya tiene una reserva Aprobada 09:00-11:00 ese día;
+        # crear_reserva() debe rechazar (Reserva.clean()) una nueva que se
+        # solape con ella, y CrearSolicitudReservaService lo absorbe
+        # devolviendo reserva=None (igual que cualquier otro error al crear
+        # la reserva — ver su docstring).
+        Usuario.objects.create(username='ana_con_cuenta_test', codigo='111222333')
+        Reserva.objects.create(
+            usuario=Usuario.objects.get(codigo='111222333'),
+            estado=EstadoReserva.objects.get(nombre='Aprobada'),
+            fecha_reserva=datetime.combine(self.fecha, time(9, 0)),
+            fecha_devolucion=datetime.combine(self.fecha, time(11, 0)),
+        )
+
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '10:00',
+            'hora_fin': '12:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+
+        solicitud, reserva = CrearSolicitudReservaService.crear_desde_estudiante(form)
+
+        self.assertIsNone(reserva)
+        solicitud.refresh_from_db()
+        self.assertIsNone(solicitud.reserva_id)
+
     def test_crear_desde_estudiante_asigna_modulo(self):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',

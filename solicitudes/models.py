@@ -308,12 +308,14 @@ class SolicitudReserva(models.Model):
                 self.hora_fin
             )
 
-        reserva = Reserva.objects.create(
+        reserva = Reserva(
             usuario=usuario,
             fecha_reserva=fecha_base,
             fecha_devolucion=fecha_devolucion,
             estado=estado_pendiente
         )
+        reserva.full_clean()
+        reserva.save()
 
         for solicitud_insumo in self.insumos.all():
             ReservaInsumo.objects.create(

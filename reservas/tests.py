@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from inventario.models import Insumo
 from reservas.models import EstadoReserva, Reserva, ReservaInsumo
+from users.models import Usuario
 
 
 class ModelosCleanValidationTests(TestCase):
@@ -32,6 +33,76 @@ class ModelosCleanValidationTests(TestCase):
         # guardar (o si se valida sin haberla seteado) no debe fallar.
         reserva = Reserva(fecha_reserva=timezone.now())
         reserva.full_clean()
+
+    # -- Solapamiento con reserva aprobada --------------------------------
+
+    def test_solapa_con_aprobada_del_mismo_usuario_es_invalida(self):
+        usuario = Usuario.objects.create(username='user_solapa_test', codigo='SOL001')
+        estado_aprobada = EstadoReserva.objects.create(nombre='Aprobada')
+        inicio = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        Reserva.objects.create(
+            usuario=usuario, estado=estado_aprobada,
+            fecha_reserva=inicio, fecha_devolucion=inicio + timedelta(hours=2),  # 10:00-12:00
+        )
+
+        nueva = Reserva(
+            usuario=usuario, estado=estado_aprobada,
+            fecha_reserva=inicio + timedelta(hours=1),  # 11:00
+            fecha_devolucion=inicio + timedelta(hours=3),  # 13:00 -> se solapa con 10:00-12:00
+        )
+        with self.assertRaises(ValidationError):
+            nueva.full_clean()
+
+    def test_no_solapa_horario_distinto_mismo_dia_es_valida(self):
+        usuario = Usuario.objects.create(username='user_no_solapa_test', codigo='SOL002')
+        estado_aprobada = EstadoReserva.objects.create(nombre='Aprobada')
+        inicio = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        Reserva.objects.create(
+            usuario=usuario, estado=estado_aprobada,
+            fecha_reserva=inicio, fecha_devolucion=inicio + timedelta(hours=2),  # 10:00-12:00
+        )
+
+        nueva = Reserva(
+            usuario=usuario, estado=estado_aprobada,
+            fecha_reserva=inicio + timedelta(hours=2),  # 12:00
+            fecha_devolucion=inicio + timedelta(hours=4),  # 14:00 -> no se solapa
+        )
+        nueva.full_clean()
+
+    def test_solapa_con_pendiente_no_bloquea(self):
+        # El bloqueo solo aplica contra reservas ya "Aprobada" — dos
+        # reservas Pendiente que se solapan no deben chocar entre sí.
+        usuario = Usuario.objects.create(username='user_pendiente_test', codigo='SOL003')
+        estado_pendiente = EstadoReserva.objects.create(nombre='Pendiente')
+        inicio = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        Reserva.objects.create(
+            usuario=usuario, estado=estado_pendiente,
+            fecha_reserva=inicio, fecha_devolucion=inicio + timedelta(hours=2),
+        )
+
+        nueva = Reserva(
+            usuario=usuario, estado=estado_pendiente,
+            fecha_reserva=inicio + timedelta(hours=1),
+            fecha_devolucion=inicio + timedelta(hours=3),
+        )
+        nueva.full_clean()
+
+    def test_solapa_con_aprobada_de_otro_usuario_no_bloquea(self):
+        usuario_1 = Usuario.objects.create(username='user_a_test', codigo='SOL004')
+        usuario_2 = Usuario.objects.create(username='user_b_test', codigo='SOL005')
+        estado_aprobada = EstadoReserva.objects.create(nombre='Aprobada')
+        inicio = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        Reserva.objects.create(
+            usuario=usuario_1, estado=estado_aprobada,
+            fecha_reserva=inicio, fecha_devolucion=inicio + timedelta(hours=2),
+        )
+
+        nueva = Reserva(
+            usuario=usuario_2, estado=estado_aprobada,
+            fecha_reserva=inicio + timedelta(hours=1),
+            fecha_devolucion=inicio + timedelta(hours=3),
+        )
+        nueva.full_clean()
 
     # -- ReservaInsumo ----------------------------------------------------
 

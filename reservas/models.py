@@ -52,6 +52,35 @@ class Reserva(models.Model):
                 'fecha_devolucion': 'La fecha de devolución debe ser posterior a la fecha de reserva.'
             })
 
+        if self.tiene_solapamiento_con_aprobada():
+            raise ValidationError(
+                'Ya tienes otra reserva aprobada que se solapa con este horario.'
+            )
+
+    def tiene_solapamiento_con_aprobada(self):
+        """True si self.usuario ya tiene otra Reserva en estado "Aprobada"
+        cuyo rango [fecha_reserva, fecha_devolucion) se solapa con el de
+        esta. Solo aplica a reservas nuevas, y solo si se puede identificar
+        al usuario: self.usuario queda vacío para solicitantes sin cuenta de
+        Usuario registrada (ver SolicitudReserva.crear_reserva(), que busca
+        por cédula) — en ese caso no hay forma de detectar el solapamiento."""
+        if self.pk is not None or not self.usuario_id or not self.fecha_reserva:
+            return False
+
+        fin = self.fecha_devolucion or self.fecha_reserva
+
+        conflictos = Reserva.objects.filter(
+            usuario_id=self.usuario_id,
+            estado__nombre='Aprobada',
+            fecha_reserva__date=self.fecha_reserva.date(),
+        )
+
+        for otra in conflictos:
+            otra_fin = otra.fecha_devolucion or otra.fecha_reserva
+            if self.fecha_reserva < otra_fin and otra.fecha_reserva < fin:
+                return True
+        return False
+
     def generar_codigo(self):
         solicitud = self.solicitud.first()
         cedula = solicitud.cedula if solicitud else 'SIN'
