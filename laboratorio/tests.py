@@ -177,6 +177,7 @@ class ModuloEstadoServiceTests(TestCase):
 
         relevante = ModuloEstadoService.solicitud_relevante(soles, hoy)
 
+        assert relevante is not None
         self.assertEqual(relevante.id, activa.id)
 
 

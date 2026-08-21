@@ -329,6 +329,10 @@ def mapa_laboratorio(request, id):
 
             elif estado in ('ocupado', 'reservado'):
                 sol_relevante = ModuloEstadoService.solicitud_relevante(soles, fecha)
+                # solicitud_relevante solo devuelve None si `soles` está vacío,
+                # y obtener_estado ya habría devuelto 'disponible' en ese caso
+                # en vez de 'ocupado'/'reservado' — nunca None acá.
+                assert sol_relevante is not None
 
                 if sol_relevante.nombre:
                     nombre_sol = sol_relevante.nombre

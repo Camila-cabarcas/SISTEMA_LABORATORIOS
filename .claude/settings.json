@@ -22,7 +22,14 @@
       "Bash(python -m pytest tests/ -q)",
       "Bash(python -c \"import ast; ast.parse\\(open\\('laboratorio/views.py', encoding='utf-8'\\).read\\(\\)\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('laboratorio/services/modulo_service.py', encoding='utf-8'\\).read\\(\\)\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('solicitudes/views.py', encoding='utf-8'\\).read\\(\\)\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('solicitudes/views.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python manage.py test laboratorio -v 1)",
+      "Bash(npx --yes pyright@1.1.413 laboratorio/views.py)",
+      "Bash(venv/Scripts/python.exe -c \"import django_stubs_ext\")",
+      "Bash(venv/Scripts/python.exe -c \"import django; print\\(django.VERSION\\)\")",
+      "Bash(venv/Scripts/python.exe -m pip show pyright)",
+      "Bash(venv/Scripts/python.exe -m pyright --version)",
+      "Bash(npx --yes pyright@1.1.413 --pythonpath \"venv/Scripts/python.exe\" laboratorio/views.py)"
     ]
   }
 }
