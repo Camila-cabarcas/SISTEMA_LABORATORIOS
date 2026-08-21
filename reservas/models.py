@@ -52,18 +52,21 @@ class Reserva(models.Model):
                 'fecha_devolucion': 'La fecha de devolución debe ser posterior a la fecha de reserva.'
             })
 
-        if self.tiene_solapamiento_con_aprobada():
+        if self.tiene_solapamiento():
             raise ValidationError(
-                'Ya tienes otra reserva aprobada que se solapa con este horario.'
+                'No puedes crear 2 reservas el mismo día en el mismo laboratorio.'
             )
 
-    def tiene_solapamiento_con_aprobada(self):
-        """True si self.usuario ya tiene otra Reserva en estado "Aprobada"
-        cuyo rango [fecha_reserva, fecha_devolucion) se solapa con el de
-        esta. Solo aplica a reservas nuevas, y solo si se puede identificar
-        al usuario: self.usuario queda vacío para solicitantes sin cuenta de
-        Usuario registrada (ver SolicitudReserva.crear_reserva(), que busca
-        por cédula) — en ese caso no hay forma de detectar el solapamiento."""
+    def tiene_solapamiento(self):
+        """True si self.usuario ya tiene otra Reserva en estado "Aprobada" o
+        "Pendiente" cuyo rango [fecha_reserva, fecha_devolucion) se solapa
+        con el de esta. Se incluye "Pendiente" (no solo "Aprobada") para que
+        el chequeo también bloquee dos solicitudes del mismo usuario que se
+        solapan mientras ninguna ha sido aprobada todavía. Solo aplica a
+        reservas nuevas, y solo si se puede identificar al usuario:
+        self.usuario queda vacío para solicitantes sin cuenta de Usuario
+        registrada (ver SolicitudReserva.crear_reserva(), que busca por
+        cédula) — en ese caso no hay forma de detectar el solapamiento."""
         if self.pk is not None or not self.usuario_id or not self.fecha_reserva:
             return False
 
@@ -71,7 +74,7 @@ class Reserva(models.Model):
 
         conflictos = Reserva.objects.filter(
             usuario_id=self.usuario_id,
-            estado__nombre='Aprobada',
+            estado__nombre__in=['Aprobada', 'Pendiente'],
             fecha_reserva__date=self.fecha_reserva.date(),
         )
 

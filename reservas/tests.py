@@ -69,9 +69,10 @@ class ModelosCleanValidationTests(TestCase):
         )
         nueva.full_clean()
 
-    def test_solapa_con_pendiente_no_bloquea(self):
-        # El bloqueo solo aplica contra reservas ya "Aprobada" — dos
-        # reservas Pendiente que se solapan no deben chocar entre sí.
+    def test_solapa_con_pendiente_del_mismo_usuario_es_invalida(self):
+        # El bloqueo también aplica contra reservas "Pendiente" (no solo
+        # "Aprobada") — dos solicitudes del mismo usuario que se solapan no
+        # deben poder coexistir aunque ninguna haya sido aprobada todavía.
         usuario = Usuario.objects.create(username='user_pendiente_test', codigo='SOL003')
         estado_pendiente = EstadoReserva.objects.create(nombre='Pendiente')
         inicio = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
@@ -85,7 +86,8 @@ class ModelosCleanValidationTests(TestCase):
             fecha_reserva=inicio + timedelta(hours=1),
             fecha_devolucion=inicio + timedelta(hours=3),
         )
-        nueva.full_clean()
+        with self.assertRaises(ValidationError):
+            nueva.full_clean()
 
     def test_solapa_con_aprobada_de_otro_usuario_no_bloquea(self):
         usuario_1 = Usuario.objects.create(username='user_a_test', codigo='SOL004')

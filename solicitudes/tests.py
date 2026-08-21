@@ -193,6 +193,87 @@ class CrearSolicitudReservaServiceTests(TestCase):
         solicitud.refresh_from_db()
         self.assertIsNone(solicitud.reserva_id)
 
+    def test_crear_desde_estudiante_bloqueada_por_solapamiento_mismo_laboratorio(self):
+        # A diferencia del test anterior (reserva conflictiva sin
+        # SolicitudReserva vinculada), acá SÍ se vincula al mismo
+        # laboratorio, así que dispara el chequeo específico de
+        # crear_reserva() — con su mensaje propio, no el genérico de
+        # Reserva.clean().
+        usuario = Usuario.objects.create(username='ana_lab_test', codigo='111222333')
+        reserva_existente = Reserva.objects.create(
+            usuario=usuario,
+            estado=EstadoReserva.objects.get(nombre='Aprobada'),
+            fecha_reserva=datetime.combine(self.fecha, time(9, 0)),
+            fecha_devolucion=datetime.combine(self.fecha, time(11, 0)),
+        )
+        SolicitudReserva.objects.create(
+            tipo_solicitante='estudiante', cedula='111222333', usuario=usuario,
+            laboratorio=self.laboratorio, fecha_reserva=datetime.combine(self.fecha, time(9, 0)),
+            hora_inicio=time(9, 0), hora_fin=time(11, 0), reserva=reserva_existente,
+        )
+
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '10:00',
+            'hora_fin': '12:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+
+        with self.assertLogs('solicitudes.services.solicitud_reserva_service', level='ERROR') as ctx:
+            solicitud, reserva = CrearSolicitudReservaService.crear_desde_estudiante(form)
+
+        self.assertIsNone(reserva)
+        self.assertIn(f'Ya tienes una reserva a esa hora en {self.laboratorio.nombre}', ctx.output[0])
+        solicitud.refresh_from_db()
+        self.assertIsNone(solicitud.reserva_id)
+
+    def test_crear_desde_estudiante_no_bloqueada_por_solapamiento_en_otro_laboratorio(self):
+        # Mismo usuario, mismo horario, pero en un laboratorio distinto: no
+        # debe chocar contra el chequeo específico de crear_reserva() — el
+        # chequeo genérico de Reserva.clean() (cualquier laboratorio) sigue
+        # sin poder pasarlo porque la reserva conflictiva no tiene
+        # SolicitudReserva vinculada (self.reserva no existe en ese momento).
+        otro_laboratorio = Laboratorio.objects.create(
+            nombre='Laboratorio de Química', ubicacion='Bloque 5', activo=True,
+        )
+        usuario = Usuario.objects.create(username='ana_otro_lab_test', codigo='111222333')
+        reserva_existente = Reserva.objects.create(
+            usuario=usuario,
+            estado=EstadoReserva.objects.get(nombre='Aprobada'),
+            fecha_reserva=datetime.combine(self.fecha, time(9, 0)),
+            fecha_devolucion=datetime.combine(self.fecha, time(11, 0)),
+        )
+        SolicitudReserva.objects.create(
+            tipo_solicitante='estudiante', cedula='111222333', usuario=usuario,
+            laboratorio=otro_laboratorio, fecha_reserva=datetime.combine(self.fecha, time(9, 0)),
+            hora_inicio=time(9, 0), hora_fin=time(11, 0), reserva=reserva_existente,
+        )
+
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '10:00',
+            'hora_fin': '12:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+
+        solicitud, reserva = CrearSolicitudReservaService.crear_desde_estudiante(form)
+
+        # Sigue bloqueada — por el chequeo genérico de Reserva.clean(), no
+        # por el de laboratorio específico.
+        self.assertIsNone(reserva)
+
     def test_crear_desde_estudiante_asigna_modulo(self):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',

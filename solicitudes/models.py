@@ -308,6 +308,29 @@ class SolicitudReserva(models.Model):
                 self.hora_fin
             )
 
+        # Reserva.clean() ya bloquea solapamientos del mismo usuario en
+        # CUALQUIER laboratorio (no puede estar en dos lugares a la vez);
+        # este chequeo adicional vive acá, no ahí, porque es el único punto
+        # con acceso a self.laboratorio_id — Reserva no sabe en qué
+        # laboratorio queda hasta que su SolicitudReserva se guarda (chicken-
+        # and-egg). Da un mensaje más específico cuando el choque es en el
+        # mismo laboratorio; si es en otro laboratorio, lo sigue bloqueando
+        # el chequeo genérico de Reserva.clean() más abajo.
+        if usuario:
+            fin = fecha_devolucion or fecha_base
+            reservas_conflicto = Reserva.objects.filter(
+                usuario_id=usuario.id,
+                solicitud__laboratorio_id=self.laboratorio_id,
+                estado__nombre__in=['Aprobada', 'Pendiente'],
+                fecha_reserva__date=fecha_base.date(),
+            )
+            for otra in reservas_conflicto:
+                otra_fin = otra.fecha_devolucion or otra.fecha_reserva
+                if fecha_base < otra_fin and otra.fecha_reserva < fin:
+                    raise ValidationError(
+                        f'Ya tienes una reserva a esa hora en {self.laboratorio.nombre}.'
+                    )
+
         reserva = Reserva(
             usuario=usuario,
             fecha_reserva=fecha_base,
