@@ -310,26 +310,37 @@ class SolicitudReserva(models.Model):
 
         # Reserva.clean() ya bloquea solapamientos del mismo usuario en
         # CUALQUIER laboratorio (no puede estar en dos lugares a la vez);
-        # este chequeo adicional vive acá, no ahí, porque es el único punto
-        # con acceso a self.laboratorio_id — Reserva no sabe en qué
-        # laboratorio queda hasta que su SolicitudReserva se guarda (chicken-
-        # and-egg). Da un mensaje más específico cuando el choque es en el
-        # mismo laboratorio; si es en otro laboratorio, lo sigue bloqueando
-        # el chequeo genérico de Reserva.clean() más abajo.
+        # estos chequeos adicionales viven acá, no ahí, porque es el único
+        # punto con acceso a self.laboratorio_id — Reserva no sabe en qué
+        # laboratorio queda hasta que su SolicitudReserva se guarda
+        # (chicken-and-egg). Si el choque es en otro laboratorio, lo sigue
+        # bloqueando el chequeo genérico de Reserva.clean() más abajo.
         if usuario:
             fin = fecha_devolucion or fecha_base
-            reservas_conflicto = Reserva.objects.filter(
+            reservas_mismo_dia_mismo_lab = Reserva.objects.filter(
                 usuario_id=usuario.id,
                 solicitud__laboratorio_id=self.laboratorio_id,
                 estado__nombre__in=['Aprobada', 'Pendiente'],
                 fecha_reserva__date=fecha_base.date(),
             )
-            for otra in reservas_conflicto:
+
+            # Solapamiento horario en el mismo laboratorio: mensaje
+            # específico ("a esa hora").
+            for otra in reservas_mismo_dia_mismo_lab:
                 otra_fin = otra.fecha_devolucion or otra.fecha_reserva
                 if fecha_base < otra_fin and otra.fecha_reserva < fin:
                     raise ValidationError(
                         f'Ya tienes una reserva a esa hora en {self.laboratorio.nombre}.'
                     )
+
+            # Máximo 1 reserva por día en el mismo laboratorio, aunque no se
+            # solapen en horario (p. ej. 10-12 y 14-16 el mismo día siguen
+            # bloqueadas). El for de arriba ya trajo y cacheó el queryset,
+            # así que este chequeo no dispara una consulta adicional.
+            if reservas_mismo_dia_mismo_lab:
+                raise ValidationError(
+                    f'Solo puedes hacer 1 reserva por día en {self.laboratorio.nombre}.'
+                )
 
         reserva = Reserva(
             usuario=usuario,

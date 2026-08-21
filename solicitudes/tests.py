@@ -233,6 +233,100 @@ class CrearSolicitudReservaServiceTests(TestCase):
         solicitud.refresh_from_db()
         self.assertIsNone(solicitud.reserva_id)
 
+    def _crear_reserva_existente(self, cedula, laboratorio, hora_inicio, hora_fin, fecha=None):
+        """Usuario + Reserva Aprobada + SolicitudReserva vinculada a
+        `laboratorio`, para armar el escenario "ya tiene una reserva" que
+        usan los tests de máximo 1 reserva/día/laboratorio."""
+        fecha = fecha or self.fecha
+        usuario, _ = Usuario.objects.get_or_create(
+            codigo=cedula, defaults={'username': f'user_{cedula}'},
+        )
+        reserva = Reserva.objects.create(
+            usuario=usuario,
+            estado=EstadoReserva.objects.get(nombre='Aprobada'),
+            fecha_reserva=datetime.combine(fecha, hora_inicio),
+            fecha_devolucion=datetime.combine(fecha, hora_fin),
+        )
+        SolicitudReserva.objects.create(
+            tipo_solicitante='estudiante', cedula=cedula, usuario=usuario,
+            laboratorio=laboratorio, fecha_reserva=datetime.combine(fecha, hora_inicio),
+            hora_inicio=hora_inicio, hora_fin=hora_fin, reserva=reserva,
+        )
+        return usuario
+
+    def test_2_reservas_mismo_laboratorio_mismo_dia_sin_solapar_es_bloqueada(self):
+        # 10:00-12:00 ya reservado; 14:00-16:00 el mismo día no se solapa,
+        # pero el límite de 1 reserva/día/laboratorio la bloquea igual.
+        self._crear_reserva_existente('111222333', self.laboratorio, time(10, 0), time(12, 0))
+
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '14:00',
+            'hora_fin': '16:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+
+        with self.assertLogs('solicitudes.services.solicitud_reserva_service', level='ERROR') as ctx:
+            solicitud, reserva = CrearSolicitudReservaService.crear_desde_estudiante(form)
+
+        self.assertIsNone(reserva)
+        self.assertIn(f'Solo puedes hacer 1 reserva por día en {self.laboratorio.nombre}', ctx.output[0])
+
+    def test_2_reservas_mismo_laboratorio_dias_distintos_es_permitida(self):
+        # Mismo laboratorio, mismo horario, pero una semana después: no hay
+        # límite de 1 reserva/día/laboratorio que cruce días distintos.
+        self._crear_reserva_existente('111222333', self.laboratorio, time(10, 0), time(12, 0))
+
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': (self.fecha + timedelta(weeks=1)).isoformat(),
+            'hora_inicio': '10:00',
+            'hora_fin': '12:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+
+        solicitud, reserva = CrearSolicitudReservaService.crear_desde_estudiante(form)
+
+        assert reserva is not None
+        self.assertEqual(reserva.estado.nombre, 'Pendiente')
+
+    def test_2_reservas_laboratorios_distintos_mismo_dia_es_permitida(self):
+        # Lab B a las 10-12 ya reservado; Lab A (self.laboratorio) a las
+        # 14-16 el mismo día no choca con el límite, que es por laboratorio.
+        otro_laboratorio = Laboratorio.objects.create(
+            nombre='Laboratorio de Química', ubicacion='Bloque 5', activo=True,
+        )
+        self._crear_reserva_existente('111222333', otro_laboratorio, time(10, 0), time(12, 0))
+
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '14:00',
+            'hora_fin': '16:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+
+        solicitud, reserva = CrearSolicitudReservaService.crear_desde_estudiante(form)
+
+        assert reserva is not None
+        self.assertEqual(reserva.estado.nombre, 'Pendiente')
+
     def test_crear_desde_estudiante_no_bloqueada_por_solapamiento_en_otro_laboratorio(self):
         # Mismo usuario, mismo horario, pero en un laboratorio distinto: no
         # debe chocar contra el chequeo específico de crear_reserva() — el
