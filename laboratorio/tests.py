@@ -39,6 +39,23 @@ class ModuloEstadoServiceTests(TestCase):
         self.estado_pendiente = EstadoReserva.objects.create(nombre='Pendiente')
         self.estado_aprobada = EstadoReserva.objects.create(nombre='Aprobada')
 
+    @staticmethod
+    def _ventana_en_curso(hoy, margen_minutos=30):
+        """Ventana [hora_inicio, hora_fin] de margen_minutos a cada lado de
+        la hora actual, recortada para no cruzar la medianoche.
+
+        Sin el recorte, sumar/restar minutos a datetime.now().time() y
+        quedarse solo con .time() descarta el desborde de día: si son las
+        23:39, "+30min" da como resultado 00:09 en vez de "mañana 00:09",
+        y la ventana queda invertida (hora_fin < hora_inicio) — lo que hacía
+        fallar estos tests solo cuando corrían cerca de la medianoche."""
+        ahora_dt = datetime.combine(hoy, datetime.now().time())
+        inicio_dia = datetime.combine(hoy, time.min)
+        fin_dia = datetime.combine(hoy, time.max)
+        hora_inicio = max(inicio_dia, ahora_dt - timedelta(minutes=margen_minutos)).time()
+        hora_fin = min(fin_dia, ahora_dt + timedelta(minutes=margen_minutos)).time()
+        return hora_inicio, hora_fin
+
     def _crear_solicitud(self, fecha, hora_inicio, hora_fin, estado_reserva):
         reserva = Reserva.objects.create(
             fecha_reserva=datetime.combine(fecha, hora_inicio),
@@ -73,9 +90,7 @@ class ModuloEstadoServiceTests(TestCase):
 
     def test_modulo_con_reserva_activa_ahora_esta_ocupado(self):
         hoy = date.today()
-        ahora = datetime.now().time()
-        hora_inicio = (datetime.combine(hoy, ahora) - timedelta(minutes=30)).time()
-        hora_fin = (datetime.combine(hoy, ahora) + timedelta(minutes=30)).time()
+        hora_inicio, hora_fin = self._ventana_en_curso(hoy)
 
         solicitud = self._crear_solicitud(hoy, hora_inicio, hora_fin, self.estado_aprobada)
         soles = ModuloEstadoService.agrupar_por_modulo(
@@ -104,9 +119,7 @@ class ModuloEstadoServiceTests(TestCase):
         # Solo una reserva Aprobada (no Pendiente) puede poner un módulo en
         # 'ocupado' — Pendiente todavía no fue confirmada por un encargado.
         hoy = date.today()
-        ahora = datetime.now().time()
-        hora_inicio = (datetime.combine(hoy, ahora) - timedelta(minutes=30)).time()
-        hora_fin = (datetime.combine(hoy, ahora) + timedelta(minutes=30)).time()
+        hora_inicio, hora_fin = self._ventana_en_curso(hoy)
 
         solicitud = self._crear_solicitud(hoy, hora_inicio, hora_fin, self.estado_pendiente)
         soles = ModuloEstadoService.agrupar_por_modulo(
@@ -119,9 +132,7 @@ class ModuloEstadoServiceTests(TestCase):
 
     def test_evaluar_ahora_false_nunca_devuelve_ocupado(self):
         hoy = date.today()
-        ahora = datetime.now().time()
-        hora_inicio = (datetime.combine(hoy, ahora) - timedelta(minutes=30)).time()
-        hora_fin = (datetime.combine(hoy, ahora) + timedelta(minutes=30)).time()
+        hora_inicio, hora_fin = self._ventana_en_curso(hoy)
 
         solicitud = self._crear_solicitud(hoy, hora_inicio, hora_fin, self.estado_aprobada)
         soles = ModuloEstadoService.agrupar_por_modulo(
@@ -164,9 +175,7 @@ class ModuloEstadoServiceTests(TestCase):
 
     def test_solicitud_relevante_prioriza_la_que_esta_en_curso(self):
         hoy = date.today()
-        ahora = datetime.now().time()
-        hora_inicio_actual = (datetime.combine(hoy, ahora) - timedelta(minutes=30)).time()
-        hora_fin_actual = (datetime.combine(hoy, ahora) + timedelta(minutes=30)).time()
+        hora_inicio_actual, hora_fin_actual = self._ventana_en_curso(hoy)
 
         self._crear_solicitud(hoy, time(6, 0), time(6, 30), self.estado_aprobada)
         activa = self._crear_solicitud(hoy, hora_inicio_actual, hora_fin_actual, self.estado_aprobada)

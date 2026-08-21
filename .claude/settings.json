@@ -31,7 +31,8 @@
       "Bash(venv/Scripts/python.exe -m pyright --version)",
       "Bash(npx --yes pyright@1.1.413 --pythonpath \"venv/Scripts/python.exe\" laboratorio/views.py)",
       "Bash(python manage.py test reservas solicitudes prestamos laboratorio -v 1)",
-      "Bash(python manage.py test solicitudes.tests.CrearSolicitudReservaServiceTests -v 2)"
+      "Bash(python manage.py test solicitudes.tests.CrearSolicitudReservaServiceTests -v 2)",
+      "Bash(python manage.py test laboratorio.tests.ModuloEstadoServiceTests -v 2)"
     ]
   }
 }
