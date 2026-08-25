@@ -140,8 +140,12 @@ def notificar_devolucion_completada(prestamo, inspecciones, async_=True):
 
 
 def notificar_recordatorio_devolucion(prestamo, async_=True):
-    """Llamada una vez por préstamo activo desde la tarea/comando semanal
-    (ver prestamos/tasks.py y el comando enviar_recordatorios_devolucion)."""
+    """Aviso de ATRASO (no un recordatorio preventivo): llamada una vez por
+    préstamo vencido hace más de 30 min desde RecordatorioDevolucionService,
+    que también se encarga de no llamarla dos veces para el mismo préstamo
+    (Prestamo.email_atraso_enviado)."""
+    from django.utils import timezone
+
     from prestamos.models import PrestamoItem
 
     solicitud = _solicitud_de_prestamo(prestamo)
@@ -157,16 +161,21 @@ def notificar_recordatorio_devolucion(prestamo, async_=True):
         PrestamoItem.objects.filter(prestamo=prestamo).select_related('item_inventario__insumo')
     )
     fecha_vencimiento = prestamo.reserva.fecha_devolucion if prestamo.reserva_id else None
+    minutos_atraso = None
+    if fecha_vencimiento:
+        minutos_atraso = int((timezone.now() - fecha_vencimiento).total_seconds() // 60)
 
     enviar_email_html(
         destinatarios=email,
-        asunto=f'Recordatorio de devolución — {prestamo.codigo}',
+        asunto='AVISO: Atraso en devolución de items',
         template_name='emails/recordatorio_devolucion.html',
         contexto={
             'nombre': nombre,
             'items': items,
             'codigo': prestamo.codigo,
             'fecha_vencimiento': fecha_vencimiento,
+            'minutos_atraso': minutos_atraso,
+            'laboratorio': solicitud.laboratorio.nombre if solicitud else None,
         },
         async_=async_,
     )

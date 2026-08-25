@@ -41,6 +41,11 @@ class Prestamo(models.Model):
         blank=True
     )
 
+    # Evita reenviar el aviso de atraso en cada corrida de
+    # enviar_recordatorios_devolucion (que puede correr cada hora) — se pone
+    # en True la primera vez que se notifica un atraso para este préstamo.
+    email_atraso_enviado = models.BooleanField(default=False)
+
     ESTADOS_ACTIVOS = ['Activo', 'Retrasado', 'En Inspección']
 
     def clean(self):

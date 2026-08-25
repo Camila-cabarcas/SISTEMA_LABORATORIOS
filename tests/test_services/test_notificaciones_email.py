@@ -5,12 +5,13 @@ destinatario y que cada notificación efectivamente encole un email (usando
 django.core.mail.outbox — Django cambia EMAIL_BACKEND a locmem para tests
 automáticamente, así que esto nunca golpea la API real de SendGrid).
 """
-from datetime import time
+from datetime import time, timedelta
 from io import StringIO
 
 import pytest
 from django.core import mail
 from django.core.management import call_command
+from django.utils import timezone
 
 from prestamos.services.recordatorio_devolucion_service import RecordatorioDevolucionService
 from solicitudes.models import SolicitudReserva
@@ -158,17 +159,78 @@ class TestNotificarPrestamoYDevolucion:
         assert reserva_con_prestamo.prestamo.codigo in mail.outbox[0].subject
 
 
+def _marcar_vencido(reserva, minutos_atras):
+    """Fuerza reserva.fecha_devolucion a `minutos_atras` minutos en el
+    pasado — reserva_con_prestamo la deja ~2h en el futuro por default
+    (Reserva.save() la calcula sola si no se pasa), así que hay que
+    pisarla explícitamente para simular un préstamo vencido."""
+    reserva.fecha_devolucion = timezone.now() - timedelta(minutes=minutos_atras)
+    reserva.save()
+
+
 class TestRecordatorioDevolucionService:
 
-    def test_notifica_solo_prestamos_activos(self, reserva_con_prestamo, laboratorio, usuario_admin):
+    def test_no_notifica_si_no_esta_vencido(self, reserva_con_prestamo, laboratorio, usuario_admin):
+        # reserva_con_prestamo deja fecha_devolucion ~2h en el futuro por
+        # default -> ni siquiera está atrasado todavía.
         usuario_admin.email = 'admin@example.com'
         usuario_admin.save()
         _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
 
         resultado = RecordatorioDevolucionService.enviar_recordatorios()
 
+        assert resultado == {'total': 0, 'enviados': 0}
+        assert len(mail.outbox) == 0
+
+    def test_no_notifica_si_paso_menos_de_30_min(self, reserva_con_prestamo, laboratorio, usuario_admin):
+        usuario_admin.email = 'admin@example.com'
+        usuario_admin.save()
+        _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
+        _marcar_vencido(reserva_con_prestamo.reserva, minutos_atras=10)
+
+        resultado = RecordatorioDevolucionService.enviar_recordatorios()
+
+        assert resultado == {'total': 0, 'enviados': 0}
+        assert len(mail.outbox) == 0
+
+    def test_notifica_si_paso_mas_de_30_min(self, reserva_con_prestamo, laboratorio, usuario_admin):
+        usuario_admin.email = 'admin@example.com'
+        usuario_admin.save()
+        _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
+        _marcar_vencido(reserva_con_prestamo.reserva, minutos_atras=45)
+
+        resultado = RecordatorioDevolucionService.enviar_recordatorios()
+
         assert resultado == {'total': 1, 'enviados': 1}
         assert len(mail.outbox) == 1
+        assert 'AVISO: Atraso' in mail.outbox[0].subject
+
+    def test_marca_email_atraso_enviado_tras_notificar(self, reserva_con_prestamo, laboratorio, usuario_admin):
+        usuario_admin.email = 'admin@example.com'
+        usuario_admin.save()
+        _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
+        _marcar_vencido(reserva_con_prestamo.reserva, minutos_atras=45)
+        assert reserva_con_prestamo.prestamo.email_atraso_enviado is False
+
+        RecordatorioDevolucionService.enviar_recordatorios()
+
+        reserva_con_prestamo.prestamo.refresh_from_db()
+        assert reserva_con_prestamo.prestamo.email_atraso_enviado is True
+
+    def test_no_reenvia_si_ya_se_notifico(self, reserva_con_prestamo, laboratorio, usuario_admin):
+        # Simula una segunda corrida del comando (p. ej. una hora después):
+        # con el flag ya en True, el préstamo ni siquiera entra al query.
+        usuario_admin.email = 'admin@example.com'
+        usuario_admin.save()
+        _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
+        _marcar_vencido(reserva_con_prestamo.reserva, minutos_atras=90)
+        reserva_con_prestamo.prestamo.email_atraso_enviado = True
+        reserva_con_prestamo.prestamo.save()
+
+        resultado = RecordatorioDevolucionService.enviar_recordatorios()
+
+        assert resultado == {'total': 0, 'enviados': 0}
+        assert len(mail.outbox) == 0
 
     def test_no_notifica_prestamos_devueltos(self, reserva_con_prestamo, laboratorio, usuario_admin):
         from prestamos.models import EstadoPrestamo
@@ -176,6 +238,7 @@ class TestRecordatorioDevolucionService:
         usuario_admin.email = 'admin@example.com'
         usuario_admin.save()
         _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
+        _marcar_vencido(reserva_con_prestamo.reserva, minutos_atras=45)
         reserva_con_prestamo.prestamo.estado = EstadoPrestamo.objects.get(nombre='Devuelto')
         reserva_con_prestamo.prestamo.save()
 
@@ -185,10 +248,17 @@ class TestRecordatorioDevolucionService:
         assert len(mail.outbox) == 0
 
     def test_prestamo_sin_email_cuenta_en_total_no_en_enviados(self, reserva_con_prestamo):
+        _marcar_vencido(reserva_con_prestamo.reserva, minutos_atras=45)
+
         resultado = RecordatorioDevolucionService.enviar_recordatorios()
 
         assert resultado == {'total': 1, 'enviados': 0}
         assert len(mail.outbox) == 0
+
+        # Sin email no se pudo notificar -> no se marca, para reintentar
+        # si más adelante el préstamo consigue un destinatario.
+        reserva_con_prestamo.prestamo.refresh_from_db()
+        assert reserva_con_prestamo.prestamo.email_atraso_enviado is False
 
 
 class TestComandoEnviarRecordatorios:
@@ -197,9 +267,21 @@ class TestComandoEnviarRecordatorios:
         usuario_admin.email = 'admin@example.com'
         usuario_admin.save()
         _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
+        _marcar_vencido(reserva_con_prestamo.reserva, minutos_atras=45)
 
         salida = StringIO()
         call_command('enviar_recordatorios_devolucion', stdout=salida)
 
         assert len(mail.outbox) == 1
         assert '1/1' in salida.getvalue()
+
+    def test_comando_no_reenvia_en_segunda_corrida(self, reserva_con_prestamo, laboratorio, usuario_admin):
+        usuario_admin.email = 'admin@example.com'
+        usuario_admin.save()
+        _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
+        _marcar_vencido(reserva_con_prestamo.reserva, minutos_atras=45)
+
+        call_command('enviar_recordatorios_devolucion', stdout=StringIO())
+        call_command('enviar_recordatorios_devolucion', stdout=StringIO())
+
+        assert len(mail.outbox) == 1
