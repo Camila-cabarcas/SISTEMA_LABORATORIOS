@@ -1,0 +1,28 @@
+{% extends "emails/base_email.html" %}
+
+{% block titulo %}Devolución registrada{% endblock %}
+
+{% block contenido %}
+<h2 style="margin-top:0; color:#2c3e50;">¡Hola, {{ nombre }}!</h2>
+<p>Se completó la devolución de tu préstamo con código <strong>{{ codigo }}</strong>{% if fecha_devolucion %} el {{ fecha_devolucion }}{% endif %}.</p>
+
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
+<tr style="background-color:#f8f9fa;">
+<th style="text-align:left; border:1px solid #e9ecef; padding:8px;">Ítem</th>
+<th style="text-align:left; border:1px solid #e9ecef; padding:8px;">Estado</th>
+</tr>
+{% for insp in inspecciones %}
+<tr>
+<td style="border:1px solid #e9ecef;">{{ insp.prestamo_item.item_inventario.insumo.nombre }} ({{ insp.prestamo_item.item_inventario.codigo }})</td>
+<td style="border:1px solid #e9ecef;">
+{% if insp.estado_inspeccion == 'bien' %}<span style="color:#198754;">Bien</span>
+{% elif insp.estado_inspeccion == 'danado' %}<span style="color:#dc3545;">Dañado</span>
+{% else %}<span style="color:#dc3545;">No entregado</span>
+{% endif %}
+</td>
+</tr>
+{% endfor %}
+</table>
+
+<p>Gracias por usar el Sistema de Laboratorios.</p>
+{% endblock %}

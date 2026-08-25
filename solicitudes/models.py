@@ -3,6 +3,8 @@ models.py — solicitudes
 Define SolicitudReserva, SolicitudInsumo y Curso; contiene la lógica de validación de reglas de negocio
 y el método crear_reserva() que genera la Reserva asociada en estado "Pendiente".
 """
+import logging
+
 from django.db import models
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.db.models import Q
@@ -11,6 +13,8 @@ from users.models import Usuario
 from laboratorio.models import Laboratorio, Modulo, HorarioLaboratorio
 from inventario.models import Insumo
 from reservas.models import Reserva
+
+logger = logging.getLogger(__name__)
 
 
 class Curso(models.Model):
@@ -360,6 +364,14 @@ class SolicitudReserva(models.Model):
 
         self.reserva = reserva
         self.save(update_fields=['reserva'])
+
+        try:
+            from utils.notificaciones_email import notificar_reserva_confirmada
+            notificar_reserva_confirmada(self, reserva)
+        except Exception:
+            logger.exception(
+                'crear_reserva | error notificando reserva confirmada | solicitud_id=%s', self.id,
+            )
 
         return reserva
 

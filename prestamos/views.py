@@ -222,6 +222,14 @@ def crear_prestamo(request, reserva_id):
                 item_inventario=item
             )
 
+        try:
+            from utils.notificaciones_email import notificar_prestamo_confirmado
+            notificar_prestamo_confirmado(prestamo)
+        except Exception:
+            logger.exception(
+                "notificar_prestamo_confirmado | error notificando | prestamo_id=%s", prestamo.id
+            )
+
         return redirect('detalle_prestamo', id=prestamo.pk)
 
     return render(

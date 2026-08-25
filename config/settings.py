@@ -1,8 +1,15 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Construye las rutas dentro del proyecto
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Carga variables desde .env (no versionado — ver .env.example) antes de
+# leerlas más abajo. Secretos como SENDGRID_API_KEY NUNCA van hardcodeados
+# acá: este archivo sí se commitea a git.
+load_dotenv(BASE_DIR / '.env')
 
 # --- CONFIGURACIÓN DE SEGURIDAD (Aquí estaba el error) ---
 # DEBUG = True es para desarrollo. Si lo pones en False, debes configurar ALLOWED_HOSTS.
@@ -10,7 +17,7 @@ DEBUG = False
 
 SECRET_KEY = 'django-insecure-clave-temporal-para-desarrollo-123456789'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1'] # El asterisco permite cualquier conexión en desarrollo
+ALLOWED_HOSTS = ['localhost', '127.0.0.1'] 
 # ---------------------------------------------------------
 
 # Aplicaciones instaladas
@@ -102,4 +109,13 @@ MESSAGE_TAGS = {
 }
 
 from .logging_config import LOGGING
+
+# --- Email (SendGrid) --------------------------------------------------
+# La API key vive en .env (no versionado — ver .env.example), nunca acá:
+# este archivo sí se commitea a git y una key hardcodeada quedaría expuesta
+# en el historial para siempre, aunque después se borre de acá.
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False
+EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@sistemalaboratorios.com')
 

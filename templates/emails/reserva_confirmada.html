@@ -1,0 +1,31 @@
+{% extends "emails/base_email.html" %}
+
+{% block titulo %}Reserva confirmada{% endblock %}
+
+{% block contenido %}
+<h2 style="margin-top:0; color:#2c3e50;">¡Hola, {{ nombre }}!</h2>
+<p>Tu reserva quedó registrada con los siguientes datos:</p>
+
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; width:160px; border:1px solid #e9ecef;">Código</td>
+<td style="border:1px solid #e9ecef;">{{ codigo }}</td>
+</tr>
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; border:1px solid #e9ecef;">Laboratorio</td>
+<td style="border:1px solid #e9ecef;">{{ laboratorio }}</td>
+</tr>
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; border:1px solid #e9ecef;">Fecha</td>
+<td style="border:1px solid #e9ecef;">{{ fecha }}</td>
+</tr>
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; border:1px solid #e9ecef;">Horario</td>
+<td style="border:1px solid #e9ecef;">
+{% if hora_inicio and hora_fin %}{{ hora_inicio }} - {{ hora_fin }}{% else %}Por confirmar{% endif %}
+</td>
+</tr>
+</table>
+
+<p>Esta reserva todavía está <strong>pendiente de aprobación</strong> por un encargado de laboratorio. Te avisaremos cuando cambie de estado.</p>
+{% endblock %}

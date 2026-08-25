@@ -106,6 +106,15 @@ class FinalizarInspeccionService:
 
             logger.info(f"FinalizarInspeccionService.finalizar | prestamo_id={prestamo_id} | estado=Devuelto | resumen={resumen}")
 
+            try:
+                from utils.notificaciones_email import notificar_devolucion_completada
+                notificar_devolucion_completada(prestamo, inspecciones)
+            except Exception:
+                logger.exception(
+                    "FinalizarInspeccionService.finalizar | error notificando devolución | prestamo_id=%s",
+                    prestamo_id,
+                )
+
             return {'prestamo': prestamo, 'resumen': resumen}
         except Exception as e:
             logger.error(f"Error en FinalizarInspeccionService.finalizar | {str(e)} | prestamo_id={prestamo_id}")
