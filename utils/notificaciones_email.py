@@ -7,12 +7,15 @@ utils.email_tasks.enviar_email_html — nunca debe romper el flujo que la
 llama (crear una reserva, registrar un préstamo, finalizar una inspección):
 cualquier error queda solo en el log.
 
-Resolución del destinatario: SolicitudReserva.email casi nunca se llena hoy
-(ni EstudianteSolicitudForm ni ProfesorSolicitudForm lo piden), así que la
-fuente confiable es solicitud.usuario.email — solo existe si el solicitante
-tiene una cuenta de Usuario registrada (ver SolicitudReserva.crear_reserva(),
-que la busca por cédula). Si no hay ningún email disponible, se omite el
-envío silenciosamente (log info, no error) — no hay a quién escribirle.
+Resolución del destinatario: solicitud.email es ahora obligatorio y
+verificado (@udea.edu.co) en EstudianteSolicitudForm y en el flujo "reserva
+libre" (ver ValidarSolicitudReservaService), así que es la fuente preferida
+cuando está presente. ProfesorSolicitudForm (flujo normal, con curso
+registrado) NO lo pide — para esos casos se cae a solicitud.usuario.email,
+que siempre existe porque ese flujo exige encontrar un Usuario Docente
+registrado por nombre (ver SolicitudReserva.clean()). Si no hay ningún
+email disponible por ninguna vía, se omite el envío silenciosamente (log
+info, no error) — no hay a quién escribirle.
 """
 import logging
 
@@ -32,10 +35,10 @@ def _email_y_nombre(solicitud):
         nombre = nombre or solicitud.usuario.get_full_name() or solicitud.usuario.username
 
     email = None
-    if solicitud.usuario and solicitud.usuario.email:
-        email = solicitud.usuario.email
-    elif solicitud.email:
+    if solicitud.email:
         email = solicitud.email
+    elif solicitud.usuario and solicitud.usuario.email:
+        email = solicitud.usuario.email
 
     return email, (nombre or 'Usuario')
 

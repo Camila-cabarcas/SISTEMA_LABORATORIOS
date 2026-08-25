@@ -38,7 +38,24 @@ def _vincular_solicitud(reserva, laboratorio, usuario=None, cedula='999999999'):
 
 class TestEmailYNombre:
 
-    def test_usa_email_del_usuario_si_existe(self, solicitud_valida, usuario_admin):
+    def test_prefiere_email_de_la_solicitud_sobre_el_del_usuario(self, solicitud_valida, usuario_admin):
+        # solicitud.email es ahora obligatorio/verificado (@udea.edu.co) en
+        # EstudianteSolicitudForm y en el flujo "libre" -> gana sobre
+        # usuario.email cuando ambos están presentes.
+        usuario_admin.email = 'admin@example.com'
+        usuario_admin.save()
+        solicitud_valida.usuario = usuario_admin
+        solicitud_valida.email = 'juan@udea.edu.co'
+        solicitud_valida.save()
+
+        email, nombre = _email_y_nombre(solicitud_valida)
+
+        assert email == 'juan@udea.edu.co'
+        assert nombre == 'Juan Pérez'
+
+    def test_cae_a_email_del_usuario_si_la_solicitud_no_tiene(self, solicitud_valida, usuario_admin):
+        # ProfesorSolicitudForm (flujo normal) no pide email -> solicitud.email
+        # queda vacío y hay que caer al de la cuenta Usuario del docente.
         usuario_admin.email = 'admin@example.com'
         usuario_admin.save()
         solicitud_valida.usuario = usuario_admin

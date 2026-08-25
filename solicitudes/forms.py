@@ -30,6 +30,16 @@ class EstudianteSolicitudForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
+    email = forms.EmailField(
+        label='Email Institucional',
+        required=True,
+        help_text='Debe ser @udea.edu.co',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'tucorreo@udea.edu.co',
+        })
+    )
+
     insumos_ids = forms.CharField(
         widget=forms.HiddenInput(),
         required=False
@@ -41,7 +51,7 @@ class EstudianteSolicitudForm(forms.ModelForm):
 
     class Meta:
         model = SolicitudReserva
-        fields = ['nombre', 'cedula', 'programa', 'laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin', 'necesita_modulo', 'observaciones']
+        fields = ['nombre', 'cedula', 'email', 'programa', 'laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin', 'necesita_modulo', 'observaciones']
         widgets = {
             'nombre': forms.TextInput(
                 attrs={
@@ -107,6 +117,12 @@ class EstudianteSolicitudForm(forms.ModelForm):
         for campo in campos_requeridos:
             if campo in self.fields:
                 self.fields[campo].required = True
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '')
+        if email and not email.lower().endswith('@udea.edu.co'):
+            raise ValidationError('El email debe ser institucional (@udea.edu.co).')
+        return email
 
     def clean(self):
         cleaned_data = super().clean() or {}

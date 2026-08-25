@@ -41,6 +41,17 @@
             </div>
         </div>
 
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_email" class="form-label">Email Institucional *</label>
+                {{ form.email }}
+                <small class="text-muted">Debe ser @udea.edu.co</small>
+                {% if form.email.errors %}
+                    <div class="invalid-feedback d-block">{{ form.email.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
         <div class="mb-3">
             <label for="id_programa" class="form-label">Programa/Carrera *</label>
             <select name="programa" id="id_programa" class="form-select" required>

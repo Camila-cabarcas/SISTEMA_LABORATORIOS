@@ -40,7 +40,7 @@ class ValidarSolicitudReservaService:
     """
 
     @staticmethod
-    def validar(*, nombre, cedula, nombre_grupo, cantidad_asistentes_str, descripcion,
+    def validar(*, nombre, cedula, email, nombre_grupo, cantidad_asistentes_str, descripcion,
                 laboratorio_id, fecha_str, hora_inicio_str, hora_fin_str):
         """
         Raises:
@@ -53,6 +53,10 @@ class ValidarSolicitudReservaService:
             errores.append('El nombre del profesor es requerido.')
         if not cedula or not cedula.isdigit():
             errores.append('La cédula es requerida y debe contener solo números.')
+        if not email:
+            errores.append('El email institucional es requerido.')
+        elif not email.lower().endswith('@udea.edu.co'):
+            errores.append('El email debe ser institucional (@udea.edu.co).')
         if not nombre_grupo:
             errores.append('El nombre del grupo o actividad es requerido.')
         if not cantidad_asistentes_str or not cantidad_asistentes_str.isdigit() or int(cantidad_asistentes_str) < 1:
@@ -145,7 +149,7 @@ class CrearSolicitudReservaService:
 
     @staticmethod
     @transaction.atomic
-    def crear_libre(*, nombre, cedula, nombre_grupo, cantidad_asistentes_str, descripcion,
+    def crear_libre(*, nombre, cedula, email, nombre_grupo, cantidad_asistentes_str, descripcion,
                      laboratorio_id, fecha_str, hora_inicio_str, hora_fin_str,
                      observaciones='', necesita_modulo=False,
                      modulos_ids_str='', insumos_ids_str='', insumos_cantidades_str=''):
@@ -179,6 +183,7 @@ class CrearSolicitudReservaService:
             tipo_solicitante='profesor',
             nombre=nombre,
             cedula=cedula,
+            email=email,
             programa=nombre_grupo,
             reserva_libre=True,
             descripcion_actividad=descripcion,

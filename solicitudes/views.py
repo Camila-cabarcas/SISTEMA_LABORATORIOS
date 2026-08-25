@@ -50,6 +50,7 @@ def solicitud_profesor(request):
             datos_libres = dict(
                 nombre=request.POST.get('nombre', '').strip(),
                 cedula=request.POST.get('cedula', '').strip(),
+                email=request.POST.get('email', '').strip(),
                 nombre_grupo=request.POST.get('nombre_grupo', '').strip(),
                 cantidad_asistentes_str=request.POST.get('cantidad_asistentes', '').strip(),
                 descripcion=request.POST.get('descripcion_actividad', '').strip(),
@@ -69,6 +70,7 @@ def solicitud_profesor(request):
                 ValidarSolicitudReservaService.validar(
                     nombre=datos_libres['nombre'],
                     cedula=datos_libres['cedula'],
+                    email=datos_libres['email'],
                     nombre_grupo=datos_libres['nombre_grupo'],
                     cantidad_asistentes_str=datos_libres['cantidad_asistentes_str'],
                     descripcion=datos_libres['descripcion'],

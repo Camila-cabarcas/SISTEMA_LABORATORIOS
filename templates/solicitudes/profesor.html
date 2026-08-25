@@ -115,6 +115,15 @@
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
+                    <label for="email_libre" class="form-label">Email Institucional *</label>
+                    <input type="email" id="email_libre" name="email" class="form-control"
+                           placeholder="tucorreo@udea.edu.co"
+                           value="{{ post_data.email|default:'' }}">
+                    <small class="text-muted">Debe ser @udea.edu.co</small>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
                     <label for="programa_libre" class="form-label">Programa académico</label>
                     <select name="programa" id="programa_libre" class="form-select">
                         <option value="">--- Selecciona un programa ---</option>

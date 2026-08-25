@@ -52,6 +52,7 @@ class ValidarSolicitudReservaServiceTests(TestCase):
         datos = dict(
             nombre='Carlos Ramírez',
             cedula='123456789',
+            email='carlos@udea.edu.co',
             nombre_grupo='Semillero de Robótica',
             cantidad_asistentes_str='10',
             descripcion='Taller de robótica educativa',
@@ -76,6 +77,16 @@ class ValidarSolicitudReservaServiceTests(TestCase):
         with self.assertRaises(ValidationError) as ctx:
             ValidarSolicitudReservaService.validar(**self._datos_validos(cedula='abc123'))
         self.assertIn('La cédula es requerida y debe contener solo números.', ctx.exception.messages)
+
+    def test_email_faltante(self):
+        with self.assertRaises(ValidationError) as ctx:
+            ValidarSolicitudReservaService.validar(**self._datos_validos(email=''))
+        self.assertIn('El email institucional es requerido.', ctx.exception.messages)
+
+    def test_email_no_institucional(self):
+        with self.assertRaises(ValidationError) as ctx:
+            ValidarSolicitudReservaService.validar(**self._datos_validos(email='carlos@gmail.com'))
+        self.assertIn('El email debe ser institucional (@udea.edu.co).', ctx.exception.messages)
 
     def test_cantidad_asistentes_invalida(self):
         with self.assertRaises(ValidationError) as ctx:
@@ -142,6 +153,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'fecha_reserva': self.fecha.isoformat(),
@@ -159,6 +171,86 @@ class CrearSolicitudReservaServiceTests(TestCase):
         solicitud.refresh_from_db()
         self.assertEqual(solicitud.reserva_id, reserva.id)
         self.assertEqual(reserva.estado.nombre, 'Pendiente')
+        self.assertEqual(solicitud.email, 'ana@udea.edu.co')
+
+    def test_estudiante_sin_email_es_invalido(self):
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'email': '',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '08:00',
+            'hora_fin': '10:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+
+    def test_estudiante_email_no_institucional_es_invalido(self):
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'email': 'ana@gmail.com',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '08:00',
+            'hora_fin': '10:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('El email debe ser institucional (@udea.edu.co).', form.errors['email'])
+
+    def test_estudiante_email_udea_mayusculas_es_valido(self):
+        # El dominio se compara sin distinguir mayúsculas/minúsculas.
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'email': 'Ana.Torres@UDEA.EDU.CO',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '08:00',
+            'hora_fin': '10:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_notificacion_usa_email_de_la_solicitud_del_estudiante(self):
+        # notificar_reserva_confirmada ya se prueba a fondo (con
+        # mail.outbox) en tests/test_services/test_notificaciones_email.py;
+        # acá solo interesa confirmar que _email_y_nombre resuelve al email
+        # que el estudiante puso en el formulario, no a uno de un Usuario
+        # (que ni siquiera existe para un estudiante anónimo como este).
+        from utils.notificaciones_email import _email_y_nombre
+
+        form = EstudianteSolicitudForm(None, {
+            'nombre': 'Ana Torres',
+            'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
+            'programa': self.programa.nombre,
+            'laboratorio': self.laboratorio.id,
+            'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '08:00',
+            'hora_fin': '10:00',
+            'necesita_modulo': False,
+            'observaciones': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+
+        solicitud, reserva = CrearSolicitudReservaService.crear_desde_estudiante(form)
+        assert reserva is not None
+
+        email, _ = _email_y_nombre(solicitud)
+        self.assertEqual(email, 'ana@udea.edu.co')
 
     def test_crear_desde_estudiante_bloqueada_por_solapamiento_con_aprobada(self):
         # El estudiante ya tiene una reserva Aprobada 09:00-11:00 ese día;
@@ -177,6 +269,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'fecha_reserva': self.fecha.isoformat(),
@@ -215,6 +308,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'fecha_reserva': self.fecha.isoformat(),
@@ -262,6 +356,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'fecha_reserva': self.fecha.isoformat(),
@@ -286,6 +381,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'fecha_reserva': (self.fecha + timedelta(weeks=1)).isoformat(),
@@ -312,6 +408,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'fecha_reserva': self.fecha.isoformat(),
@@ -352,6 +449,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'fecha_reserva': self.fecha.isoformat(),
@@ -372,6 +470,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         form = EstudianteSolicitudForm(None, {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'fecha_reserva': self.fecha.isoformat(),
@@ -392,6 +491,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         datos_base = {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'hora_inicio': '08:00',
@@ -451,6 +551,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         solicitud, reserva = CrearSolicitudReservaService.crear_libre(
             nombre='Laura Gómez',
             cedula='555666777',
+            email='laura@udea.edu.co',
             nombre_grupo='Semillero de Robótica',
             cantidad_asistentes_str='5',
             descripcion='Taller abierto',
@@ -471,6 +572,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         solicitud, _ = CrearSolicitudReservaService.crear_libre(
             nombre='Laura Gómez',
             cedula='555666777',
+            email='laura@udea.edu.co',
             nombre_grupo='Semillero de Robótica',
             cantidad_asistentes_str='2',
             descripcion='Taller abierto',
@@ -493,6 +595,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         solicitud, _ = CrearSolicitudReservaService.crear_libre(
             nombre='Laura Gómez',
             cedula='555666777',
+            email='laura@udea.edu.co',
             nombre_grupo='Semillero de Robótica',
             cantidad_asistentes_str='5',
             descripcion='Taller abierto',
@@ -516,6 +619,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
             CrearSolicitudReservaService.crear_libre(
                 nombre='Laura Gómez',
                 cedula='555666777',
+                email='laura@udea.edu.co',
                 nombre_grupo='Semillero de Robótica',
                 cantidad_asistentes_str='5',
                 descripcion='Taller abierto',
@@ -826,6 +930,7 @@ class SolicitudesViewsHttpTests(TestCase):
         response = self.client.post('/solicitudes/estudiante/', {
             'nombre': 'Ana Torres',
             'cedula': '111222333',
+            'email': 'ana@udea.edu.co',
             'programa': self.programa.nombre,
             'laboratorio': self.laboratorio.id,
             'fecha_reserva': self.fecha.isoformat(),
@@ -867,6 +972,7 @@ class SolicitudesViewsHttpTests(TestCase):
             'reserva_libre': '1',
             'nombre': 'Laura Gómez',
             'cedula': '555666777',
+            'email': 'laura@udea.edu.co',
             'nombre_grupo': 'Semillero de Robótica',
             'cantidad_asistentes': '5',
             'descripcion_actividad': 'Taller abierto',
@@ -887,6 +993,7 @@ class SolicitudesViewsHttpTests(TestCase):
             'reserva_libre': '1',
             'nombre': '',
             'cedula': '555666777',
+            'email': 'laura@udea.edu.co',
             'nombre_grupo': 'Semillero de Robótica',
             'cantidad_asistentes': '5',
             'descripcion_actividad': 'Taller abierto',
