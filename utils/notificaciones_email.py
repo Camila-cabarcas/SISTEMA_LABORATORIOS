@@ -56,9 +56,12 @@ def _solicitud_de_prestamo(prestamo):
 
 
 def notificar_reserva_confirmada(solicitud, reserva, async_=True):
-    """Trigger: SolicitudReserva.crear_reserva(), justo después de crear la
-    Reserva. `solicitud` es self de ese método — ya tiene laboratorio/
-    horario a mano sin necesidad de recorrer la relación inversa."""
+    """Ya no tiene ningún trigger automático: las reservas se aprueban al
+    crearse (ver SolicitudReserva.crear_reserva(), que ahora dispara
+    notificar_reserva_aprobada directamente) así que no queda un momento
+    "confirmada pero todavía no aprobada" que notificar. Se deja disponible
+    para uso manual/futuro. `solicitud` ya tiene laboratorio/horario a mano
+    sin necesidad de recorrer la relación inversa."""
     email, nombre = _email_y_nombre(solicitud)
     if not email:
         logger.info(
@@ -84,13 +87,13 @@ def notificar_reserva_confirmada(solicitud, reserva, async_=True):
 
 
 def notificar_reserva_aprobada(reserva, async_=True):
-    """Trigger: AprobarSolicitudReservaService.aprobar() Y
-    reservas/views.py:aprobar_reserva (acción 'aprobar') — hoy son dos
-    caminos independientes que llegan al mismo resultado
-    (Reserva.estado='Aprobada'); ver el docstring de
-    AprobarSolicitudReservaService sobre por qué existen los dos. Toma
-    `reserva` (no `solicitud`) porque aprobar_reserva es la vía que un
-    laboratorista realmente usa hoy y ahí solo hay una Reserva a mano."""
+    """Trigger: SolicitudReserva.crear_reserva() (las reservas se aprueban
+    automáticamente al crearse) y, para reservas creadas antes de ese
+    cambio o por otras vías, AprobarSolicitudReservaService.aprobar().
+    Toma `reserva` (no `solicitud`) y resuelve la solicitud vinculada por
+    la relación inversa (`_solicitud_de_reserva`) para poder reusarse desde
+    cualquier punto que ya tenga la Reserva a mano sin cargar con la
+    solicitud."""
     solicitud = _solicitud_de_reserva(reserva)
     email, nombre = _email_y_nombre(solicitud)
     if not email:

@@ -60,12 +60,11 @@ def test_crear_reserva_sin_permiso(client, usuario_estudiante):
     assert response.url == '/usuarios/sin-permiso/'
 
 
-def test_aprobar_reserva_dispara_notificacion(cliente_autenticado, laboratorio, monkeypatch):
-    # aprobar_reserva es el camino que un laboratorista realmente usa hoy
-    # (a diferencia de AprobarSolicitudReservaService, que no tiene vista
-    # propia todavía) — parcheamos notificar_reserva_aprobada en vez de
-    # revisar mail.outbox porque el envío real corre en un hilo aparte
-    # (async_=True por default) y la vista la importa localmente.
+def test_aprobar_reserva_accion_desconocida_no_cambia_estado(cliente_autenticado, laboratorio):
+    # La vista ya no tiene una rama 'aprobar' — las reservas se aprueban
+    # automáticamente al crearse (SolicitudReserva.crear_reserva()). Lo
+    # único que esta vista todavía hace es cancelar; cualquier otra acción
+    # (incluida la vieja 'aprobar') es un no-op que solo redirige.
     estado_pendiente = EstadoReserva.objects.get(nombre='Pendiente')
     reserva = Reserva.objects.create(
         fecha_reserva=datetime(2026, 8, 1, 8, 0),
@@ -77,18 +76,11 @@ def test_aprobar_reserva_dispara_notificacion(cliente_autenticado, laboratorio, 
         reserva=reserva,
     )
 
-    llamadas = []
-    monkeypatch.setattr(
-        'utils.notificaciones_email.notificar_reserva_aprobada',
-        lambda reserva: llamadas.append(reserva),
-    )
-
     response = cliente_autenticado.post(f'/reservas/{reserva.id}/aprobar/', {'accion': 'aprobar'})
 
     assert response.status_code == 302
     reserva.refresh_from_db()
-    assert reserva.estado.nombre == 'Aprobada'
-    assert llamadas == [reserva]
+    assert reserva.estado.nombre == 'Pendiente'
 
 
 def test_cancelar_reserva_no_dispara_notificacion_de_aprobada(cliente_autenticado, laboratorio, monkeypatch):

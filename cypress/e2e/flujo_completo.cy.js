@@ -2,9 +2,10 @@
  * flujo_completo.cy.js
  *
  * Flujo E2E completo del Sistema de Laboratorios:
- *   1) Un estudiante crea una solicitud de reserva (pública, sin login).
- *   2) Un administrador aprueba la solicitud (que ya generó una Reserva
- *      "Pendiente" automáticamente — ver solicitudes/views.py::solicitud_estudiante).
+ *   1) Un estudiante crea una solicitud de reserva (pública, sin login) —
+ *      su Reserva queda "Aprobada" automáticamente al crearse (ver
+ *      SolicitudReserva.crear_reserva()), sin paso de aprobación manual.
+ *   2) Un administrador revisa la reserva ya aprobada.
  *   3) Un laboratorista crea el préstamo a partir de la reserva aprobada.
  *   4) El laboratorista inspecciona los ítems al momento de la devolución.
  *   5) El sistema marca el préstamo como "Devuelto" y actualiza el inventario.
@@ -153,7 +154,7 @@ describe('Flujo completo: solicitud → reserva → préstamo → inspección �
     cy.screenshot('01-solicitud-confirmada');
   });
 
-  it('2) Administrador aprueba la solicitud', () => {
+  it('2) Administrador revisa la reserva ya aprobada automáticamente', () => {
     cy.login(usuarios.admin.username, usuarios.admin.password);
 
     cy.visit('/reservas/');
@@ -165,8 +166,8 @@ describe('Flujo completo: solicitud → reserva → préstamo → inspección �
       cy.contains('a', 'Ver detalle').click();
     });
 
-    // Estado inicial: Pendiente.
-    cy.verifyStatus('.badge', 'Pendiente');
+    // La reserva nace Aprobada — no hay paso de aprobación manual que hacer.
+    cy.verifyStatus('.badge', 'Aprobada');
 
     cy.url().then((url) => {
       const match = url.match(/\/reservas\/(\d+)\//);
@@ -174,11 +175,6 @@ describe('Flujo completo: solicitud → reserva → préstamo → inspección �
       reservaId = match[1];
     });
 
-    cy.screenshot('02-reserva-pendiente');
-
-    cy.contains('button', 'Aprobar').click();
-
-    cy.verifyStatus('.badge', 'Aprobada');
     cy.screenshot('02-reserva-aprobada');
   });
 

@@ -205,8 +205,8 @@ class CrearSolicitudReservaService:
         # deliberadamente no aplica.
         if solicitud.limite_pendientes_alcanzado():
             raise ValidationError(
-                'Ya tienes 2 reservas pendientes. Debes esperar a que sean '
-                'aprobadas o canceladas antes de crear una nueva.'
+                'Ya tienes 2 reservas aprobadas. Debes esperar a que se '
+                'completen o sean canceladas antes de crear una nueva.'
             )
 
         solicitud.save()

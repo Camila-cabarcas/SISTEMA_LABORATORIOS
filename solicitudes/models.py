@@ -197,8 +197,8 @@ class SolicitudReserva(models.Model):
 
         if self.limite_pendientes_alcanzado():
             errors[NON_FIELD_ERRORS] = (
-                'Ya tienes 2 reservas pendientes. Debes esperar a que sean '
-                'aprobadas o canceladas antes de crear una nueva.'
+                'Ya tienes 2 reservas aprobadas. Debes esperar a que se '
+                'completen o sean canceladas antes de crear una nueva.'
             )
 
         if errors:
@@ -208,8 +208,11 @@ class SolicitudReserva(models.Model):
         """True si el solicitante (identificado por cédula si es estudiante,
         o por usuario si es profesor — mismo criterio que la validación de
         horas acumuladas por día de arriba) ya tiene 2 o más solicitudes
-        cuya Reserva sigue en estado "Pendiente". Solo aplica a solicitudes
-        nuevas: una ya guardada no cuenta contra su propio límite."""
+        cuya Reserva sigue en estado "Aprobada" (las reservas se aprueban
+        automáticamente al crearse — ver crear_reserva() — así que ya no
+        existe un estado "Pendiente" intermedio contra el cual contar). Solo
+        aplica a solicitudes nuevas: una ya guardada no cuenta contra su
+        propio límite."""
         if self.pk is not None:
             return False
 
@@ -221,7 +224,7 @@ class SolicitudReserva(models.Model):
             return False
 
         return SolicitudReserva.objects.filter(
-            filtro, reserva__estado__nombre='Pendiente'
+            filtro, reserva__estado__nombre='Aprobada'
         ).count() >= 2
 
     def _calcular_duracion(self):
@@ -294,9 +297,9 @@ class SolicitudReserva(models.Model):
         if self.reserva:
             return self.reserva
 
-        estado_pendiente = EstadoReserva.objects.filter(nombre='Pendiente').first()
-        if not estado_pendiente:
-            raise ValueError('No existe estado "Pendiente" en EstadoReserva')
+        estado_aprobada = EstadoReserva.objects.filter(nombre='Aprobada').first()
+        if not estado_aprobada:
+            raise ValueError('No existe estado "Aprobada" en EstadoReserva')
 
         usuario = Usuario.objects.filter(codigo=self.cedula).first()
 
@@ -350,7 +353,7 @@ class SolicitudReserva(models.Model):
             usuario=usuario,
             fecha_reserva=fecha_base,
             fecha_devolucion=fecha_devolucion,
-            estado=estado_pendiente
+            estado=estado_aprobada
         )
         reserva.full_clean()
         reserva.save()
@@ -366,11 +369,11 @@ class SolicitudReserva(models.Model):
         self.save(update_fields=['reserva'])
 
         try:
-            from utils.notificaciones_email import notificar_reserva_confirmada
-            notificar_reserva_confirmada(self, reserva)
+            from utils.notificaciones_email import notificar_reserva_aprobada
+            notificar_reserva_aprobada(reserva)
         except Exception:
             logger.exception(
-                'crear_reserva | error notificando reserva confirmada | solicitud_id=%s', self.id,
+                'crear_reserva | error notificando reserva aprobada | solicitud_id=%s', self.id,
             )
 
         return reserva

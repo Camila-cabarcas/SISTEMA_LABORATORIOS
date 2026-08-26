@@ -118,24 +118,6 @@ class TestNotificarReservaConfirmada:
         assert enviado.to == ['estudiante@example.com']
         assert reserva.codigo in enviado.subject
 
-    def test_crear_reserva_dispara_la_notificacion(self, solicitud_valida, usuario_admin, monkeypatch):
-        # Verifica el cableado real (SolicitudReserva.crear_reserva() llama
-        # a notificar_reserva_confirmada) sin depender del hilo en segundo
-        # plano que usa async_=True por default. crear_reserva() importa
-        # notificar_reserva_confirmada localmente (dentro del método) en
-        # cada llamada, así que parchear el nombre en utils.notificaciones_
-        # email (de donde lo importa) alcanza — no hace falta parchear
-        # solicitudes.models, que no tiene ese nombre a nivel de módulo.
-        llamadas = []
-        monkeypatch.setattr(
-            'utils.notificaciones_email.notificar_reserva_confirmada',
-            lambda solicitud, reserva: llamadas.append((solicitud, reserva)),
-        )
-
-        reserva = solicitud_valida.crear_reserva()
-
-        assert llamadas == [(solicitud_valida, reserva)]
-
 
 class TestNotificarReservaAprobada:
 
@@ -160,9 +142,9 @@ class TestNotificarReservaAprobada:
     def test_con_email_encola_un_mensaje_con_info_correcta(self, solicitud_valida, laboratorio, catalogos):
         # El email se setea DESPUÉS de crear_reserva() a propósito: si
         # estuviera antes, esa llamada también dispararía (en un hilo
-        # aparte) notificar_reserva_confirmada con destinatario válido,
-        # sumando un segundo mensaje a mail.outbox antes de que termine
-        # este test — mismo problema que ya resolvió
+        # aparte) su propia notificar_reserva_aprobada con destinatario
+        # válido, sumando un segundo mensaje a mail.outbox antes de que
+        # termine este test — mismo problema que ya resolvió
         # TestNotificarReservaConfirmada.test_con_email_encola_un_mensaje
         # armando la Reserva directo en vez de vía crear_reserva().
         reserva = solicitud_valida.crear_reserva()
@@ -181,11 +163,32 @@ class TestNotificarReservaAprobada:
         assert reserva.codigo in cuerpo_html
         assert '08:00' in cuerpo_html  # hora_inicio de solicitud_valida
 
+    def test_crear_reserva_dispara_la_notificacion(self, solicitud_valida, catalogos, monkeypatch):
+        # Verifica el cableado real: SolicitudReserva.crear_reserva() llama
+        # a notificar_reserva_aprobada ahora que las reservas quedan
+        # Aprobada desde que se crean (ya no hay un paso de aprobación
+        # manual separado). Parchea el nombre en utils.notificaciones_email
+        # (de donde crear_reserva() lo importa localmente en cada llamada)
+        # en vez de depender del hilo en segundo plano que usa async_=True
+        # por default.
+        llamadas = []
+        monkeypatch.setattr(
+            'utils.notificaciones_email.notificar_reserva_aprobada',
+            lambda reserva: llamadas.append(reserva),
+        )
+
+        reserva = solicitud_valida.crear_reserva()
+
+        assert llamadas == [reserva]
+
     def test_aprobar_solicitud_dispara_la_notificacion(self, solicitud_valida, usuario_admin, monkeypatch):
-        # Igual que test_crear_reserva_dispara_la_notificacion: parchea el
-        # nombre en utils.notificaciones_email (de donde lo importa
-        # AprobarSolicitudReservaService.aprobar(), con import local) en vez
-        # de depender del hilo en segundo plano de async_=True por default.
+        # Igual que test_crear_reserva_dispara_la_notificacion, pero para el
+        # segundo camino que todavía existe hacia el mismo email:
+        # AprobarSolicitudReservaService.aprobar() (sin vista propia hoy,
+        # pero sigue disponible para reservas que quedaron Pendiente por
+        # otra vía). Parchea el nombre en utils.notificaciones_email (de
+        # donde lo importa con import local) en vez de depender del hilo en
+        # segundo plano de async_=True por default.
         from solicitudes.services.solicitud_reserva_service import AprobarSolicitudReservaService
 
         reserva = solicitud_valida.crear_reserva()

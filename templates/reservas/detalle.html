@@ -282,21 +282,10 @@
 
 {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Laboratorio' %}
     {% if reserva.estado.nombre == 'Pendiente' %}
-        {% if solicitante.reserva_libre and user.rol.nombre == 'Laboratorio' %}
-        <div class="alert alert-warning" role="alert">
-            <strong>Atención:</strong> Solo el Administrador puede aprobar esta reserva libre.
-        </div>
         <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/">
             {% csrf_token %}
             <button type="submit" name="accion" value="cancelar" class="btn btn-danger"><i class="fa-solid fa-ban me-1"></i>Cancelar reserva</button>
         </form>
-        {% else %}
-        <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/">
-            {% csrf_token %}
-            <button type="submit" name="accion" value="aprobar" class="btn btn-success me-2"><i class="fa-solid fa-check me-1"></i>Aprobar</button>
-            <button type="submit" name="accion" value="cancelar" class="btn btn-danger"><i class="fa-solid fa-ban me-1"></i>Cancelar reserva</button>
-        </form>
-        {% endif %}
     {% endif %}
 {% endif %}
 
