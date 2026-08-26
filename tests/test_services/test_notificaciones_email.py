@@ -19,6 +19,7 @@ from utils.notificaciones_email import (
     _email_y_nombre,
     notificar_devolucion_completada,
     notificar_prestamo_confirmado,
+    notificar_reserva_aprobada,
     notificar_reserva_confirmada,
 )
 
@@ -134,6 +135,71 @@ class TestNotificarReservaConfirmada:
         reserva = solicitud_valida.crear_reserva()
 
         assert llamadas == [(solicitud_valida, reserva)]
+
+
+class TestNotificarReservaAprobada:
+
+    def test_sin_email_no_envia_nada(self, solicitud_valida, catalogos):
+        reserva = solicitud_valida.crear_reserva()
+
+        notificar_reserva_aprobada(reserva, async_=False)
+
+        assert len(mail.outbox) == 0
+
+    def test_sin_solicitud_vinculada_no_envia(self, catalogos):
+        from reservas.models import EstadoReserva, Reserva
+
+        reserva = Reserva.objects.create(
+            fecha_reserva=timezone.now(), estado=EstadoReserva.objects.get(nombre='Aprobada'),
+        )
+
+        notificar_reserva_aprobada(reserva, async_=False)
+
+        assert len(mail.outbox) == 0
+
+    def test_con_email_encola_un_mensaje_con_info_correcta(self, solicitud_valida, laboratorio, catalogos):
+        # El email se setea DESPUÉS de crear_reserva() a propósito: si
+        # estuviera antes, esa llamada también dispararía (en un hilo
+        # aparte) notificar_reserva_confirmada con destinatario válido,
+        # sumando un segundo mensaje a mail.outbox antes de que termine
+        # este test — mismo problema que ya resolvió
+        # TestNotificarReservaConfirmada.test_con_email_encola_un_mensaje
+        # armando la Reserva directo en vez de vía crear_reserva().
+        reserva = solicitud_valida.crear_reserva()
+        solicitud_valida.email = 'juan@udea.edu.co'
+        solicitud_valida.save()
+
+        notificar_reserva_aprobada(reserva, async_=False)
+
+        assert len(mail.outbox) == 1
+        enviado = mail.outbox[0]
+        assert enviado.to == ['juan@udea.edu.co']
+        assert reserva.codigo in enviado.subject
+        assert 'Aprobada' in enviado.subject
+        cuerpo_html = enviado.alternatives[0][0]
+        assert laboratorio.nombre in cuerpo_html
+        assert reserva.codigo in cuerpo_html
+        assert '08:00' in cuerpo_html  # hora_inicio de solicitud_valida
+
+    def test_aprobar_solicitud_dispara_la_notificacion(self, solicitud_valida, usuario_admin, monkeypatch):
+        # Igual que test_crear_reserva_dispara_la_notificacion: parchea el
+        # nombre en utils.notificaciones_email (de donde lo importa
+        # AprobarSolicitudReservaService.aprobar(), con import local) en vez
+        # de depender del hilo en segundo plano de async_=True por default.
+        from solicitudes.services.solicitud_reserva_service import AprobarSolicitudReservaService
+
+        reserva = solicitud_valida.crear_reserva()
+        solicitud_valida.refresh_from_db()
+
+        llamadas = []
+        monkeypatch.setattr(
+            'utils.notificaciones_email.notificar_reserva_aprobada',
+            lambda reserva: llamadas.append(reserva),
+        )
+
+        AprobarSolicitudReservaService.aprobar(solicitud_valida.id, usuario_admin)
+
+        assert llamadas == [reserva]
 
 
 class TestNotificarPrestamoYDevolucion:

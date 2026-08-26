@@ -349,9 +349,13 @@ def aprobar_reserva(request, id):
 
         if accion == 'aprobar':
             reserva.estado = EstadoReserva.objects.get(nombre='Aprobada')
+            reserva.save()
+
+            from utils.notificaciones_email import notificar_reserva_aprobada
+            notificar_reserva_aprobada(reserva)
         elif accion == 'cancelar':
             reserva.estado = EstadoReserva.objects.get(nombre='Cancelada')
-        reserva.save()
+            reserva.save()
         return redirect('detalle_reserva', id=reserva.pk)
 
     return render(request, 'reservas/aprobar.html', {

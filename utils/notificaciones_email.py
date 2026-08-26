@@ -83,6 +83,39 @@ def notificar_reserva_confirmada(solicitud, reserva, async_=True):
     )
 
 
+def notificar_reserva_aprobada(reserva, async_=True):
+    """Trigger: AprobarSolicitudReservaService.aprobar() Y
+    reservas/views.py:aprobar_reserva (acción 'aprobar') — hoy son dos
+    caminos independientes que llegan al mismo resultado
+    (Reserva.estado='Aprobada'); ver el docstring de
+    AprobarSolicitudReservaService sobre por qué existen los dos. Toma
+    `reserva` (no `solicitud`) porque aprobar_reserva es la vía que un
+    laboratorista realmente usa hoy y ahí solo hay una Reserva a mano."""
+    solicitud = _solicitud_de_reserva(reserva)
+    email, nombre = _email_y_nombre(solicitud)
+    if not email:
+        logger.info(
+            'notificar_reserva_aprobada | sin email de destinatario | reserva_id=%s',
+            reserva.id if reserva else None,
+        )
+        return
+
+    enviar_email_html(
+        destinatarios=email,
+        asunto=f'¡Reserva Aprobada! — {reserva.codigo}',
+        template_name='emails/reserva_aprobada.html',
+        contexto={
+            'nombre': nombre,
+            'laboratorio': solicitud.laboratorio.nombre if solicitud else None,
+            'fecha': solicitud.fecha_reserva.date() if solicitud else None,
+            'hora_inicio': solicitud.hora_inicio if solicitud else None,
+            'hora_fin': solicitud.hora_fin if solicitud else None,
+            'codigo': reserva.codigo,
+        },
+        async_=async_,
+    )
+
+
 def notificar_prestamo_confirmado(prestamo, async_=True):
     """Trigger: prestamos/views.py:crear_prestamo, después de registrar los
     PrestamoItem seleccionados."""
