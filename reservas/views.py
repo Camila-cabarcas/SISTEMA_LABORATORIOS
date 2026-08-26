@@ -6,9 +6,11 @@ import logging
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied, ValidationError
 from users.decorators import rol_requerido
 from .models import Reserva, ReservaInsumo, EstadoReserva
 from .forms import ReservaForm, ReservaInsumoForm
+from .services.editar_insumos_service import EditarInsumosReservaService
 from laboratorio.models import HorarioLaboratorio
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -293,6 +295,7 @@ def detalle_reserva(request, id):
         not reserva.prestamo_set.exists() and
         reserva.fecha_reserva <= ahora <= reserva.hora_limite_retiro
     )
+    puede_editar_insumos = EditarInsumosReservaService.puede_editar(reserva, request.user)
 
     # SolicitudReserva no tiene un campo email propio: para profesores
     # invitados, crear_reserva lo guarda como la primera línea de
@@ -314,6 +317,7 @@ def detalle_reserva(request, id):
         'now':     ahora,
         'fecha_vencida': ahora > reserva.fecha_devolucion if reserva.fecha_devolucion else False,
         'puede_crear_prestamo': puede_crear_prestamo,
+        'puede_editar_insumos': puede_editar_insumos,
         'email_solicitante': email_solicitante,
         'observaciones_solicitante': observaciones_solicitante,
     })
@@ -451,4 +455,50 @@ def eliminar_insumo_reserva(request, reserva_id, insumo_id):
     return render(request, 'reservas/confirmar_eliminar_insumo.html', {
         'reserva': reserva,
         'insumo':  insumo
+    })
+
+
+@rol_requerido('Administrador', 'Laboratorio')
+def editar_insumos_reserva(request, id):
+    """Permite a un laboratorista (solo del laboratorio de esta reserva, o a
+    un Administrador) agregar/quitar/cambiar la cantidad de los insumos de
+    una Reserva Aprobada mientras todavía no exista un Prestamo asociado —
+    fecha/hora, laboratorio y módulos no se tocan acá. Ver
+    EditarInsumosReservaService para las reglas de acceso y validación."""
+    reserva = get_object_or_404(Reserva, id=id)
+    laboratorio = EditarInsumosReservaService.verificar_acceso(reserva, request.user)
+
+    insumos_actuales = ReservaInsumo.objects.filter(reserva=reserva).select_related('insumo')
+    errores = []
+
+    if request.method == 'POST':
+        ids_str        = request.POST.get('insumos_ids', '')
+        cantidades_str = request.POST.get('insumos_cantidades', '')
+        ids            = [x for x in ids_str.split(',') if x.strip()]
+        cantidades     = [x for x in cantidades_str.split(',') if x.strip()]
+
+        items = []
+        if len(ids) != len(cantidades):
+            errores = ['Datos de insumos inválidos.']
+        else:
+            try:
+                items = [
+                    {'insumo_id': int(insumo_id), 'cantidad': int(cantidad)}
+                    for insumo_id, cantidad in zip(ids, cantidades)
+                ]
+            except ValueError:
+                errores = ['Datos de insumos inválidos.']
+
+        if not errores:
+            try:
+                EditarInsumosReservaService.guardar(reserva, request.user, items)
+                return redirect('detalle_reserva', id=reserva.pk)
+            except ValidationError as e:
+                errores = e.messages
+
+    return render(request, 'reservas/editar_insumos.html', {
+        'reserva':          reserva,
+        'laboratorio':      laboratorio,
+        'insumos_actuales': insumos_actuales,
+        'errores':          errores,
     })

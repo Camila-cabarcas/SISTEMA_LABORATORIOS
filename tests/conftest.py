@@ -54,6 +54,25 @@ def usuario_estudiante(catalogos):
 
 
 @pytest.fixture
+def usuario_laboratorista(laboratorio, catalogos):
+    """Usuario rol='Laboratorio' asignado como encargado de `laboratorio`
+    (ver Laboratorio.encargados / laboratorio.models.es_laboratorista_del_laboratorio)."""
+    rol = Rol.objects.get(nombre='Laboratorio')
+    usuario = Usuario.objects.create_user(
+        username='laboratorista_test',
+        password='clave12345',
+        rol=rol,
+        # codigo explícito: Usuario.codigo es unique=True pero blank=True, y
+        # el valor por defecto ('') colisiona con otros Usuario creados sin
+        # codigo (p. ej. usuario_admin) si ambos fixtures se usan en el
+        # mismo test.
+        codigo='LAB_TEST_001',
+    )
+    laboratorio.encargados.add(usuario)
+    return usuario
+
+
+@pytest.fixture
 def laboratorio(db):
     return Laboratorio.objects.create(
         nombre='Laboratorio de Química',

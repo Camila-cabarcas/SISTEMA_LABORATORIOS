@@ -1,0 +1,48 @@
+{% extends "emails/base_email.html" %}
+
+{% block titulo %}Tu reserva fue modificada{% endblock %}
+
+{% block contenido %}
+<h2 style="margin-top:0; color:#2c3e50;">Hola, {{ nombre }}</h2>
+<p>El laboratorista modificó los insumos de tu reserva con código <strong>{{ codigo }}</strong>.</p>
+
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; width:160px; border:1px solid #e9ecef;">Laboratorio</td>
+<td style="border:1px solid #e9ecef;">{{ laboratorio|default:"—" }}</td>
+</tr>
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; border:1px solid #e9ecef;">Fecha</td>
+<td style="border:1px solid #e9ecef;">{{ fecha|default:"—" }}</td>
+</tr>
+</table>
+
+{% if agregados %}
+<p style="font-weight:bold; margin-bottom:4px; color:#198754;">Insumos agregados:</p>
+<ul style="margin-top:4px; padding-left:20px;">
+{% for item in agregados %}
+<li>{{ item.insumo.nombre }} — Cantidad: {{ item.cantidad }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if quitados %}
+<p style="font-weight:bold; margin-bottom:4px; color:#dc3545;">Insumos quitados:</p>
+<ul style="margin-top:4px; padding-left:20px;">
+{% for item in quitados %}
+<li>{{ item.insumo.nombre }} — Cantidad: {{ item.cantidad }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if cambiados %}
+<p style="font-weight:bold; margin-bottom:4px;">Cantidad modificada:</p>
+<ul style="margin-top:4px; padding-left:20px;">
+{% for item in cambiados %}
+<li>{{ item.insumo.nombre }} — {{ item.cantidad_anterior }} → {{ item.cantidad_nueva }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<p>Si tienes dudas sobre estos cambios, comunícate con el laboratorio.</p>
+{% endblock %}

@@ -287,6 +287,11 @@
             <button type="submit" name="accion" value="cancelar" class="btn btn-danger"><i class="fa-solid fa-ban me-1"></i>Cancelar reserva</button>
         </form>
     {% endif %}
+    {% if puede_editar_insumos %}
+        <a href="/reservas/{{ reserva.id }}/editar-insumos/" class="btn btn-outline-primary">
+            <i class="fa-solid fa-pen me-1"></i>Editar insumos
+        </a>
+    {% endif %}
 {% endif %}
 
 {% endwith %}

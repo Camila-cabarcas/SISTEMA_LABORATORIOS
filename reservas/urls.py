@@ -12,6 +12,7 @@ from .views import (
     reservas_para_prestamo,
     horarios_disponibles,
     eliminar_insumo_reserva,
+    editar_insumos_reserva,
     exportar_reservas_excel,
 )
 
@@ -24,5 +25,6 @@ urlpatterns = [
     path('<int:id>/', detalle_reserva, name='detalle_reserva'),
     path('<int:id>/cancelar/', cancelar_reserva, name='cancelar_reserva'),
     path('<int:id>/aprobar/', aprobar_reserva, name='aprobar_reserva'),
+    path('<int:id>/editar-insumos/', editar_insumos_reserva, name='editar_insumos_reserva'),
     path('<int:reserva_id>/insumo/<int:insumo_id>/eliminar/', eliminar_insumo_reserva, name='eliminar_insumo_reserva'),
 ]

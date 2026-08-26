@@ -13,6 +13,7 @@ from django.core import mail
 from django.core.management import call_command
 from django.utils import timezone
 
+from inventario.models import Insumo
 from prestamos.services.recordatorio_devolucion_service import RecordatorioDevolucionService
 from solicitudes.models import SolicitudReserva
 from utils.notificaciones_email import (
@@ -21,6 +22,7 @@ from utils.notificaciones_email import (
     notificar_prestamo_confirmado,
     notificar_reserva_aprobada,
     notificar_reserva_confirmada,
+    notificar_reserva_modificada,
 )
 
 pytestmark = pytest.mark.django_db
@@ -203,6 +205,53 @@ class TestNotificarReservaAprobada:
         AprobarSolicitudReservaService.aprobar(solicitud_valida.id, usuario_admin)
 
         assert llamadas == [reserva]
+
+
+class TestNotificarReservaModificada:
+
+    def test_sin_email_no_envia_nada(self, solicitud_valida, catalogos):
+        reserva = solicitud_valida.crear_reserva()
+        insumo = Insumo.objects.create(nombre='Vaso precipitado', descripcion='Para tests')
+
+        notificar_reserva_modificada(
+            reserva, agregados=[{'insumo': insumo, 'cantidad': 2}], quitados=[], cambiados=[],
+            async_=False,
+        )
+
+        assert len(mail.outbox) == 0
+
+    def test_con_email_arma_mensaje_con_agregados_quitados_y_cambiados(
+        self, solicitud_valida, laboratorio, catalogos,
+    ):
+        # El email se setea DESPUÉS de crear_reserva() a propósito, mismo
+        # motivo que TestNotificarReservaAprobada.test_con_email_encola_un_mensaje_con_info_correcta:
+        # evitar que el hilo en segundo plano de notificar_reserva_aprobada
+        # (disparado por crear_reserva()) sume un mensaje extra a mail.outbox.
+        reserva = solicitud_valida.crear_reserva()
+        solicitud_valida.email = 'juan@udea.edu.co'
+        solicitud_valida.save()
+
+        insumo_agregado = Insumo.objects.create(nombre='Vaso precipitado', descripcion='x')
+        insumo_quitado = Insumo.objects.create(nombre='Probeta', descripcion='x')
+        insumo_cambiado = Insumo.objects.create(nombre='Bureta', descripcion='x')
+
+        notificar_reserva_modificada(
+            reserva,
+            agregados=[{'insumo': insumo_agregado, 'cantidad': 3}],
+            quitados=[{'insumo': insumo_quitado, 'cantidad': 1}],
+            cambiados=[{'insumo': insumo_cambiado, 'cantidad_anterior': 1, 'cantidad_nueva': 5}],
+            async_=False,
+        )
+
+        assert len(mail.outbox) == 1
+        enviado = mail.outbox[0]
+        assert enviado.to == ['juan@udea.edu.co']
+        assert reserva.codigo in enviado.subject
+        cuerpo_html = enviado.alternatives[0][0]
+        assert 'Vaso precipitado' in cuerpo_html
+        assert 'Probeta' in cuerpo_html
+        assert 'Bureta' in cuerpo_html
+        assert laboratorio.nombre in cuerpo_html
 
 
 class TestNotificarPrestamoYDevolucion:

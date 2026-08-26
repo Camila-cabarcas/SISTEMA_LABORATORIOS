@@ -1,0 +1,222 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Editar insumos — Reserva #{{ reserva.id }}</h1>
+
+<div class="card p-4">
+
+    <p class="text-muted">
+        Solo puedes agregar, quitar o cambiar la cantidad de los insumos de esta reserva.
+        La fecha, el horario, el laboratorio y los módulos no se pueden modificar desde aquí.
+    </p>
+
+    <table role="presentation" class="table table-borderless w-auto mb-4">
+        <tr>
+            <th class="pe-4">Código</th>
+            <td>{{ reserva.codigo }}</td>
+        </tr>
+        <tr>
+            <th class="pe-4">Laboratorio</th>
+            <td>{{ laboratorio.nombre|default:"—" }}</td>
+        </tr>
+        <tr>
+            <th class="pe-4">Fecha / hora</th>
+            <td>{{ reserva.fecha_reserva }}</td>
+        </tr>
+        <tr>
+            <th class="pe-4">Estado</th>
+            <td>{{ reserva.estado }}</td>
+        </tr>
+    </table>
+
+    {% if errores %}
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0">
+            {% for error in errores %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" id="editar-insumos-form">
+        {% csrf_token %}
+
+        <h5 class="mb-3"><i class="fa-solid fa-vial me-2"></i>Buscar e insumo</h5>
+
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label for="insumo_buscar" class="form-label">Buscar insumo</label>
+                <div style="position: relative;">
+                    <input type="text" id="insumo_buscar" class="form-control"
+                           placeholder="Escribe para buscar o haz clic para ver todos..."
+                           autocomplete="off">
+                    <div id="insumo_dropdown" class="list-group mt-2"
+                         style="position: absolute; width: 100%; z-index: 1000;
+                                max-height: 250px; overflow-y: auto; display: none; top: 100%;">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="insumo_cantidad" class="form-label">Cantidad</label>
+                <input type="number" id="insumo_cantidad" class="form-control" min="1" value="1">
+            </div>
+        </div>
+
+        <button type="button" id="agregar_insumo_btn" class="btn btn-sm btn-success mb-3">
+            <i class="fa-solid fa-plus me-1"></i>Agregar insumo
+        </button>
+
+        <div id="insumos_lista" class="mb-3" style="display: none;">
+            <h6><i class="fa-solid fa-list-check me-1"></i>Insumos de la reserva:</h6>
+            <div class="list-group" id="insumos_items"></div>
+        </div>
+
+        <input type="hidden" name="insumos_ids" id="id_insumos_ids">
+        <input type="hidden" name="insumos_cantidades" id="id_insumos_cantidades">
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary me-2">Guardar</button>
+            <a href="/reservas/{{ reserva.id }}/" class="btn btn-secondary">Cancelar</a>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+let insumosSeleccionados = {
+    {% for ri in insumos_actuales %}
+    "{{ ri.insumo.id }}": {
+        id: "{{ ri.insumo.id }}",
+        nombre: "{{ ri.insumo.nombre|escapejs }}",
+        cantidad: {{ ri.cantidad }},
+        disponible: {{ ri.insumo.cantidad_disponible }}
+    },
+    {% endfor %}
+};
+
+const buscarInput = document.getElementById('insumo_buscar');
+const dropdownDiv  = document.getElementById('insumo_dropdown');
+let insumosCache   = null;
+
+buscarInput.addEventListener('click', mostrarInsumos);
+buscarInput.addEventListener('input', buscarInsumos);
+document.addEventListener('click', function(e) {
+    if (e.target !== buscarInput && !dropdownDiv.contains(e.target))
+        dropdownDiv.style.display = 'none';
+});
+
+function mostrarInsumos() {
+    if (!insumosCache) {
+        fetch('/solicitudes/buscar-insumos/?q=')
+            .then(r => r.json())
+            .then(data => {
+                insumosCache = data.results;
+                renderDropdown(insumosCache);
+                dropdownDiv.style.display = 'block';
+            });
+    } else {
+        renderDropdown(insumosCache);
+        dropdownDiv.style.display = 'block';
+    }
+}
+
+function buscarInsumos(e) {
+    const query = e.target.value;
+    if (query === '') { mostrarInsumos(); return; }
+    fetch(`/solicitudes/buscar-insumos/?q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(data => { renderDropdown(data.results); dropdownDiv.style.display = 'block'; });
+}
+
+function renderDropdown(insumos) {
+    dropdownDiv.innerHTML = '';
+    insumos.forEach(insumo => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'list-group-item list-group-item-action';
+        btn.textContent = insumo.text;
+        if (insumo.disabled) {
+            btn.style.pointerEvents = 'none';
+            btn.style.color = '#999';
+            btn.style.backgroundColor = '#f5f5f5';
+        } else {
+            btn.onclick = e => { e.preventDefault(); seleccionarInsumo(insumo); };
+        }
+        dropdownDiv.appendChild(btn);
+    });
+}
+
+function seleccionarInsumo(insumo) {
+    buscarInput.value = insumo.text;
+    dropdownDiv.style.display = 'none';
+    buscarInput.dataset.insumoId = insumo.id;
+    buscarInput.dataset.disponible = insumo.cantidad_disponible;
+}
+
+document.getElementById('agregar_insumo_btn').addEventListener('click', function() {
+    const insumoId = buscarInput.dataset.insumoId;
+    const cantidad = parseInt(document.getElementById('insumo_cantidad').value) || 1;
+    if (!insumoId) { alert('Selecciona un insumo de la lista'); return; }
+    const texto = buscarInput.value;
+    const disponible = parseInt(buscarInput.dataset.disponible) || 0;
+    if (insumosSeleccionados[insumoId]) {
+        insumosSeleccionados[insumoId].cantidad = cantidad;
+    } else {
+        insumosSeleccionados[insumoId] = {
+            id: insumoId, nombre: texto.split('(')[0].trim(), cantidad, disponible,
+        };
+    }
+    actualizarListaInsumos();
+    buscarInput.value = '';
+    delete buscarInput.dataset.insumoId;
+    delete buscarInput.dataset.disponible;
+    document.getElementById('insumo_cantidad').value = '1';
+});
+
+function eliminarInsumo(insumoId) {
+    delete insumosSeleccionados[insumoId];
+    actualizarListaInsumos();
+}
+
+function cambiarCantidad(insumoId, valor) {
+    const cantidad = parseInt(valor) || 1;
+    insumosSeleccionados[insumoId].cantidad = cantidad < 1 ? 1 : cantidad;
+    actualizarListaInsumos();
+}
+
+function actualizarListaInsumos() {
+    const lista         = document.getElementById('insumos_items');
+    const listContainer = document.getElementById('insumos_lista');
+    lista.innerHTML = '';
+    const ids = [], cantidades = [];
+    Object.values(insumosSeleccionados).forEach(insumo => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = `
+            <div>
+                <strong>${insumo.nombre}</strong>
+                <span class="text-muted ms-2">Disponible: ${insumo.disponible ?? '—'}</span>
+            </div>
+            <div class="d-flex align-items-center">
+                <input type="number" min="1" class="form-control form-control-sm me-2"
+                       style="width: 80px;" value="${insumo.cantidad}"
+                       onchange="cambiarCantidad('${insumo.id}', this.value)">
+                <button type="button" class="btn btn-sm btn-danger"
+                        onclick="eliminarInsumo('${insumo.id}')">Quitar</button>
+            </div>`;
+        lista.appendChild(item);
+        ids.push(insumo.id);
+        cantidades.push(insumo.cantidad);
+    });
+    document.getElementById('id_insumos_ids').value        = ids.join(',');
+    document.getElementById('id_insumos_cantidades').value = cantidades.join(',');
+    listContainer.style.display = Object.keys(insumosSeleccionados).length ? 'block' : 'none';
+}
+
+actualizarListaInsumos();
+</script>
+
+{% endblock %}

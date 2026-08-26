@@ -27,6 +27,20 @@ class Laboratorio(models.Model):
         return self.nombre
 
 
+def es_laboratorista_del_laboratorio(usuario, laboratorio):
+    """True si `usuario` es el Usuario (rol='Laboratorio') asignado como
+    encargado de `laboratorio` — mismo criterio que
+    laboratorio.views._check_lab_access, expuesto acá para reutilizar desde
+    otras apps (p. ej. reservas) sin depender de esa vista. Un Administrador
+    NO cuenta como laboratorista de un laboratorio puntual: quien necesite
+    que Administrador también pase debe chequearlo aparte."""
+    if not laboratorio or not usuario or not usuario.is_authenticated:
+        return False
+    if not usuario.rol or usuario.rol.nombre != 'Laboratorio':
+        return False
+    return laboratorio.encargados.filter(id=usuario.id).exists()
+
+
 class HorarioLaboratorio(models.Model):
 
     DIAS = [

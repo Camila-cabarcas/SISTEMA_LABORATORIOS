@@ -119,6 +119,38 @@ def notificar_reserva_aprobada(reserva, async_=True):
     )
 
 
+def notificar_reserva_modificada(reserva, agregados, quitados, cambiados=None, async_=True):
+    """Trigger: EditarInsumosReservaService.guardar(), después de que un
+    laboratorista agrega/quita/cambia la cantidad de insumos de una Reserva
+    Aprobada. `agregados`/`quitados`/`cambiados` son listas de dicts (ver
+    ese service para su forma exacta) — se pasan tal cual al template para
+    no duplicar el cálculo del diff acá."""
+    solicitud = _solicitud_de_reserva(reserva)
+    email, nombre = _email_y_nombre(solicitud)
+    if not email:
+        logger.info(
+            'notificar_reserva_modificada | sin email de destinatario | reserva_id=%s',
+            reserva.id if reserva else None,
+        )
+        return
+
+    enviar_email_html(
+        destinatarios=email,
+        asunto=f'Tu reserva fue modificada — {reserva.codigo}',
+        template_name='emails/reserva_modificada.html',
+        contexto={
+            'nombre': nombre,
+            'laboratorio': solicitud.laboratorio.nombre if solicitud else None,
+            'fecha': solicitud.fecha_reserva.date() if solicitud else None,
+            'codigo': reserva.codigo,
+            'agregados': agregados,
+            'quitados': quitados,
+            'cambiados': cambiados or [],
+        },
+        async_=async_,
+    )
+
+
 def notificar_prestamo_confirmado(prestamo, async_=True):
     """Trigger: prestamos/views.py:crear_prestamo, después de registrar los
     PrestamoItem seleccionados."""
