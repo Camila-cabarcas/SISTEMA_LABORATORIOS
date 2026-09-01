@@ -96,6 +96,7 @@ Reglas de asignación y administración:
 
 - Las reservas en estado **"Pendiente"** que superan su `hora_limite_retiro` sin haber sido utilizadas se marcan automáticamente como **"Expiradas"**.
 - Esta expiración ocurre tanto mediante el management command `expirar_reservas` (ejecutado cada 5 minutos vía el Programador de Tareas de Windows) como al cargar la lista de reservas en `/reservas/` (auto-expiración en línea).
+- **Legacy:** esta regla es de cuando una reserva nacía "Pendiente" y esperaba aprobación manual. Con la aprobación automática (ver `SolicitudReserva.crear_reserva()`), toda reserva nueva nace directamente "Aprobada" — el flujo normal ya no genera reservas "Pendiente", así que en la práctica esta expiración hoy no tiene nada que hacer. El estado "Expirada" y el chequeo se mantienen (sin tocar "Aprobada") para no perder la protección si algo vuelve a dejar una reserva en "Pendiente" por otra vía.
 - Los préstamos que superan su fecha de devolución se marcan como **"Retrasados"** mediante el management command `marcar_retrasados`.
 - Si se elimina el último insumo asociado a una reserva, esa reserva se cancela automáticamente.
 
@@ -259,7 +260,7 @@ El sistema depende de dos *management commands* de Django que deben ejecutarse p
 
 | Comando | App | Frecuencia configurada | Qué hace |
 | --- | --- | --- | --- |
-| `expirar_reservas` | `reservas` | Cada 5 minutos | Marca como "Expiradas" las reservas pendientes/aprobadas cuya `hora_limite_retiro` ya pasó. |
+| `expirar_reservas` | `reservas` | Cada 5 minutos | Marca como "Expiradas" las reservas **Pendiente** cuya `hora_limite_retiro` ya pasó. Legacy: con auto-aprobación (ver 6.3) ya no se crean reservas Pendiente, así que en el flujo normal de hoy este comando es un no-op. |
 | `marcar_retrasados` | `prestamos` | No configurada actualmente | Marca como "Retrasados" los préstamos activos cuya fecha de devolución de la reserva ya pasó (con 5 minutos de gracia). |
 
 > ⚠️ La tarea programada de `marcar_retrasados` fue eliminada del Programador de Tareas de Windows y está pendiente de volver a configurarse. Mientras tanto, debe ejecutarse manualmente cuando sea necesario.

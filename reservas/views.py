@@ -29,6 +29,11 @@ def lista_reservas(request):
     estado_expirada = EstadoReserva.objects.filter(nombre='Expirada').first()
     estado_pendiente = EstadoReserva.objects.filter(nombre='Pendiente').first()
 
+    # Auto-expiración en línea, espejo de reservas/management/commands/
+    # expirar_reservas.py — solo toca "Pendiente" (ver el docstring de ese
+    # comando sobre por qué "Aprobada" ya no se expira acá bajo
+    # auto-aprobación). En el flujo normal de hoy esto es un no-op: nada
+    # nuevo nace Pendiente.
     if estado_expirada and estado_pendiente:
         Reserva.objects.filter(
             estado=estado_pendiente,
