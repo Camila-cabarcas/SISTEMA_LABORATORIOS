@@ -292,6 +292,11 @@
             <i class="fa-solid fa-pen me-1"></i>Editar insumos
         </a>
     {% endif %}
+    {% if reserva.estado.nombre != 'Cancelada' %}
+        <a href="/reservas/{{ reserva.id }}/cancelar-admin/" class="btn btn-outline-danger">
+            <i class="fa-solid fa-ban me-1"></i>Cancelar (administrativo)
+        </a>
+    {% endif %}
 {% endif %}
 
 {% endwith %}

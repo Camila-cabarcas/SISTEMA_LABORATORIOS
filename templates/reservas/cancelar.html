@@ -2,25 +2,37 @@
 
 {% block contenido %}
 
-<h1 class="mb-4">Cancelar Reserva #{{ reserva.id }}</h1>
+<h1 class="mb-4">Cancelar reserva {{ reserva.codigo }}</h1>
 
 <div class="card p-4">
 
-    <p>¿Estás segura de que deseas cancelar esta reserva?</p>
+    <p>¿Confirmas que deseas cancelar esta reserva?</p>
 
-    <p><strong>Usuario:</strong> {{ reserva.usuario }}</p>
+    <p><strong>Laboratorio:</strong> {{ reserva.solicitud.first.laboratorio.nombre }}</p>
     <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
     <p><strong>Estado actual:</strong> {{ reserva.estado }}</p>
+
+    {% if errores %}
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0">
+            {% for error in errores %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
     <form method="POST">
 
         {% csrf_token %}
+        <input type="hidden" name="cedula" value="{{ cedula }}">
+        <input type="hidden" name="email" value="{{ email }}">
 
         <button type="submit" class="btn btn-danger">
             Sí, cancelar reserva
         </button>
 
-        <a href="/reservas/{{ reserva.id }}/" class="btn btn-secondary ms-2">
+        <a href="{% url 'detalle_reserva_propietario' id=reserva.id %}?cedula={{ cedula }}&email={{ email }}" class="btn btn-secondary ms-2">
             No, volver
         </a>
 

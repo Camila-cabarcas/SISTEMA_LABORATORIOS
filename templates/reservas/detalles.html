@@ -1,0 +1,130 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Reserva {{ reserva.codigo }}</h1>
+
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Información general</h5>
+    <table role="presentation" class="table table-borderless w-auto mb-0">
+        <tr>
+            <th class="pe-4">Código</th>
+            <td>{{ reserva.codigo }}</td>
+        </tr>
+        <tr>
+            <th class="pe-4">Laboratorio</th>
+            <td>{{ solicitud.laboratorio.nombre|default:"—" }}</td>
+        </tr>
+        <tr>
+            <th class="pe-4">Fecha</th>
+            <td>{{ reserva.fecha_reserva|date:"d/m/Y" }}</td>
+        </tr>
+        <tr>
+            <th class="pe-4">Horario</th>
+            <td>
+                {% if solicitud.hora_inicio and solicitud.hora_fin %}
+                    {{ solicitud.hora_inicio|time:"H:i" }} - {{ solicitud.hora_fin|time:"H:i" }}
+                {% else %}
+                    {{ reserva.fecha_reserva|date:"H:i" }}
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th class="pe-4">Módulos</th>
+            <td>
+                {% if solicitud.modulos_asignados.all %}
+                    {% for modulo in solicitud.modulos_asignados.all %}{{ modulo.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                {% else %}
+                    <span class="text-muted">No aplica</span>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Insumos</h5>
+    {% if insumos %}
+    <ul class="mb-0">
+        {% for ri in insumos %}
+        <li>{{ ri.insumo.nombre }} — Cantidad: {{ ri.cantidad }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted mb-0">Esta reserva no tiene insumos asociados.</p>
+    {% endif %}
+</div>
+
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Estado de la reserva</h5>
+    <p class="mb-1">
+        <span class="badge {% if reserva.estado.nombre == 'Aprobada' %}bg-success{% elif reserva.estado.nombre == 'Cancelada' %}bg-danger{% elif reserva.estado.nombre == 'Expirada' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">
+            {{ reserva.estado.nombre|default:"—" }}
+        </span>
+    </p>
+    <p class="text-muted mb-1">Creada: {{ reserva.fecha_creacion|date:"d/m/Y H:i" }}</p>
+    <p class="mb-0">
+        Editable:
+        {% if puede_editar_insumos %}
+            <span class="text-success">Sí — un laboratorista puede editar los insumos de esta reserva.</span>
+        {% else %}
+            <span class="text-muted">No.</span>
+        {% endif %}
+    </p>
+</div>
+
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Estado del préstamo</h5>
+
+    {% if estado_prestamo.tipo == 'sin_prestamo' %}
+    <div class="alert alert-secondary mb-0">
+        <strong>SIN PRÉSTAMO</strong>
+        <p class="mb-0">Esta reserva no fue utilizada (nunca se registró un préstamo).</p>
+    </div>
+
+    {% elif estado_prestamo.tipo == 'activo' %}
+    <div class="alert alert-primary mb-0">
+        <strong>PRÉSTAMO ACTIVO</strong>
+        <p class="mb-1">Código: {{ estado_prestamo.prestamo.codigo }}</p>
+        <p class="mb-1">Entregado: {{ estado_prestamo.prestamo.fecha_entrega|date:"d/m/Y H:i" }}</p>
+        <p class="mb-0">
+            Devolución esperada:
+            {% if reserva.fecha_devolucion %}{{ reserva.fecha_devolucion|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+        </p>
+    </div>
+
+    {% elif estado_prestamo.tipo == 'devuelto' %}
+    <div class="alert alert-success mb-0">
+        <strong>PRÉSTAMO DEVUELTO</strong>
+        <p class="mb-0">Completado: {{ estado_prestamo.prestamo.fecha_devolucion|date:"d/m/Y H:i"|default:"—" }}</p>
+    </div>
+
+    {% elif estado_prestamo.tipo == 'retrasado' %}
+    <div class="alert alert-danger mb-0">
+        <strong>⚠️ PRÉSTAMO RETRASADO</strong>
+        <p class="mb-0">Debes devolver los ítems urgentemente.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card p-4">
+    <h5 class="mb-3">Acciones</h5>
+
+    {% if puede_cancelar %}
+    <form method="GET" action="{% url 'cancelar_reserva' id=reserva.id %}" class="d-inline">
+        <input type="hidden" name="cedula" value="{{ cedula }}">
+        <input type="hidden" name="email" value="{{ email }}">
+        <button type="submit" class="btn btn-danger">Cancelar reserva</button>
+    </form>
+    {% elif reserva.estado.nombre == 'Aprobada' %}
+    <p class="text-muted mb-0">
+        Ya no puedes cancelar esta reserva por tu cuenta: debe hacerse con al menos 2 horas de
+        anticipación a la fecha de la reserva ({{ limite_cancelacion|date:"d/m/Y H:i" }}).
+        Comunícate con el laboratorio si necesitas cancelarla.
+    </p>
+    {% else %}
+    <p class="text-muted mb-0">No hay acciones disponibles para esta reserva.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

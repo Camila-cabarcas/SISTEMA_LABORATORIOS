@@ -204,6 +204,74 @@ def notificar_devolucion_completada(prestamo, inspecciones, async_=True):
     )
 
 
+def notificar_cancelacion(reserva, cancelada_por, motivo='', async_=True):
+    """Trigger: CancelarReservaService (reservas/services/cancelar_reserva_
+    service.py), tanto cancelar_propietario() como cancelar_admin() — el
+    destinatario cambia según quién canceló:
+
+    - cancelada_por='estudiante': el propio solicitante se autocanceló (ver
+      cancelar_propietario) — se avisa a TODOS los encargados
+      (Laboratorio.encargados) del laboratorio de la reserva, no al
+      solicitante (que ya sabe que canceló porque fue él quien lo hizo).
+    - cancelada_por='laboratorista': cancelación administrativa (ver
+      cancelar_admin) — se avisa al solicitante, con el motivo que dio quien
+      canceló.
+    """
+    solicitud = _solicitud_de_reserva(reserva)
+
+    if cancelada_por == 'estudiante':
+        laboratorio = solicitud.laboratorio if solicitud else None
+        destinatarios = [
+            e for e in (laboratorio.encargados.values_list('email', flat=True) if laboratorio else [])
+            if e
+        ]
+        if not destinatarios:
+            logger.info(
+                'notificar_cancelacion | sin encargados con email | reserva_id=%s | laboratorio_id=%s',
+                reserva.id if reserva else None, laboratorio.id if laboratorio else None,
+            )
+            return
+
+        enviar_email_html(
+            destinatarios=destinatarios,
+            asunto=f'Reserva cancelada por el solicitante — {reserva.codigo}',
+            template_name='emails/reserva_cancelada.html',
+            contexto={
+                'para_laboratorista': True,
+                'solicitante': solicitud.nombre if solicitud else 'Desconocido',
+                'cedula': solicitud.cedula if solicitud else '',
+                'laboratorio': laboratorio.nombre if laboratorio else None,
+                'fecha': solicitud.fecha_reserva.date() if solicitud else None,
+                'codigo': reserva.codigo,
+            },
+            async_=async_,
+        )
+        return
+
+    email, nombre = _email_y_nombre(solicitud)
+    if not email:
+        logger.info(
+            'notificar_cancelacion | sin email de destinatario | reserva_id=%s',
+            reserva.id if reserva else None,
+        )
+        return
+
+    enviar_email_html(
+        destinatarios=email,
+        asunto=f'Tu reserva fue cancelada — {reserva.codigo}',
+        template_name='emails/reserva_cancelada.html',
+        contexto={
+            'para_laboratorista': False,
+            'nombre': nombre,
+            'laboratorio': solicitud.laboratorio.nombre if solicitud else None,
+            'fecha': solicitud.fecha_reserva.date() if solicitud else None,
+            'codigo': reserva.codigo,
+            'motivo': motivo,
+        },
+        async_=async_,
+    )
+
+
 def notificar_recordatorio_devolucion(prestamo, async_=True):
     """Aviso de ATRASO (no un recordatorio preventivo): llamada una vez por
     préstamo vencido hace más de 30 min desde RecordatorioDevolucionService,

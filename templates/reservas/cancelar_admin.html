@@ -1,0 +1,50 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Cancelar reserva {{ reserva.codigo }} (administrativo)</h1>
+
+<div class="card p-4">
+
+    <p>
+        Esta cancelación no tiene restricciones (estado, préstamo asociado, ni las 2 horas de
+        anticipación que sí aplican cuando cancela el propio solicitante) — por eso se exige un
+        motivo, que se registra en el log y se incluye en el email al solicitante.
+    </p>
+
+    <p><strong>Laboratorio:</strong> {{ reserva.solicitud.first.laboratorio.nombre }}</p>
+    <p><strong>Fecha reserva:</strong> {{ reserva.fecha_reserva }}</p>
+    <p><strong>Estado actual:</strong> {{ reserva.estado }}</p>
+
+    {% if errores %}
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0">
+            {% for error in errores %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label for="motivo" class="form-label">Motivo de la cancelación</label>
+            <textarea name="motivo" id="motivo" class="form-control" rows="3" required>{{ request.POST.motivo }}</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-danger">
+            Cancelar reserva
+        </button>
+
+        <a href="{% url 'detalle_reserva' id=reserva.id %}" class="btn btn-secondary ms-2">
+            Volver
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

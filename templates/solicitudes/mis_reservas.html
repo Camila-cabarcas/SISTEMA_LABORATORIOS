@@ -1,0 +1,119 @@
+<p class="text-muted">
+    Ingresa la cédula y el email que usaste al hacer la reserva para ver su estado, editarla o
+    cancelarla.
+</p>
+
+<form method="GET" class="row g-2 mb-4">
+    <div class="col-md-4">
+        <label for="mr-cedula" class="form-label">Cédula</label>
+        <input type="text" name="cedula" id="mr-cedula" class="form-control" value="{{ cedula }}" required>
+    </div>
+    <div class="col-md-5">
+        <label for="mr-email" class="form-label">Email</label>
+        <input type="email" name="email" id="mr-email" class="form-control" value="{{ email }}" required>
+    </div>
+    <div class="col-md-3 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar mis reservas
+        </button>
+    </div>
+</form>
+
+{% if buscado %}
+
+    {% if error_busqueda %}
+    <div class="alert alert-warning">{{ error_busqueda }}</div>
+
+    {% else %}
+
+    <form method="GET" class="row g-2 mb-3">
+        <input type="hidden" name="cedula" value="{{ cedula }}">
+        <input type="hidden" name="email" value="{{ email }}">
+        <div class="col-md-3">
+            <select name="estado" class="form-select" onchange="this.form.submit()">
+                <option value="">Todos los estados</option>
+                <option value="Aprobada" {% if estado_filtro == 'Aprobada' %}selected{% endif %}>Aprobada</option>
+                <option value="Cancelada" {% if estado_filtro == 'Cancelada' %}selected{% endif %}>Cancelada</option>
+                <option value="Pendiente" {% if estado_filtro == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="Expirada" {% if estado_filtro == 'Expirada' %}selected{% endif %}>Expirada</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <input type="text" name="q" class="form-control" placeholder="Buscar por código o laboratorio" value="{{ q }}">
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-outline-secondary w-100">Filtrar</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Laboratorio</th>
+                <th>Fecha / Hora</th>
+                <th>Estado Reserva</th>
+                <th>Estado Préstamo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in page_obj %}
+            <tr>
+                <td>{{ fila.reserva.codigo }}</td>
+                <td>{{ fila.solicitud.laboratorio.nombre|default:"—" }}</td>
+                <td>{{ fila.reserva.fecha_reserva|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <span class="badge {% if fila.reserva.estado.nombre == 'Aprobada' %}bg-success{% elif fila.reserva.estado.nombre == 'Cancelada' %}bg-danger{% elif fila.reserva.estado.nombre == 'Expirada' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">
+                        {{ fila.reserva.estado.nombre|default:"—" }}
+                    </span>
+                </td>
+                <td>
+                    {% if fila.estado_prestamo.tipo == 'sin_prestamo' %}
+                        <span class="badge bg-secondary">Sin Préstamo</span>
+                    {% elif fila.estado_prestamo.tipo == 'activo' %}
+                        <span class="badge bg-primary">Activo</span>
+                    {% elif fila.estado_prestamo.tipo == 'devuelto' %}
+                        <span class="badge bg-success">Devuelto</span>
+                    {% elif fila.estado_prestamo.tipo == 'retrasado' %}
+                        <span class="badge bg-danger">⚠️ Retrasado</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'detalle_reserva_propietario' id=fila.reserva.id %}?cedula={{ cedula|urlencode }}&email={{ email|urlencode }}"
+                       class="btn btn-sm btn-outline-primary">Ver Detalles</a>
+                    {% if fila.puede_cancelar %}
+                    <a href="{% url 'cancelar_reserva' id=fila.reserva.id %}?cedula={{ cedula|urlencode }}&email={{ email|urlencode }}"
+                       class="btn btn-sm btn-outline-danger">Cancelar</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-muted">No hay reservas con esos filtros.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Paginación de mis reservas">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?cedula={{ cedula|urlencode }}&email={{ email|urlencode }}&estado={{ estado_filtro }}&q={{ q }}&page={{ page_obj.previous_page_number }}">Anterior</a>
+            </li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?cedula={{ cedula|urlencode }}&email={{ email|urlencode }}&estado={{ estado_filtro }}&q={{ q }}&page={{ page_obj.next_page_number }}">Siguiente</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% endif %}
+
+{% endif %}

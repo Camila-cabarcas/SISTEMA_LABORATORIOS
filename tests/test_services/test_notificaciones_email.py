@@ -19,6 +19,7 @@ from solicitudes.models import SolicitudReserva
 from utils.notificaciones_email import (
     _email_y_nombre,
     notificar_cambios_o_prestamo_listo,
+    notificar_cancelacion,
     notificar_devolucion_completada,
     notificar_reserva_creada_aprobada,
 )
@@ -261,6 +262,63 @@ class TestNotificarCambiosOPrestamoListo:
 
         assert len(mail.outbox) == 1
         assert reserva_con_prestamo.reserva.codigo in mail.outbox[0].subject
+
+
+class TestNotificarCancelacion:
+    """notificar_cancelacion — trigger: CancelarReservaService. El
+    destinatario depende de `cancelada_por`: 'estudiante' avisa a los
+    encargados del laboratorio (quien canceló ya lo sabe), 'laboratorista'
+    avisa al solicitante con el motivo."""
+
+    def test_estudiante_sin_encargados_con_email_no_envia_nada(self, solicitud_valida, catalogos):
+        reserva = solicitud_valida.crear_reserva()
+
+        notificar_cancelacion(reserva, cancelada_por='estudiante', async_=False)
+
+        assert len(mail.outbox) == 0
+
+    def test_estudiante_avisa_a_los_encargados(self, solicitud_valida, laboratorio, usuario_admin, catalogos):
+        from users.models import Rol
+
+        usuario_admin.rol = Rol.objects.get(nombre='Laboratorio')
+        usuario_admin.email = 'lab@udea.edu.co'
+        usuario_admin.save()
+        laboratorio.encargados.add(usuario_admin)
+
+        reserva = solicitud_valida.crear_reserva()
+
+        notificar_cancelacion(reserva, cancelada_por='estudiante', async_=False)
+
+        assert len(mail.outbox) == 1
+        enviado = mail.outbox[0]
+        assert enviado.to == ['lab@udea.edu.co']
+        assert reserva.codigo in enviado.subject
+        cuerpo_html = enviado.alternatives[0][0]
+        assert solicitud_valida.nombre in cuerpo_html
+        assert solicitud_valida.cedula in cuerpo_html
+
+    def test_laboratorista_sin_email_no_envia_nada(self, solicitud_valida, catalogos):
+        reserva = solicitud_valida.crear_reserva()
+
+        notificar_cancelacion(reserva, cancelada_por='laboratorista', motivo='x', async_=False)
+
+        assert len(mail.outbox) == 0
+
+    def test_laboratorista_avisa_al_solicitante_con_motivo(self, solicitud_valida, laboratorio, catalogos):
+        reserva = solicitud_valida.crear_reserva()
+        solicitud_valida.email = 'juan@udea.edu.co'
+        solicitud_valida.save()
+
+        notificar_cancelacion(
+            reserva, cancelada_por='laboratorista', motivo='Mantenimiento del laboratorio.', async_=False,
+        )
+
+        assert len(mail.outbox) == 1
+        enviado = mail.outbox[0]
+        assert enviado.to == ['juan@udea.edu.co']
+        assert reserva.codigo in enviado.subject
+        cuerpo_html = enviado.alternatives[0][0]
+        assert 'Mantenimiento del laboratorio.' in cuerpo_html
 
 
 class TestNotificarPrestamoYDevolucion:

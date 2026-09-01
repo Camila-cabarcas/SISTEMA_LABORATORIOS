@@ -3,14 +3,19 @@ views.py — reservas
 Vistas para listar, crear manualmente, aprobar, cancelar y gestionar reservas e insumos asociados.
 """
 import logging
+from urllib.parse import urlencode
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.urls import reverse
 from users.decorators import rol_requerido
 from .models import Reserva, ReservaInsumo, EstadoReserva
 from .forms import ReservaForm, ReservaInsumoForm
 from .services.editar_insumos_service import EditarInsumosReservaService
+from .services.cancelar_reserva_service import CancelarReservaService
+from .services.estado_prestamo_service import ObtenerEstadoPrestamoService
+from solicitudes.services.mis_reservas_service import MisReservasService
 from laboratorio.models import HorarioLaboratorio
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -328,16 +333,96 @@ def detalle_reserva(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+def detalle_reserva_propietario(request, id):
+    """Vista de autoservicio (sin login — no hay cuentas de estudiante en
+    este sistema, ver solicitudes.services.mis_reservas_service) para que
+    quien hizo la reserva vea sus detalles, el estado de su préstamo (si
+    existe) y pueda cancelarla. Requiere `cedula`+`email` por querystring;
+    si no coinciden con la SolicitudReserva vinculada, 403 sin filtrar
+    ningún dato de la reserva."""
+    reserva = get_object_or_404(Reserva, id=id)
+    solicitud = reserva.solicitud.first()
+
+    cedula = request.GET.get('cedula', '')
+    email = request.GET.get('email', '')
+
+    if not MisReservasService.es_propietario(solicitud, cedula, email):
+        return render(request, 'reservas/detalles_no_autorizado.html', status=403)
+
+    insumos = ReservaInsumo.objects.filter(reserva=reserva).select_related('insumo')
+    estado_prestamo = ObtenerEstadoPrestamoService.obtener(reserva)
+    puede_editar_insumos = (
+        bool(reserva.estado) and reserva.estado.nombre == 'Aprobada'
+        and not reserva.prestamo_set.exists()
+    )
+    puede_cancelar = CancelarReservaService.puede_cancelar_propietario(reserva)
+
+    return render(request, 'reservas/detalles.html', {
+        'reserva': reserva,
+        'solicitud': solicitud,
+        'insumos': insumos,
+        'estado_prestamo': estado_prestamo,
+        'puede_editar_insumos': puede_editar_insumos,
+        'puede_cancelar': puede_cancelar,
+        'limite_cancelacion': CancelarReservaService.limite_cancelacion(reserva),
+        'cedula': cedula,
+        'email': email,
+    })
+
+
 def cancelar_reserva(request, id):
+    """Autoservicio: quien hizo la reserva (identificado por cédula+email
+    — ver MisReservasService) puede cancelarla mientras esté Aprobada, no
+    tenga Prestamo asociado, y falten al menos CancelarReservaService.
+    HORAS_LIMITE horas para fecha_reserva. Sin @rol_requerido a propósito:
+    esta acción es del solicitante, no del laboratorista — ese cancela sin
+    estas restricciones desde aprobar_reserva o cancelar_reserva_admin."""
+    reserva = get_object_or_404(Reserva, id=id)
+    solicitud = reserva.solicitud.first()
+
+    cedula = request.POST.get('cedula') or request.GET.get('cedula', '')
+    email = request.POST.get('email') or request.GET.get('email', '')
+
+    if not MisReservasService.es_propietario(solicitud, cedula, email):
+        return render(request, 'reservas/detalles_no_autorizado.html', status=403)
+
+    errores = []
+    if request.method == 'POST':
+        try:
+            CancelarReservaService.cancelar_propietario(reserva, cedula, email)
+            url = reverse('detalle_reserva_propietario', args=[reserva.id])
+            return redirect(f'{url}?{urlencode({"cedula": cedula, "email": email})}')
+        except ValidationError as e:
+            errores = e.messages
+
+    return render(request, 'reservas/cancelar.html', {
+        'reserva': reserva,
+        'cedula': cedula,
+        'email': email,
+        'errores': errores,
+    })
+
+
+@rol_requerido('Administrador', 'Laboratorio')
+def cancelar_reserva_admin(request, id):
+    """Cancelación administrativa: sin las restricciones de
+    cancelar_reserva (estado, préstamo, 2 horas de anticipación) — por eso
+    exige un motivo, que queda en el log y en el email al solicitante."""
     reserva = get_object_or_404(Reserva, id=id)
 
+    errores = []
     if request.method == 'POST':
-        reserva.estado = EstadoReserva.objects.get(nombre='Cancelada')
-        reserva.save()
-        return redirect('lista_reservas')
+        motivo = request.POST.get('motivo', '')
+        try:
+            CancelarReservaService.cancelar_admin(reserva, request.user, motivo)
+            return redirect('detalle_reserva', id=reserva.pk)
+        except ValidationError as e:
+            errores = e.messages
 
-    return render(request, 'reservas/cancelar.html', {'reserva': reserva})
+    return render(request, 'reservas/cancelar_admin.html', {
+        'reserva': reserva,
+        'errores': errores,
+    })
 
 
 @rol_requerido('Administrador', 'Laboratorio')

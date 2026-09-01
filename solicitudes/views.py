@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db.models import Q
 from users.models import Usuario, ProgramaAcademico
 from users.decorators import rol_requerido, requiere_contrasena_admin
@@ -21,6 +22,7 @@ from .services.registro_profesor_service import (
     AprobarSolicitudRegistroProfesorService,
     CrearSolicitudRegistroProfesorService,
 )
+from .services.mis_reservas_service import MisReservasService
 
 logger = logging.getLogger(__name__)
 
@@ -168,9 +170,67 @@ def cursos_profesor(request):
     })
 
 
-@login_required
 def lista_solicitudes(request):
-    return redirect('lista_reservas')
+    """Página pública /solicitudes/ con dos pestañas: "Crear Reserva" (los
+    formularios de siempre, en /solicitudes/estudiante/ y /solicitudes/
+    profesor/ — esta pestaña solo enlaza a ellos, no los reimplementa) y
+    "Mis Reservas", autoservicio para ver/cancelar una reserva ya hecha.
+
+    Sin login (no existe cuenta de estudiante en este sistema — ver
+    solicitud_estudiante/solicitud_profesor arriba, ambas públicas): "Mis
+    Reservas" identifica al dueño por cédula + email (ver
+    MisReservasService), los mismos datos que ya se piden al crear la
+    solicitud. Antes esta vista tenía @login_required y solo redirigía a
+    lista_reservas (la lista de reservas de Administrador/Laboratorio) — se
+    quita el decorador porque el público real de esta pestaña (estudiantes,
+    profesores) nunca tiene sesión iniciada."""
+    cedula = request.GET.get('cedula', '').strip()
+    email = request.GET.get('email', '').strip()
+    buscado = bool(cedula and email)
+
+    solicitudes_encontradas = []
+    error_busqueda = ''
+    if buscado:
+        solicitudes_encontradas = MisReservasService.buscar(cedula, email)
+        if not solicitudes_encontradas:
+            error_busqueda = 'No encontramos reservas con esa cédula y ese email.'
+
+    estado_filtro = request.GET.get('estado', '')
+    q = request.GET.get('q', '').strip()
+
+    from reservas.services.cancelar_reserva_service import CancelarReservaService
+    from reservas.services.estado_prestamo_service import ObtenerEstadoPrestamoService
+
+    filas = []
+    for solicitud in solicitudes_encontradas:
+        reserva = solicitud.reserva
+        if estado_filtro and (not reserva.estado or reserva.estado.nombre != estado_filtro):
+            continue
+        if q:
+            q_lower = q.lower()
+            coincide_codigo = q_lower in (reserva.codigo or '').lower()
+            coincide_lab = solicitud.laboratorio and q_lower in solicitud.laboratorio.nombre.lower()
+            if not coincide_codigo and not coincide_lab:
+                continue
+        filas.append({
+            'solicitud': solicitud,
+            'reserva': reserva,
+            'estado_prestamo': ObtenerEstadoPrestamoService.obtener(reserva),
+            'puede_cancelar': CancelarReservaService.puede_cancelar_propietario(reserva),
+        })
+
+    paginator = Paginator(filas, 10)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'solicitudes/lista.html', {
+        'buscado': buscado,
+        'cedula': cedula,
+        'email': email,
+        'error_busqueda': error_busqueda,
+        'page_obj': page_obj,
+        'estado_filtro': estado_filtro,
+        'q': q,
+    })
 
 
 def solicitud_exitosa(request):

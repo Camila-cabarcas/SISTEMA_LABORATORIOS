@@ -13,9 +13,9 @@ from solicitudes.models import SolicitudReserva
 pytestmark = pytest.mark.django_db
 
 
-def _reserva_aprobada_con_solicitud(laboratorio, cedula='111222333', email='ana@udea.edu.co'):
+def _reserva_aprobada_con_solicitud(laboratorio, cedula='111222333', email='ana@udea.edu.co', fecha_reserva=None):
     reserva = Reserva.objects.create(
-        fecha_reserva=datetime(2026, 8, 1, 8, 0),
+        fecha_reserva=fecha_reserva or datetime(2026, 8, 1, 8, 0),
         estado=EstadoReserva.objects.get(nombre='Aprobada'),
     )
     SolicitudReserva.objects.create(
@@ -278,3 +278,187 @@ def test_editar_insumos_dispara_email_al_estudiante(client, usuario_laboratorist
 
     assert response.status_code == 302
     assert llamadas == [reserva]
+
+
+# ── detalle_reserva_propietario (autoservicio) ──────────────────────────────
+
+def test_detalle_propietario_cedula_y_email_correctos(client, laboratorio, catalogos):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio)
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/?cedula=111222333&email=ana@udea.edu.co')
+
+    assert response.status_code == 200
+    assert reserva.codigo in response.content.decode()
+
+
+def test_detalle_propietario_rechaza_identidad_incorrecta(client, laboratorio, catalogos):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio)
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/?cedula=111222333&email=otro@udea.edu.co')
+
+    assert response.status_code == 403
+
+
+def test_detalle_propietario_sin_parametros_es_403(client, laboratorio, catalogos):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio)
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/')
+
+    assert response.status_code == 403
+
+
+def test_detalle_propietario_muestra_sin_prestamo(client, laboratorio, catalogos):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio)
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/?cedula=111222333&email=ana@udea.edu.co')
+
+    assert 'SIN PRÉSTAMO' in response.content.decode()
+
+
+def test_detalle_propietario_muestra_prestamo_activo(client, laboratorio, usuario_admin):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio)
+    Prestamo.objects.create(
+        reserva=reserva, responsable=usuario_admin,
+        estado=EstadoPrestamo.objects.get(nombre='Activo'),
+    )
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/?cedula=111222333&email=ana@udea.edu.co')
+
+    assert 'PRÉSTAMO ACTIVO' in response.content.decode()
+
+
+def test_detalle_propietario_muestra_prestamo_retrasado(client, laboratorio, usuario_admin):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio)
+    Prestamo.objects.create(
+        reserva=reserva, responsable=usuario_admin,
+        estado=EstadoPrestamo.objects.get(nombre='Retrasado'),
+    )
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/?cedula=111222333&email=ana@udea.edu.co')
+
+    assert 'RETRASADO' in response.content.decode()
+
+
+def test_detalle_propietario_muestra_prestamo_devuelto(client, laboratorio, usuario_admin):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio)
+    Prestamo.objects.create(
+        reserva=reserva, responsable=usuario_admin,
+        estado=EstadoPrestamo.objects.get(nombre='Devuelto'),
+    )
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/?cedula=111222333&email=ana@udea.edu.co')
+
+    assert 'DEVUELTO' in response.content.decode()
+
+
+# ── cancelar_reserva (autoservicio, 2h) ─────────────────────────────────────
+
+def test_cancelar_propietario_dentro_del_plazo(client, laboratorio, catalogos):
+    from django.utils import timezone
+
+    reserva = _reserva_aprobada_con_solicitud(
+        laboratorio, fecha_reserva=timezone.now() + timedelta(hours=3),
+    )
+
+    response = client.post(f'/reservas/{reserva.id}/cancelar/', {
+        'cedula': '111222333', 'email': 'ana@udea.edu.co',
+    })
+
+    assert response.status_code == 302
+    reserva.refresh_from_db()
+    assert reserva.estado.nombre == 'Cancelada'
+
+
+def test_cancelar_propietario_rechaza_menos_de_2h_antes(client, laboratorio, catalogos):
+    from django.utils import timezone
+
+    reserva = _reserva_aprobada_con_solicitud(
+        laboratorio, fecha_reserva=timezone.now() + timedelta(hours=1),
+    )
+
+    response = client.post(f'/reservas/{reserva.id}/cancelar/', {
+        'cedula': '111222333', 'email': 'ana@udea.edu.co',
+    })
+
+    assert response.status_code == 200
+    assert 'tarde' in response.content.decode().lower()
+    reserva.refresh_from_db()
+    assert reserva.estado.nombre == 'Aprobada'
+
+
+def test_cancelar_propietario_rechaza_identidad_incorrecta(client, laboratorio, catalogos):
+    from django.utils import timezone
+
+    reserva = _reserva_aprobada_con_solicitud(
+        laboratorio, fecha_reserva=timezone.now() + timedelta(hours=3),
+    )
+
+    response = client.post(f'/reservas/{reserva.id}/cancelar/', {
+        'cedula': '111222333', 'email': 'otro@udea.edu.co',
+    })
+
+    assert response.status_code == 403
+    reserva.refresh_from_db()
+    assert reserva.estado.nombre == 'Aprobada'
+
+
+def test_cancelar_propietario_get_muestra_confirmacion(client, laboratorio, catalogos):
+    from django.utils import timezone
+
+    reserva = _reserva_aprobada_con_solicitud(
+        laboratorio, fecha_reserva=timezone.now() + timedelta(hours=3),
+    )
+
+    response = client.get(
+        f'/reservas/{reserva.id}/cancelar/?cedula=111222333&email=ana@udea.edu.co',
+    )
+
+    assert response.status_code == 200
+
+
+# ── cancelar_reserva_admin ───────────────────────────────────────────────
+
+def test_cancelar_admin_requiere_rol_staff(client, laboratorio, usuario_estudiante):
+    from django.utils import timezone
+
+    reserva = _reserva_aprobada_con_solicitud(
+        laboratorio, fecha_reserva=timezone.now() + timedelta(hours=1),
+    )
+    client.force_login(usuario_estudiante)
+
+    response = client.post(f'/reservas/{reserva.id}/cancelar-admin/', {'motivo': 'x'})
+
+    assert response.status_code == 302
+    assert response.url == '/usuarios/sin-permiso/'
+
+
+def test_cancelar_admin_requiere_motivo(cliente_autenticado, laboratorio):
+    from django.utils import timezone
+
+    reserva = _reserva_aprobada_con_solicitud(
+        laboratorio, fecha_reserva=timezone.now() + timedelta(hours=1),
+    )
+
+    response = cliente_autenticado.post(f'/reservas/{reserva.id}/cancelar-admin/', {'motivo': ''})
+
+    assert response.status_code == 200
+    reserva.refresh_from_db()
+    assert reserva.estado.nombre == 'Aprobada'
+
+
+def test_cancelar_admin_cancela_sin_restriccion_de_2h(cliente_autenticado, laboratorio):
+    from django.utils import timezone
+
+    # A menos de 2h — el autoservicio (cancelar_reserva) lo rechazaría, pero
+    # cancelar_reserva_admin no tiene esa restricción.
+    reserva = _reserva_aprobada_con_solicitud(
+        laboratorio, fecha_reserva=timezone.now() + timedelta(minutes=30),
+    )
+
+    response = cliente_autenticado.post(f'/reservas/{reserva.id}/cancelar-admin/', {
+        'motivo': 'Mantenimiento del laboratorio.',
+    })
+
+    assert response.status_code == 302
+    reserva.refresh_from_db()
+    assert reserva.estado.nombre == 'Cancelada'

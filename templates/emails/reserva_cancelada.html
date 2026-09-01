@@ -1,0 +1,49 @@
+{% extends "emails/base_email.html" %}
+
+{% block titulo %}Reserva cancelada{% endblock %}
+
+{% block contenido %}
+{% if para_laboratorista %}
+
+<h2 style="margin-top:0; color:#dc3545;">Reserva cancelada por el solicitante</h2>
+<p><strong>{{ solicitante }}</strong> (cédula {{ cedula }}) canceló su reserva con código <strong>{{ codigo }}</strong>.</p>
+
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; width:160px; border:1px solid #e9ecef;">Laboratorio</td>
+<td style="border:1px solid #e9ecef;">{{ laboratorio|default:"—" }}</td>
+</tr>
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; border:1px solid #e9ecef;">Fecha</td>
+<td style="border:1px solid #e9ecef;">{{ fecha|default:"—" }}</td>
+</tr>
+</table>
+
+<p>El horario y los insumos quedan libres para otra reserva.</p>
+
+{% else %}
+
+<h2 style="margin-top:0; color:#dc3545;">Hola, {{ nombre }}</h2>
+<p>Tu reserva con código <strong>{{ codigo }}</strong> fue cancelada por un laboratorista.</p>
+
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; width:160px; border:1px solid #e9ecef;">Laboratorio</td>
+<td style="border:1px solid #e9ecef;">{{ laboratorio|default:"—" }}</td>
+</tr>
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; border:1px solid #e9ecef;">Fecha</td>
+<td style="border:1px solid #e9ecef;">{{ fecha|default:"—" }}</td>
+</tr>
+{% if motivo %}
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; border:1px solid #e9ecef;">Motivo</td>
+<td style="border:1px solid #e9ecef;">{{ motivo }}</td>
+</tr>
+{% endif %}
+</table>
+
+<p>Si tienes dudas sobre esta cancelación, comunícate con el laboratorio.</p>
+
+{% endif %}
+{% endblock %}

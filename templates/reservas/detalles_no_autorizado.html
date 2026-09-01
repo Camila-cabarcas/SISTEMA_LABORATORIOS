@@ -1,0 +1,15 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">No autorizado</h1>
+
+<div class="card p-4">
+    <p>No pudimos verificar que esta reserva te pertenece.</p>
+    <p class="text-muted">
+        Revisa que la cédula y el email coincidan exactamente con los que usaste al hacer la
+        reserva, o busca de nuevo desde <a href="/solicitudes/">Mis Reservas</a>.
+    </p>
+</div>
+
+{% endblock %}

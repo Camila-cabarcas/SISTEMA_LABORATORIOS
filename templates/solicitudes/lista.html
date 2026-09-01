@@ -2,90 +2,38 @@
 
 {% block contenido %}
 
-<h1 class="mb-4">Solicitudes de Reserva</h1>
+<h1 class="mb-4">Solicitudes de reserva</h1>
 
-<div class="mb-4">
-    <a href="/solicitudes/estudiante/" class="btn btn-primary">
-        Nueva Solicitud - Estudiante
-    </a>
-    <a href="/solicitudes/profesor/" class="btn btn-success">
-        Nueva Solicitud - Profesor
-    </a>
-</div>
+<ul class="nav nav-tabs" id="solicitudes-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if not buscado %}active{% endif %}" id="crear-tab" data-bs-toggle="tab"
+                data-bs-target="#crear" type="button" role="tab" aria-controls="crear">
+            Crear Reserva
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if buscado %}active{% endif %}" id="mis-reservas-tab" data-bs-toggle="tab"
+                data-bs-target="#mis-reservas" type="button" role="tab" aria-controls="mis-reservas">
+            Mis Reservas
+        </button>
+    </li>
+</ul>
 
-<div class="card p-4">
+<div class="tab-content border border-top-0 rounded-bottom p-4 bg-white" id="solicitudes-tabs-content">
 
-    {% if solicitudes %}
+    <div class="tab-pane fade {% if not buscado %}show active{% endif %}" id="crear" role="tabpanel" aria-labelledby="crear-tab">
+        <p class="text-muted">Elige el tipo de solicitante para crear una nueva reserva:</p>
+        <a href="/solicitudes/estudiante/" class="btn btn-primary me-2">
+            <i class="fa-solid fa-user-graduate me-1"></i>Nueva Solicitud - Estudiante
+        </a>
+        <a href="/solicitudes/profesor/" class="btn btn-success">
+            <i class="fa-solid fa-chalkboard-user me-1"></i>Nueva Solicitud - Profesor
+        </a>
+    </div>
 
-    <table class="table table-striped">
-
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Tipo</th>
-                <th>Solicitante</th>
-                <th>Laboratorio</th>
-                <th>Fecha</th>
-                <th>Horario</th>
-                <th>Insumos</th>
-                <th>Módulos</th>
-                <th>Creado</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for solicitud in solicitudes %}
-            <tr>
-                <td>#{{ solicitud.id }}</td>
-                <td>
-                    <span class="badge {% if solicitud.tipo_solicitante == 'estudiante' %}bg-info{% else %}bg-success{% endif %}">
-                        {{ solicitud.get_tipo_solicitante_display|truncatewords:1 }}
-                    </span>
-                </td>
-                <td>
-                    {% if solicitud.tipo_solicitante == 'estudiante' %}
-                        {{ solicitud.usuario.username }}
-                    {% else %}
-                        {{ solicitud.nombre }}
-                    {% endif %}
-                </td>
-                <td>{{ solicitud.laboratorio.nombre|truncatewords:2 }}</td>
-                <td>{{ solicitud.fecha_reserva|date:"d/m/Y" }}</td>
-                <td>
-                    {% if solicitud.hora_inicio and solicitud.hora_fin %}
-                        {{ solicitud.hora_inicio|time:"H:i" }} - {{ solicitud.hora_fin|time:"H:i" }}
-                    {% else %}
-                        <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if solicitud.insumos.all %}
-                        <small>{{ solicitud.insumos.count }} insumo(s)</small>
-                    {% else %}
-                        <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if solicitud.modulos_asignados.all %}
-                        <small>{{ solicitud.modulos_asignados.count }}</small>
-                    {% else %}
-                        {% if solicitud.necesita_modulo %}
-                            <span class="text-warning">Sin asignar</span>
-                        {% else %}
-                            <span class="text-muted">No requiere</span>
-                        {% endif %}
-                    {% endif %}
-                </td>
-                <td><small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-
-    </table>
-
-    {% else %}
-    <p class="text-muted">No hay solicitudes registradas.</p>
-    {% endif %}
+    <div class="tab-pane fade {% if buscado %}show active{% endif %}" id="mis-reservas" role="tabpanel" aria-labelledby="mis-reservas-tab">
+        {% include 'solicitudes/mis_reservas.html' %}
+    </div>
 
 </div>
 
