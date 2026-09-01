@@ -1,8 +1,37 @@
 {% extends "emails/base_email.html" %}
 
-{% block titulo %}Tu reserva fue modificada{% endblock %}
+{% block titulo %}{% if tipo == 'prestamo' %}¡Tu préstamo está listo!{% else %}Tu reserva fue modificada{% endif %}{% endblock %}
 
 {% block contenido %}
+{% if tipo == 'prestamo' %}
+
+<h2 style="margin-top:0; color:#198754;">✅ ¡Hola, {{ nombre }}! Tu préstamo está listo</h2>
+<p>Se registró la entrega de tu préstamo, asociado a la reserva con código <strong>{{ codigo }}</strong>.</p>
+
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; width:160px; border:1px solid #e9ecef;">Laboratorio</td>
+<td style="border:1px solid #e9ecef;">{{ laboratorio|default:"—" }}</td>
+</tr>
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; border:1px solid #e9ecef;">Fecha de entrega</td>
+<td style="border:1px solid #e9ecef;">{{ fecha_entrega|default:"—" }}</td>
+</tr>
+</table>
+
+<p style="font-weight:bold; margin-bottom:4px;">Ítems entregados:</p>
+<ul style="margin-top:4px; padding-left:20px;">
+{% for pi in items %}
+<li>{{ pi.item_inventario.insumo.nombre }} ({{ pi.item_inventario.codigo }})</li>
+{% empty %}
+<li>Sin ítems registrados.</li>
+{% endfor %}
+</ul>
+
+<p>Recuerda devolver los ítems en el estado en que los recibiste.</p>
+
+{% else %}
+
 <h2 style="margin-top:0; color:#2c3e50;">Hola, {{ nombre }}</h2>
 <p>El laboratorista modificó los insumos de tu reserva con código <strong>{{ codigo }}</strong>.</p>
 
@@ -45,4 +74,6 @@
 {% endif %}
 
 <p>Si tienes dudas sobre estos cambios, comunícate con el laboratorio.</p>
+
+{% endif %}
 {% endblock %}

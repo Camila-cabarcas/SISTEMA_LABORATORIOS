@@ -225,7 +225,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
 
     def test_notificacion_usa_email_de_la_solicitud_del_estudiante(self):
-        # notificar_reserva_confirmada ya se prueba a fondo (con
+        # notificar_reserva_creada_aprobada ya se prueba a fondo (con
         # mail.outbox) en tests/test_services/test_notificaciones_email.py;
         # acá solo interesa confirmar que _email_y_nombre resuelve al email
         # que el estudiante puso en el formulario, no a uno de un Usuario

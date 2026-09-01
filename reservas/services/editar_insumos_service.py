@@ -166,8 +166,11 @@ class EditarInsumosReservaService:
 
         if agregados or quitados or cambiados:
             try:
-                from utils.notificaciones_email import notificar_reserva_modificada
-                notificar_reserva_modificada(reserva, agregados, quitados, cambiados)
+                from utils.notificaciones_email import notificar_cambios_o_prestamo_listo
+                notificar_cambios_o_prestamo_listo(
+                    reserva, tipo='cambios',
+                    agregados=agregados, quitados=quitados, cambiados=cambiados,
+                )
             except Exception:
                 logger.exception(
                     'EditarInsumosReservaService.guardar | error notificando modificación | reserva_id=%s',

@@ -35,8 +35,8 @@ def _crear_insumo_con_stock(nombre, cantidad, laboratorio=None):
 @pytest.fixture
 def reserva_aprobada(laboratorio, catalogos):
     # Sin email en la SolicitudReserva a propósito: guardar() dispara su
-    # propia notificar_reserva_modificada en un hilo aparte (async_=True por
-    # default) apenas termina — si hubiera email acá, ese hilo mandaría un
+    # propia notificar_cambios_o_prestamo_listo en un hilo aparte (async_=True
+    # por default) apenas termina — si hubiera email acá, ese hilo mandaría un
     # mensaje real a mail.outbox en paralelo con cualquier assert posterior,
     # con condición de carrera. Los tests que sí necesitan revisar contenido
     # de email lo setean DESPUÉS de llamar a guardar() (mismo patrón que
@@ -240,15 +240,13 @@ class TestAuditoria:
 
 class TestNotificacion:
 
-    def test_dispara_notificar_reserva_modificada_con_el_diff(
+    def test_dispara_notificar_cambios_o_prestamo_listo_con_el_diff(
         self, reserva_aprobada, usuario_laboratorista, insumo_stock, monkeypatch,
     ):
         llamadas = []
         monkeypatch.setattr(
-            'utils.notificaciones_email.notificar_reserva_modificada',
-            lambda reserva, agregados, quitados, cambiados=None: llamadas.append(
-                (reserva, agregados, quitados, cambiados),
-            ),
+            'utils.notificaciones_email.notificar_cambios_o_prestamo_listo',
+            lambda reserva, tipo='cambios', **kwargs: llamadas.append((reserva, tipo, kwargs)),
         )
 
         EditarInsumosReservaService.guardar(
@@ -257,11 +255,12 @@ class TestNotificacion:
         )
 
         assert len(llamadas) == 1
-        reserva_llamada, agregados, quitados, cambiados = llamadas[0]
+        reserva_llamada, tipo, kwargs = llamadas[0]
         assert reserva_llamada == reserva_aprobada
-        assert [a['insumo'] for a in agregados] == [insumo_stock]
-        assert quitados == []
-        assert cambiados == []
+        assert tipo == 'cambios'
+        assert [a['insumo'] for a in kwargs['agregados']] == [insumo_stock]
+        assert kwargs['quitados'] == []
+        assert kwargs['cambiados'] == []
 
     def test_no_notifica_si_no_hubo_cambios(
         self, reserva_aprobada, usuario_laboratorista, insumo_stock, monkeypatch,
@@ -270,7 +269,7 @@ class TestNotificacion:
 
         llamadas = []
         monkeypatch.setattr(
-            'utils.notificaciones_email.notificar_reserva_modificada',
+            'utils.notificaciones_email.notificar_cambios_o_prestamo_listo',
             lambda *args, **kwargs: llamadas.append(args),
         )
 
@@ -282,7 +281,7 @@ class TestNotificacion:
         assert llamadas == []
 
     def test_email_llega_al_estudiante(self, reserva_aprobada, usuario_laboratorista, insumo_stock):
-        from utils.notificaciones_email import notificar_reserva_modificada
+        from utils.notificaciones_email import notificar_cambios_o_prestamo_listo
 
         agregados, quitados, cambiados = EditarInsumosReservaService.guardar(
             reserva_aprobada, usuario_laboratorista,
@@ -298,7 +297,10 @@ class TestNotificacion:
         solicitud.email = 'ana@udea.edu.co'
         solicitud.save()
 
-        notificar_reserva_modificada(reserva_aprobada, agregados, quitados, cambiados, async_=False)
+        notificar_cambios_o_prestamo_listo(
+            reserva_aprobada, tipo='cambios',
+            agregados=agregados, quitados=quitados, cambiados=cambiados, async_=False,
+        )
 
         assert len(mail.outbox) == 1
         enviado = mail.outbox[0]

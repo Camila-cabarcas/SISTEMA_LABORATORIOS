@@ -1,11 +1,26 @@
 """
 notificaciones_email.py — utils
-Notificaciones por email para el ciclo de vida de una reserva/préstamo:
-reserva confirmada, préstamo confirmado, devolución completada y recordatorio
-semanal de devolución. Cada función arma su contexto y llama a
+Notificaciones por email para el ciclo de vida de una reserva/préstamo: 4
+emails en total — reserva creada y aprobada, cambios en la reserva o
+préstamo listo (fusionados en un solo email adaptable, ver
+notificar_cambios_o_prestamo_listo), devolución completada y aviso de
+atraso. Cada función arma su contexto y llama a
 utils.email_tasks.enviar_email_html — nunca debe romper el flujo que la
 llama (crear una reserva, registrar un préstamo, finalizar una inspección):
 cualquier error queda solo en el log.
+
+Antes había 6 funciones (7 templates contando emails/prueba.html, que no es
+una notificación de este ciclo de vida sino un smoke test de SendGrid — ver
+users/management/commands/enviar_email_prueba.py, eliminado junto con su
+template porque no tenía otro motivo para existir): notificar_reserva_
+confirmada + notificar_reserva_aprobada se fusionaron en
+notificar_reserva_creada_aprobada porque, con auto-aprobación (ver
+SolicitudReserva.crear_reserva()), "creada" y "aprobada" son el mismo
+evento; notificar_reserva_modificada + notificar_prestamo_confirmado se
+fusionaron en notificar_cambios_o_prestamo_listo porque ambas son avisos de
+"algo cambió en tu reserva" que un estudiante recibe en el mismo punto del
+flujo (después de aprobada, antes/en el momento del préstamo) — un
+parámetro `tipo` decide qué mitad de la plantilla se renderiza.
 
 Resolución del destinatario: solicitud.email es ahora obligatorio y
 verificado (@udea.edu.co) en EstudianteSolicitudForm y en el flujo "reserva
@@ -55,25 +70,30 @@ def _solicitud_de_prestamo(prestamo):
     return _solicitud_de_reserva(prestamo.reserva)
 
 
-def notificar_reserva_confirmada(solicitud, reserva, async_=True):
-    """Ya no tiene ningún trigger automático: las reservas se aprueban al
-    crearse (ver SolicitudReserva.crear_reserva(), que ahora dispara
-    notificar_reserva_aprobada directamente) así que no queda un momento
-    "confirmada pero todavía no aprobada" que notificar. Se deja disponible
-    para uso manual/futuro. `solicitud` ya tiene laboratorio/horario a mano
-    sin necesidad de recorrer la relación inversa."""
+def notificar_reserva_creada_aprobada(solicitud, async_=True):
+    """Notificación fusionada de creación + aprobación (antes dos emails
+    separados: notificar_reserva_confirmada + notificar_reserva_aprobada).
+    Con auto-aprobación (ver SolicitudReserva.crear_reserva()) una reserva
+    nace directamente Aprobada, así que "creada" y "aprobada" son el mismo
+    evento — no tiene sentido mandar dos correos por él.
+
+    Trigger: SolicitudReserva.crear_reserva(), justo después de crear la
+    Reserva. Toma `solicitud` (no `reserva`) porque en ese punto ya tiene
+    self.reserva asignado y laboratorio/horario a mano, sin necesidad de
+    recorrer la relación inversa."""
     email, nombre = _email_y_nombre(solicitud)
     if not email:
         logger.info(
-            'notificar_reserva_confirmada | sin email de destinatario | solicitud_id=%s',
+            'notificar_reserva_creada_aprobada | sin email de destinatario | solicitud_id=%s',
             solicitud.id if solicitud else None,
         )
         return
 
+    reserva = solicitud.reserva
     enviar_email_html(
         destinatarios=email,
-        asunto=f'Reserva confirmada — {reserva.codigo}',
-        template_name='emails/reserva_confirmada.html',
+        asunto=f'¡Tu reserva fue creada y aprobada! — {reserva.codigo}',
+        template_name='emails/reserva_creada_aprobada.html',
         contexto={
             'nombre': nombre,
             'laboratorio': solicitud.laboratorio.nombre,
@@ -86,100 +106,74 @@ def notificar_reserva_confirmada(solicitud, reserva, async_=True):
     )
 
 
-def notificar_reserva_aprobada(reserva, async_=True):
-    """Trigger: SolicitudReserva.crear_reserva() (las reservas se aprueban
-    automáticamente al crearse) y, para reservas creadas antes de ese
-    cambio o por otras vías, AprobarSolicitudReservaService.aprobar().
-    Toma `reserva` (no `solicitud`) y resuelve la solicitud vinculada por
-    la relación inversa (`_solicitud_de_reserva`) para poder reusarse desde
-    cualquier punto que ya tenga la Reserva a mano sin cargar con la
-    solicitud."""
+def notificar_cambios_o_prestamo_listo(
+    reserva, tipo='cambios', *,
+    agregados=None, quitados=None, cambiados=None,
+    prestamo=None, async_=True,
+):
+    """Notificación fusionada para dos eventos del ciclo de vida de una
+    Reserva Aprobada que antes vivían en funciones separadas
+    (notificar_reserva_modificada + notificar_prestamo_confirmado): ambos
+    son "algo cambió en tu reserva" en el mismo tramo del flujo (después de
+    aprobada, antes o en el momento del préstamo), así que comparten un
+    único template adaptable (emails/cambios_y_prestamo.html) según `tipo`.
+
+    Args:
+        reserva: la Reserva afectada — se resuelve la solicitud vinculada
+            por la relación inversa (`_solicitud_de_reserva`).
+        tipo: 'cambios' (default) — un laboratorista agregó/quitó/cambió la
+            cantidad de insumos (trigger: EditarInsumosReservaService.
+            guardar()); pasa `agregados`/`quitados`/`cambiados` (mismas
+            listas de dicts que antes). 'prestamo' — se registró la entrega
+            del préstamo asociado (trigger: prestamos/views.py:
+            crear_prestamo); pasa `prestamo` (el Prestamo recién creado)
+            para no tener que resolverlo de nuevo acá — si no se pasa, usa
+            el más reciente de reserva.prestamo_set.
+    """
     solicitud = _solicitud_de_reserva(reserva)
     email, nombre = _email_y_nombre(solicitud)
     if not email:
         logger.info(
-            'notificar_reserva_aprobada | sin email de destinatario | reserva_id=%s',
-            reserva.id if reserva else None,
+            'notificar_cambios_o_prestamo_listo | sin email de destinatario | reserva_id=%s | tipo=%s',
+            reserva.id if reserva else None, tipo,
         )
         return
 
-    enviar_email_html(
-        destinatarios=email,
-        asunto=f'¡Reserva Aprobada! — {reserva.codigo}',
-        template_name='emails/reserva_aprobada.html',
-        contexto={
-            'nombre': nombre,
-            'laboratorio': solicitud.laboratorio.nombre if solicitud else None,
-            'fecha': solicitud.fecha_reserva.date() if solicitud else None,
-            'hora_inicio': solicitud.hora_inicio if solicitud else None,
-            'hora_fin': solicitud.hora_fin if solicitud else None,
-            'codigo': reserva.codigo,
-        },
-        async_=async_,
-    )
+    contexto = {
+        'nombre': nombre,
+        'tipo': tipo,
+        'laboratorio': solicitud.laboratorio.nombre if solicitud else None,
+        'codigo': reserva.codigo,
+    }
 
+    if tipo == 'prestamo':
+        from prestamos.models import PrestamoItem
 
-def notificar_reserva_modificada(reserva, agregados, quitados, cambiados=None, async_=True):
-    """Trigger: EditarInsumosReservaService.guardar(), después de que un
-    laboratorista agrega/quita/cambia la cantidad de insumos de una Reserva
-    Aprobada. `agregados`/`quitados`/`cambiados` son listas de dicts (ver
-    ese service para su forma exacta) — se pasan tal cual al template para
-    no duplicar el cálculo del diff acá."""
-    solicitud = _solicitud_de_reserva(reserva)
-    email, nombre = _email_y_nombre(solicitud)
-    if not email:
-        logger.info(
-            'notificar_reserva_modificada | sin email de destinatario | reserva_id=%s',
-            reserva.id if reserva else None,
-        )
-        return
-
-    enviar_email_html(
-        destinatarios=email,
-        asunto=f'Tu reserva fue modificada — {reserva.codigo}',
-        template_name='emails/reserva_modificada.html',
-        contexto={
-            'nombre': nombre,
-            'laboratorio': solicitud.laboratorio.nombre if solicitud else None,
-            'fecha': solicitud.fecha_reserva.date() if solicitud else None,
-            'codigo': reserva.codigo,
-            'agregados': agregados,
-            'quitados': quitados,
-            'cambiados': cambiados or [],
-        },
-        async_=async_,
-    )
-
-
-def notificar_prestamo_confirmado(prestamo, async_=True):
-    """Trigger: prestamos/views.py:crear_prestamo, después de registrar los
-    PrestamoItem seleccionados."""
-    from prestamos.models import PrestamoItem
-
-    solicitud = _solicitud_de_prestamo(prestamo)
-    email, nombre = _email_y_nombre(solicitud)
-    if not email:
-        logger.info(
-            'notificar_prestamo_confirmado | sin email de destinatario | prestamo_id=%s',
-            prestamo.id,
-        )
-        return
-
-    items = list(
-        PrestamoItem.objects.filter(prestamo=prestamo).select_related('item_inventario__insumo')
-    )
-
-    enviar_email_html(
-        destinatarios=email,
-        asunto=f'Préstamo confirmado — {prestamo.codigo}',
-        template_name='emails/prestamo_confirmado.html',
-        contexto={
-            'nombre': nombre,
+        prestamo = prestamo or reserva.prestamo_set.order_by('-fecha_entrega').first()
+        items = []
+        if prestamo:
+            items = list(
+                PrestamoItem.objects.filter(prestamo=prestamo).select_related('item_inventario__insumo')
+            )
+        asunto = f'¡Tu préstamo está listo! — {reserva.codigo}'
+        contexto.update({
             'items': items,
-            'laboratorio': solicitud.laboratorio.nombre if solicitud else None,
-            'fecha_entrega': prestamo.fecha_entrega,
-            'codigo': prestamo.codigo,
-        },
+            'fecha_entrega': prestamo.fecha_entrega if prestamo else None,
+        })
+    else:
+        asunto = f'Tu reserva fue modificada — {reserva.codigo}'
+        contexto.update({
+            'fecha': solicitud.fecha_reserva.date() if solicitud else None,
+            'agregados': agregados or [],
+            'quitados': quitados or [],
+            'cambiados': cambiados or [],
+        })
+
+    enviar_email_html(
+        destinatarios=email,
+        asunto=asunto,
+        template_name='emails/cambios_y_prestamo.html',
+        contexto=contexto,
         async_=async_,
     )
 

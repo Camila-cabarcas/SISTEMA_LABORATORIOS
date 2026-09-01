@@ -1,10 +1,10 @@
 {% extends "emails/base_email.html" %}
 
-{% block titulo %}Reserva confirmada{% endblock %}
+{% block titulo %}¡Reserva creada y aprobada!{% endblock %}
 
 {% block contenido %}
-<h2 style="margin-top:0; color:#2c3e50;">¡Hola, {{ nombre }}!</h2>
-<p>Tu reserva quedó registrada con los siguientes datos:</p>
+<h2 style="margin-top:0; color:#198754;">✅ ¡Hola, {{ nombre }}! Tu reserva fue creada y aprobada</h2>
+<p>Tu reserva quedó registrada y aprobada automáticamente, con los siguientes datos:</p>
 
 <table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
 <tr>
@@ -27,5 +27,5 @@
 </tr>
 </table>
 
-<p>Esta reserva todavía está <strong>pendiente de aprobación</strong> por un encargado de laboratorio. Te avisaremos cuando cambie de estado.</p>
+<p>Tu reserva está aprobada y lista. Accede al laboratorio en la fecha y hora indicadas — recuerda que el límite para retirar los insumos es 30 minutos después de la hora de inicio.</p>
 {% endblock %}

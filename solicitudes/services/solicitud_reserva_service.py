@@ -274,8 +274,8 @@ class AprobarSolicitudReservaService:
             solicitud.id, reserva.id, getattr(usuario, 'username', None),
         )
 
-        from utils.notificaciones_email import notificar_reserva_aprobada
-        notificar_reserva_aprobada(reserva)
+        from utils.notificaciones_email import notificar_reserva_creada_aprobada
+        notificar_reserva_creada_aprobada(solicitud)
 
         return reserva
 

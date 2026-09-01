@@ -369,11 +369,11 @@ class SolicitudReserva(models.Model):
         self.save(update_fields=['reserva'])
 
         try:
-            from utils.notificaciones_email import notificar_reserva_aprobada
-            notificar_reserva_aprobada(reserva)
+            from utils.notificaciones_email import notificar_reserva_creada_aprobada
+            notificar_reserva_creada_aprobada(self)
         except Exception:
             logger.exception(
-                'crear_reserva | error notificando reserva aprobada | solicitud_id=%s', self.id,
+                'crear_reserva | error notificando reserva creada/aprobada | solicitud_id=%s', self.id,
             )
 
         return reserva

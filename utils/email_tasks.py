@@ -25,7 +25,7 @@ def enviar_email_html(destinatarios, asunto, template_name, contexto=None, async
     Args:
         destinatarios: un email (str) o lista de emails.
         asunto: subject del correo.
-        template_name: ruta del template HTML, ej. 'emails/prueba.html'.
+        template_name: ruta del template HTML, ej. 'emails/devolucion_completada.html'.
         contexto: dict para el template (default: {}).
         async_: si True (default), el envío corre en un hilo aparte y esta
             función retorna de inmediato sin esperar la respuesta de

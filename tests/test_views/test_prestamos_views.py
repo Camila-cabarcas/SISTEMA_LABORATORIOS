@@ -114,11 +114,11 @@ def test_crear_prestamo_post_dispara_notificacion(cliente_autenticado, usuario_a
     )
     llamadas = []
     monkeypatch.setattr(
-        'utils.notificaciones_email.notificar_prestamo_confirmado',
-        lambda prestamo: llamadas.append(prestamo.id),
+        'utils.notificaciones_email.notificar_cambios_o_prestamo_listo',
+        lambda reserva, tipo='cambios', **kwargs: llamadas.append((reserva.id, tipo)),
     )
 
     response = cliente_autenticado.post(f'/prestamos/crear/{reserva.id}/', {'items': [item.id]})
 
     assert response.status_code == 302
-    assert len(llamadas) == 1
+    assert llamadas == [(reserva.id, 'prestamo')]

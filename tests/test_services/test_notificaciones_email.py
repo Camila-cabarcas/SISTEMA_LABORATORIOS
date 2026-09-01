@@ -18,11 +18,9 @@ from prestamos.services.recordatorio_devolucion_service import RecordatorioDevol
 from solicitudes.models import SolicitudReserva
 from utils.notificaciones_email import (
     _email_y_nombre,
+    notificar_cambios_o_prestamo_listo,
     notificar_devolucion_completada,
-    notificar_prestamo_confirmado,
-    notificar_reserva_aprobada,
-    notificar_reserva_confirmada,
-    notificar_reserva_modificada,
+    notificar_reserva_creada_aprobada,
 )
 
 pytestmark = pytest.mark.django_db
@@ -87,79 +85,37 @@ class TestEmailYNombre:
         assert _email_y_nombre(None) == (None, None)
 
 
-class TestNotificarReservaConfirmada:
+class TestNotificarReservaCreadaAprobada:
+    """notificar_reserva_creada_aprobada — fusión de las antiguas
+    notificar_reserva_confirmada + notificar_reserva_aprobada (ver el
+    docstring del módulo)."""
 
     def test_sin_email_no_envia_nada(self, solicitud_valida):
         # solicitud_valida no tiene usuario ni email -> se omite en silencio
-        # antes de tocar `reserva` (por eso None acá es seguro).
-        notificar_reserva_confirmada(solicitud_valida, reserva=None, async_=False)
-
-        assert len(mail.outbox) == 0
-
-    def test_con_email_encola_un_mensaje(self, solicitud_valida, usuario_admin):
-        from reservas.models import EstadoReserva, Reserva
-
-        usuario_admin.email = 'estudiante@example.com'
-        usuario_admin.save()
-        solicitud_valida.usuario = usuario_admin
-        solicitud_valida.save()
-
-        # Se arma la Reserva directo (no vía solicitud_valida.crear_reserva())
-        # para no disparar TAMBIÉN su propia notificación automática — acá
-        # solo interesa probar notificar_reserva_confirmada en aislamiento,
-        # con async_=False para poder revisar mail.outbox sin condición de
-        # carrera con el hilo en segundo plano que usa async_=True.
-        reserva = Reserva.objects.create(
-            fecha_reserva=solicitud_valida.fecha_reserva,
-            estado=EstadoReserva.objects.get(nombre='Pendiente'),
-        )
-        notificar_reserva_confirmada(solicitud_valida, reserva, async_=False)
-
-        assert len(mail.outbox) == 1
-        enviado = mail.outbox[0]
-        assert enviado.to == ['estudiante@example.com']
-        assert reserva.codigo in enviado.subject
-
-
-class TestNotificarReservaAprobada:
-
-    def test_sin_email_no_envia_nada(self, solicitud_valida, catalogos):
-        reserva = solicitud_valida.crear_reserva()
-
-        notificar_reserva_aprobada(reserva, async_=False)
-
-        assert len(mail.outbox) == 0
-
-    def test_sin_solicitud_vinculada_no_envia(self, catalogos):
-        from reservas.models import EstadoReserva, Reserva
-
-        reserva = Reserva.objects.create(
-            fecha_reserva=timezone.now(), estado=EstadoReserva.objects.get(nombre='Aprobada'),
-        )
-
-        notificar_reserva_aprobada(reserva, async_=False)
+        # antes de tocar solicitud.reserva (por eso no hace falta llamar
+        # crear_reserva() antes acá).
+        notificar_reserva_creada_aprobada(solicitud_valida, async_=False)
 
         assert len(mail.outbox) == 0
 
     def test_con_email_encola_un_mensaje_con_info_correcta(self, solicitud_valida, laboratorio, catalogos):
         # El email se setea DESPUÉS de crear_reserva() a propósito: si
         # estuviera antes, esa llamada también dispararía (en un hilo
-        # aparte) su propia notificar_reserva_aprobada con destinatario
-        # válido, sumando un segundo mensaje a mail.outbox antes de que
-        # termine este test — mismo problema que ya resolvió
-        # TestNotificarReservaConfirmada.test_con_email_encola_un_mensaje
-        # armando la Reserva directo en vez de vía crear_reserva().
+        # aparte) su propia notificar_reserva_creada_aprobada con
+        # destinatario válido, sumando un segundo mensaje a mail.outbox
+        # antes de que termine este test.
         reserva = solicitud_valida.crear_reserva()
         solicitud_valida.email = 'juan@udea.edu.co'
         solicitud_valida.save()
 
-        notificar_reserva_aprobada(reserva, async_=False)
+        notificar_reserva_creada_aprobada(solicitud_valida, async_=False)
 
         assert len(mail.outbox) == 1
         enviado = mail.outbox[0]
         assert enviado.to == ['juan@udea.edu.co']
         assert reserva.codigo in enviado.subject
-        assert 'Aprobada' in enviado.subject
+        assert 'creada' in enviado.subject.lower()
+        assert 'aprobada' in enviado.subject.lower()
         cuerpo_html = enviado.alternatives[0][0]
         assert laboratorio.nombre in cuerpo_html
         assert reserva.codigo in cuerpo_html
@@ -167,21 +123,21 @@ class TestNotificarReservaAprobada:
 
     def test_crear_reserva_dispara_la_notificacion(self, solicitud_valida, catalogos, monkeypatch):
         # Verifica el cableado real: SolicitudReserva.crear_reserva() llama
-        # a notificar_reserva_aprobada ahora que las reservas quedan
-        # Aprobada desde que se crean (ya no hay un paso de aprobación
-        # manual separado). Parchea el nombre en utils.notificaciones_email
-        # (de donde crear_reserva() lo importa localmente en cada llamada)
-        # en vez de depender del hilo en segundo plano que usa async_=True
-        # por default.
+        # a notificar_reserva_creada_aprobada (las reservas quedan Aprobada
+        # desde que se crean, no hay un paso de aprobación manual
+        # separado). Parchea el nombre en utils.notificaciones_email (de
+        # donde crear_reserva() lo importa localmente en cada llamada) en
+        # vez de depender del hilo en segundo plano que usa async_=True por
+        # default.
         llamadas = []
         monkeypatch.setattr(
-            'utils.notificaciones_email.notificar_reserva_aprobada',
-            lambda reserva: llamadas.append(reserva),
+            'utils.notificaciones_email.notificar_reserva_creada_aprobada',
+            lambda solicitud: llamadas.append(solicitud),
         )
 
-        reserva = solicitud_valida.crear_reserva()
+        solicitud_valida.crear_reserva()
 
-        assert llamadas == [reserva]
+        assert llamadas == [solicitud_valida]
 
     def test_aprobar_solicitud_dispara_la_notificacion(self, solicitud_valida, usuario_admin, monkeypatch):
         # Igual que test_crear_reserva_dispara_la_notificacion, pero para el
@@ -193,40 +149,46 @@ class TestNotificarReservaAprobada:
         # segundo plano de async_=True por default.
         from solicitudes.services.solicitud_reserva_service import AprobarSolicitudReservaService
 
-        reserva = solicitud_valida.crear_reserva()
-        solicitud_valida.refresh_from_db()
+        solicitud_valida.crear_reserva()
 
         llamadas = []
         monkeypatch.setattr(
-            'utils.notificaciones_email.notificar_reserva_aprobada',
-            lambda reserva: llamadas.append(reserva),
+            'utils.notificaciones_email.notificar_reserva_creada_aprobada',
+            lambda solicitud: llamadas.append(solicitud),
         )
 
         AprobarSolicitudReservaService.aprobar(solicitud_valida.id, usuario_admin)
 
-        assert llamadas == [reserva]
+        assert llamadas == [solicitud_valida]
 
 
-class TestNotificarReservaModificada:
+class TestNotificarCambiosOPrestamoListo:
+    """notificar_cambios_o_prestamo_listo — fusión de las antiguas
+    notificar_reserva_modificada (tipo='cambios') + notificar_prestamo_
+    confirmado (tipo='prestamo'), un único template adaptable según `tipo`
+    (ver el docstring del módulo)."""
 
-    def test_sin_email_no_envia_nada(self, solicitud_valida, catalogos):
+    # -- tipo='cambios' -----------------------------------------------------
+
+    def test_cambios_sin_email_no_envia_nada(self, solicitud_valida, catalogos):
         reserva = solicitud_valida.crear_reserva()
         insumo = Insumo.objects.create(nombre='Vaso precipitado', descripcion='Para tests')
 
-        notificar_reserva_modificada(
-            reserva, agregados=[{'insumo': insumo, 'cantidad': 2}], quitados=[], cambiados=[],
+        notificar_cambios_o_prestamo_listo(
+            reserva, tipo='cambios',
+            agregados=[{'insumo': insumo, 'cantidad': 2}], quitados=[], cambiados=[],
             async_=False,
         )
 
         assert len(mail.outbox) == 0
 
-    def test_con_email_arma_mensaje_con_agregados_quitados_y_cambiados(
+    def test_cambios_con_email_arma_mensaje_con_agregados_quitados_y_cambiados(
         self, solicitud_valida, laboratorio, catalogos,
     ):
         # El email se setea DESPUÉS de crear_reserva() a propósito, mismo
-        # motivo que TestNotificarReservaAprobada.test_con_email_encola_un_mensaje_con_info_correcta:
-        # evitar que el hilo en segundo plano de notificar_reserva_aprobada
-        # (disparado por crear_reserva()) sume un mensaje extra a mail.outbox.
+        # motivo que TestNotificarReservaCreadaAprobada — evita que el hilo
+        # en segundo plano disparado por crear_reserva() sume un mensaje
+        # extra a mail.outbox.
         reserva = solicitud_valida.crear_reserva()
         solicitud_valida.email = 'juan@udea.edu.co'
         solicitud_valida.save()
@@ -235,8 +197,8 @@ class TestNotificarReservaModificada:
         insumo_quitado = Insumo.objects.create(nombre='Probeta', descripcion='x')
         insumo_cambiado = Insumo.objects.create(nombre='Bureta', descripcion='x')
 
-        notificar_reserva_modificada(
-            reserva,
+        notificar_cambios_o_prestamo_listo(
+            reserva, tipo='cambios',
             agregados=[{'insumo': insumo_agregado, 'cantidad': 3}],
             quitados=[{'insumo': insumo_quitado, 'cantidad': 1}],
             cambiados=[{'insumo': insumo_cambiado, 'cantidad_anterior': 1, 'cantidad_nueva': 5}],
@@ -247,32 +209,61 @@ class TestNotificarReservaModificada:
         enviado = mail.outbox[0]
         assert enviado.to == ['juan@udea.edu.co']
         assert reserva.codigo in enviado.subject
+        assert 'modificada' in enviado.subject.lower()
         cuerpo_html = enviado.alternatives[0][0]
         assert 'Vaso precipitado' in cuerpo_html
         assert 'Probeta' in cuerpo_html
         assert 'Bureta' in cuerpo_html
         assert laboratorio.nombre in cuerpo_html
 
+    # -- tipo='prestamo' ------------------------------------------------
 
-class TestNotificarPrestamoYDevolucion:
-
-    def test_prestamo_confirmado_sin_solicitud_vinculada_no_envia(self, reserva_con_prestamo):
+    def test_prestamo_sin_solicitud_vinculada_no_envia(self, reserva_con_prestamo):
         # reserva_con_prestamo arma la Reserva directo, sin SolicitudReserva
         # vinculada -> no hay forma de resolver un destinatario.
-        notificar_prestamo_confirmado(reserva_con_prestamo.prestamo, async_=False)
+        notificar_cambios_o_prestamo_listo(
+            reserva_con_prestamo.reserva, tipo='prestamo',
+            prestamo=reserva_con_prestamo.prestamo, async_=False,
+        )
 
         assert len(mail.outbox) == 0
 
-    def test_prestamo_confirmado_con_solicitud_vinculada_envia(self, reserva_con_prestamo, laboratorio, usuario_admin):
+    def test_prestamo_con_solicitud_vinculada_envia_con_items(
+        self, reserva_con_prestamo, laboratorio, usuario_admin,
+    ):
         usuario_admin.email = 'admin@example.com'
         usuario_admin.save()
         _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
 
-        notificar_prestamo_confirmado(reserva_con_prestamo.prestamo, async_=False)
+        notificar_cambios_o_prestamo_listo(
+            reserva_con_prestamo.reserva, tipo='prestamo',
+            prestamo=reserva_con_prestamo.prestamo, async_=False,
+        )
 
         assert len(mail.outbox) == 1
-        assert mail.outbox[0].to == ['admin@example.com']
-        assert reserva_con_prestamo.prestamo.codigo in mail.outbox[0].subject
+        enviado = mail.outbox[0]
+        assert enviado.to == ['admin@example.com']
+        assert reserva_con_prestamo.reserva.codigo in enviado.subject
+        assert 'listo' in enviado.subject.lower()
+        cuerpo_html = enviado.alternatives[0][0]
+        assert reserva_con_prestamo.item.codigo in cuerpo_html
+
+    def test_prestamo_sin_pasar_prestamo_resuelve_el_mas_reciente(
+        self, reserva_con_prestamo, laboratorio, usuario_admin,
+    ):
+        # Si no se pasa `prestamo` explícito (p. ej. un futuro caller que
+        # solo tenga la Reserva a mano), cae a reserva.prestamo_set.
+        usuario_admin.email = 'admin@example.com'
+        usuario_admin.save()
+        _vincular_solicitud(reserva_con_prestamo.reserva, laboratorio, usuario=usuario_admin)
+
+        notificar_cambios_o_prestamo_listo(reserva_con_prestamo.reserva, tipo='prestamo', async_=False)
+
+        assert len(mail.outbox) == 1
+        assert reserva_con_prestamo.reserva.codigo in mail.outbox[0].subject
+
+
+class TestNotificarPrestamoYDevolucion:
 
     def test_devolucion_completada_envia_con_inspecciones(self, reserva_con_prestamo, laboratorio, usuario_admin):
         from prestamos.models import InspeccionItem

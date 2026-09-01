@@ -117,8 +117,8 @@ def test_cancelar_reserva_no_dispara_notificacion_de_aprobada(cliente_autenticad
 
     llamadas = []
     monkeypatch.setattr(
-        'utils.notificaciones_email.notificar_reserva_aprobada',
-        lambda reserva: llamadas.append(reserva),
+        'utils.notificaciones_email.notificar_reserva_creada_aprobada',
+        lambda solicitud: llamadas.append(solicitud),
     )
 
     response = cliente_autenticado.post(f'/reservas/{reserva.id}/aprobar/', {'accion': 'cancelar'})
@@ -267,8 +267,8 @@ def test_editar_insumos_dispara_email_al_estudiante(client, usuario_laboratorist
 
     llamadas = []
     monkeypatch.setattr(
-        'utils.notificaciones_email.notificar_reserva_modificada',
-        lambda reserva, agregados, quitados, cambiados=None: llamadas.append(reserva),
+        'utils.notificaciones_email.notificar_cambios_o_prestamo_listo',
+        lambda reserva, tipo='cambios', **kwargs: llamadas.append(reserva),
     )
 
     response = client.post(f'/reservas/{reserva.id}/editar-insumos/', {

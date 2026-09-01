@@ -1,9 +1,0 @@
-{% extends "emails/base_email.html" %}
-
-{% block titulo %}Email de prueba{% endblock %}
-
-{% block contenido %}
-<h2 style="margin-top:0; color:#2c3e50;">¡Hola{% if nombre %}, {{ nombre }}{% endif %}!</h2>
-<p>Este es un email de prueba enviado desde el Sistema de Laboratorios usando SendGrid.</p>
-<p>Si lo recibiste, la configuración de envío de correos quedó funcionando correctamente.</p>
-{% endblock %}
