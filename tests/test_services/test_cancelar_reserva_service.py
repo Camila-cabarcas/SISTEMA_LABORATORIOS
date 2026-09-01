@@ -148,7 +148,7 @@ class TestCancelarPropietario:
 class TestCancelarAdmin:
 
     def test_cancela_sin_restricciones_de_tiempo_ni_prestamo(self, laboratorio, usuario_admin, catalogos):
-        reserva = _reserva_aprobada(laboratorio, horas_hasta_fecha=0.1)
+        reserva = _reserva_aprobada(laboratorio, horas_hasta_fecha=1)
         Prestamo.objects.create(
             reserva=reserva, responsable=usuario_admin,
             estado=EstadoPrestamo.objects.get(nombre='Activo'),
@@ -189,4 +189,4 @@ class TestCancelarAdmin:
 
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == ['ana@udea.edu.co']
-        assert 'Mantenimiento del laboratorio.' in mail.outbox[0].alternatives[0][0]
+        assert 'Mantenimiento del laboratorio.' in mail.outbox[0].body

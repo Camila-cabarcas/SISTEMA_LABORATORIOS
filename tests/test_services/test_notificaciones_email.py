@@ -7,9 +7,11 @@ automáticamente, así que esto nunca golpea la API real de SendGrid).
 """
 from datetime import time, timedelta
 from io import StringIO
+from typing import cast
 
 import pytest
 from django.core import mail
+from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.core.management import call_command
 from django.utils import timezone
 
@@ -25,6 +27,28 @@ from utils.notificaciones_email import (
 )
 
 pytestmark = pytest.mark.django_db
+
+
+def _cuerpo_html(mensaje: EmailMessage) -> str:
+    """Contenido HTML del primer alternative de un email ya enviado
+    (mail.outbox[i]). mail.outbox está tipado como list[EmailMessage] pero
+    enviar_email_html() siempre construye un EmailMultiAlternatives (la
+    única subclase con .alternatives) — de ahí el isinstance, que además de
+    validarlo en runtime narrows el tipo para el checker.
+
+    A nivel de tipos, EmailMultiAlternatives.alternatives es
+    list[tuple[<unión amplia>, str]] (los stubs de Django cubren cualquier
+    payload MIME ahí, no solo str/bytes) aunque en este código siempre sea
+    str: el HTML ya renderizado por Django (un str de render_to_string),
+    nunca bytes ni otro tipo de payload — de ahí el cast. Se normaliza acá
+    en vez de indexar alternatives[0][0] directo en cada test, que el
+    checker de tipos marca como error porque no puede probar por sí mismo
+    que esos casos no ocurren."""
+    assert isinstance(mensaje, EmailMultiAlternatives)
+    contenido = mensaje.alternatives[0][0]
+    if isinstance(contenido, bytes):
+        return contenido.decode('utf-8')
+    return cast(str, contenido)
 
 
 def _vincular_solicitud(reserva, laboratorio, usuario=None, cedula='999999999'):
@@ -117,7 +141,7 @@ class TestNotificarReservaCreadaAprobada:
         assert reserva.codigo in enviado.subject
         assert 'creada' in enviado.subject.lower()
         assert 'aprobada' in enviado.subject.lower()
-        cuerpo_html = enviado.alternatives[0][0]
+        cuerpo_html = _cuerpo_html(enviado)
         assert laboratorio.nombre in cuerpo_html
         assert reserva.codigo in cuerpo_html
         assert '08:00' in cuerpo_html  # hora_inicio de solicitud_valida
@@ -211,7 +235,7 @@ class TestNotificarCambiosOPrestamoListo:
         assert enviado.to == ['juan@udea.edu.co']
         assert reserva.codigo in enviado.subject
         assert 'modificada' in enviado.subject.lower()
-        cuerpo_html = enviado.alternatives[0][0]
+        cuerpo_html = _cuerpo_html(enviado)
         assert 'Vaso precipitado' in cuerpo_html
         assert 'Probeta' in cuerpo_html
         assert 'Bureta' in cuerpo_html
@@ -246,7 +270,7 @@ class TestNotificarCambiosOPrestamoListo:
         assert enviado.to == ['admin@example.com']
         assert reserva_con_prestamo.reserva.codigo in enviado.subject
         assert 'listo' in enviado.subject.lower()
-        cuerpo_html = enviado.alternatives[0][0]
+        cuerpo_html = _cuerpo_html(enviado)
         assert reserva_con_prestamo.item.codigo in cuerpo_html
 
     def test_prestamo_sin_pasar_prestamo_resuelve_el_mas_reciente(
@@ -293,7 +317,7 @@ class TestNotificarCancelacion:
         enviado = mail.outbox[0]
         assert enviado.to == ['lab@udea.edu.co']
         assert reserva.codigo in enviado.subject
-        cuerpo_html = enviado.alternatives[0][0]
+        cuerpo_html = _cuerpo_html(enviado)
         assert solicitud_valida.nombre in cuerpo_html
         assert solicitud_valida.cedula in cuerpo_html
 
@@ -317,7 +341,7 @@ class TestNotificarCancelacion:
         enviado = mail.outbox[0]
         assert enviado.to == ['juan@udea.edu.co']
         assert reserva.codigo in enviado.subject
-        cuerpo_html = enviado.alternatives[0][0]
+        cuerpo_html = _cuerpo_html(enviado)
         assert 'Mantenimiento del laboratorio.' in cuerpo_html
 
 
