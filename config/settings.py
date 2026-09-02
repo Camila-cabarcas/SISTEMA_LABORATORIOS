@@ -1,23 +1,36 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Construye las rutas dentro del proyecto
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Carga variables desde .env (no versionado — ver .env.example) antes de
-# leerlas más abajo. Secretos como SENDGRID_API_KEY NUNCA van hardcodeados
-# acá: este archivo sí se commitea a git.
+# leerlas más abajo. Secretos como SENDGRID_API_KEY y SECRET_KEY NUNCA van
+# hardcodeados acá: este archivo sí se commitea a git.
 load_dotenv(BASE_DIR / '.env')
 
 # --- CONFIGURACIÓN DE SEGURIDAD (Aquí estaba el error) ---
 # DEBUG = True es para desarrollo. Si lo pones en False, debes configurar ALLOWED_HOSTS.
 DEBUG = False
 
-SECRET_KEY = 'django-insecure-clave-temporal-para-desarrollo-123456789'
+# SECRET_KEY vive en .env (ver .env.example) — nunca hardcodeada acá. Antes
+# había una acá mismo ('django-insecure-...'), que quedó expuesta para
+# siempre en el historial de git en cuanto se commiteó; se rotó y se movió
+# a .env. Falla fuerte (en vez de caer a un default inseguro) si falta,
+# para que un despliegue sin .env configurado no arranque en silencio con
+# una clave predecible.
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "SECRET_KEY no definida. Agrégala a tu .env (ver .env.example) — "
+        "genera una con: python -c \"from django.core.management.utils "
+        "import get_random_secret_key; print(get_random_secret_key())\""
+    )
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1'] 
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 # ---------------------------------------------------------
 
 # Aplicaciones instaladas
