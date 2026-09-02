@@ -9,3 +9,4 @@ htmlcov/
 .pytest_cache/
 logs/app.log
 *.log
+CREDENCIALES_LAB.txt

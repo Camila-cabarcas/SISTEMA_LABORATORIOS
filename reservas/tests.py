@@ -1,10 +1,16 @@
 """
 tests.py — reservas
-Tests para clean() de Reserva y ReservaInsumo.
+Tests para clean() de Reserva y ReservaInsumo, y para la unicidad de
+EstadoReserva.nombre (ver docs/auditoria_seguridad_codigo.md, CRÍTICO #4 —
+el código llama EstadoReserva.objects.get(nombre='Aprobada') en decenas de
+lugares; sin unique=True, una fila duplicada rompería todos con
+MultipleObjectsReturned).
 """
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from django.db.transaction import atomic
 from django.test import TestCase
 from django.utils import timezone
 
@@ -124,3 +130,35 @@ class ModelosCleanValidationTests(TestCase):
         reserva_insumo = ReservaInsumo(reserva=reserva, insumo=insumo, cantidad=0)
         with self.assertRaises(ValidationError):
             reserva_insumo.full_clean()
+
+
+class EstadoReservaUnicidadTests(TestCase):
+
+    def test_crear_dos_estados_con_el_mismo_nombre_lanza_integrity_error(self):
+        EstadoReserva.objects.create(nombre='Aprobada')
+
+        with self.assertRaises(IntegrityError):
+            with atomic():
+                EstadoReserva.objects.create(nombre='Aprobada')
+
+        # La segunda fila nunca se creó — sigue habiendo exactamente una.
+        self.assertEqual(EstadoReserva.objects.filter(nombre='Aprobada').count(), 1)
+
+    def test_full_clean_tambien_rechaza_el_duplicado(self):
+        # validate_unique() a nivel de Model.full_clean() (el camino que
+        # usaría un ModelForm) también debe rechazarlo, con ValidationError
+        # en vez de tocar la base de datos.
+        EstadoReserva.objects.create(nombre='Cancelada')
+
+        duplicado = EstadoReserva(nombre='Cancelada')
+        with self.assertRaises(ValidationError):
+            duplicado.full_clean()
+
+    def test_get_por_nombre_sigue_devolviendo_un_unico_resultado(self):
+        EstadoReserva.objects.create(nombre='Devuelta')
+
+        # Sanity check de regresión: el patrón que usa el resto del sistema
+        # (.get(nombre=...)) sigue funcionando normalmente para nombres que
+        # sí son únicos — unique=True no rompe el caso feliz.
+        encontrado = EstadoReserva.objects.get(nombre='Devuelta')
+        self.assertEqual(encontrado.nombre, 'Devuelta')

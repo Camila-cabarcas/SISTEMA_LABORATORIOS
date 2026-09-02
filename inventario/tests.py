@@ -8,10 +8,12 @@ historial de préstamos — a diferencia del delete() físico de antes, que
 borraba en cascada PrestamoItem/InspeccionItem/MovimientoInventario.
 """
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from django.db.transaction import atomic
 from django.test import TestCase, Client
 from django.utils import timezone
 
-from inventario.models import EstadoItem, Insumo, ItemInventario, TipoMovimiento
+from inventario.models import EstadoInsumo, EstadoItem, Insumo, ItemInventario, TipoMovimiento
 from prestamos.forms import PrestamoItemForm
 from prestamos.models import EstadoPrestamo, Prestamo, PrestamoItem
 from reservas.models import EstadoReserva, Reserva
@@ -209,3 +211,54 @@ class ModelosCleanValidationTests(TestCase):
         item = ItemInventario(codigo='   ', insumo=insumo, estado=self.estado_disponible)
         with self.assertRaises(ValidationError):
             item.full_clean()
+
+
+class EstadosUnicidadTests(TestCase):
+    """EstadoItem.nombre, EstadoInsumo.nombre y TipoMovimiento.nombre con
+    unique=True — ver docs/auditoria_seguridad_codigo.md, CRÍTICO #4. El
+    código llama .get(nombre='Disponible')/.get(nombre='Prestado') (y
+    equivalentes) en muchos lugares; una fila duplicada rompería todos con
+    MultipleObjectsReturned."""
+
+    def test_estado_item_duplicado_lanza_integrity_error(self):
+        EstadoItem.objects.create(nombre='Disponible')
+
+        with self.assertRaises(IntegrityError):
+            with atomic():
+                EstadoItem.objects.create(nombre='Disponible')
+
+        self.assertEqual(EstadoItem.objects.filter(nombre='Disponible').count(), 1)
+
+    def test_estado_insumo_duplicado_lanza_integrity_error(self):
+        EstadoInsumo.objects.create(nombre='Activo')
+
+        with self.assertRaises(IntegrityError):
+            with atomic():
+                EstadoInsumo.objects.create(nombre='Activo')
+
+        self.assertEqual(EstadoInsumo.objects.filter(nombre='Activo').count(), 1)
+
+    def test_tipo_movimiento_duplicado_lanza_integrity_error(self):
+        TipoMovimiento.objects.create(nombre='Prestado')
+
+        with self.assertRaises(IntegrityError):
+            with atomic():
+                TipoMovimiento.objects.create(nombre='Prestado')
+
+        self.assertEqual(TipoMovimiento.objects.filter(nombre='Prestado').count(), 1)
+
+    def test_full_clean_tambien_rechaza_el_duplicado(self):
+        # 'Perdido' no sirve acá: la migración 0005_estadoitem_perdido ya
+        # sembró esa fila, así que el primer create() de abajo colisionaría
+        # con esa, no con el duplicado que el test quiere provocar.
+        EstadoItem.objects.create(nombre='Estado de prueba único')
+
+        duplicado = EstadoItem(nombre='Estado de prueba único')
+        with self.assertRaises(ValidationError):
+            duplicado.full_clean()
+
+    def test_get_por_nombre_sigue_devolviendo_un_unico_resultado(self):
+        EstadoItem.objects.create(nombre='Dañado')
+
+        encontrado = EstadoItem.objects.get(nombre='Dañado')
+        self.assertEqual(encontrado.nombre, 'Dañado')

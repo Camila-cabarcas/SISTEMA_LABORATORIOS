@@ -13,6 +13,8 @@ la dispare.
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from django.db.transaction import atomic
 from django.test import TestCase
 from django.utils import timezone
 
@@ -394,3 +396,33 @@ class ModelosCleanValidationTests(TestCase):
         inspeccion_cruzada = InspeccionItem(prestamo=prestamo_2, prestamo_item=prestamo_item_de_1)
         with self.assertRaises(ValidationError):
             inspeccion_cruzada.full_clean()
+
+
+class EstadoPrestamoUnicidadTests(TestCase):
+    """EstadoPrestamo.nombre unique=True — ver docs/auditoria_seguridad_codigo.md,
+    CRÍTICO #4. El código llama EstadoPrestamo.objects.get(nombre='Activo')
+    (y equivalentes) en muchos lugares de este mismo archivo (get_or_create)
+    y en las vistas; una fila duplicada rompería todos con
+    MultipleObjectsReturned."""
+
+    def test_crear_dos_estados_con_el_mismo_nombre_lanza_integrity_error(self):
+        EstadoPrestamo.objects.create(nombre='Activo')
+
+        with self.assertRaises(IntegrityError):
+            with atomic():
+                EstadoPrestamo.objects.create(nombre='Activo')
+
+        self.assertEqual(EstadoPrestamo.objects.filter(nombre='Activo').count(), 1)
+
+    def test_full_clean_tambien_rechaza_el_duplicado(self):
+        EstadoPrestamo.objects.create(nombre='Retrasado')
+
+        duplicado = EstadoPrestamo(nombre='Retrasado')
+        with self.assertRaises(ValidationError):
+            duplicado.full_clean()
+
+    def test_get_por_nombre_sigue_devolviendo_un_unico_resultado(self):
+        EstadoPrestamo.objects.create(nombre='Devuelto')
+
+        encontrado = EstadoPrestamo.objects.get(nombre='Devuelto')
+        self.assertEqual(encontrado.nombre, 'Devuelto')

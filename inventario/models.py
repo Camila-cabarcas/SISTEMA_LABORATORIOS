@@ -7,19 +7,25 @@ from django.db import models
 from django.utils import timezone
 
 class TipoMovimiento(models.Model):
-    nombre = models.CharField(max_length=50)
+    # unique=True: ver el comentario en reservas.models.EstadoReserva — el
+    # código depende de .get(nombre='Prestado') (y equivalentes) en varios
+    # lugares; una fila duplicada rompería esos .get().
+    nombre = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.nombre
 
 class EstadoItem(models.Model):
-    nombre = models.CharField(max_length=50)
+    # unique=True: mismo motivo — .get(nombre='Disponible') se usa en
+    # decenas de lugares (validar préstamos, listar stock, etc.).
+    nombre = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.nombre
-    
+
 class EstadoInsumo(models.Model):
-    nombre = models.CharField(max_length=50)
+    # unique=True: mismo motivo que los estados de arriba.
+    nombre = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.nombre

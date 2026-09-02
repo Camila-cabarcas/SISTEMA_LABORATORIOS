@@ -9,7 +9,11 @@ from datetime import timedelta
 
 
 class EstadoReserva(models.Model):
-    nombre = models.CharField(max_length=50)
+    # unique=True: el código llama EstadoReserva.objects.get(nombre='Aprobada')
+    # (y equivalentes) en decenas de lugares — una fila duplicada rompería
+    # todos esos .get() con MultipleObjectsReturned. Ver auditoría de
+    # seguridad (docs/auditoria_seguridad_codigo.md, CRÍTICO #4).
+    nombre = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.nombre
