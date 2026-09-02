@@ -1,9 +1,9 @@
 # Auditoría de código — Sistema de Laboratorios
 
-Fecha: 2026-09-01
+Fecha: 2026-09-01 (actualizada 2026-09-02 con la auditoría de cuentas por laboratorio y contraseña admin)
 Alcance: todo el código de producción (modelos, services, vistas, templates de email, configuración, migraciones). No incluye una revisión de dependencias de terceros (`requirements.txt`) más allá de lo que aparece abajo.
 
-Metodología: lectura dirigida por área de riesgo (control de acceso, integridad de datos, configuración de despliegue), más verificación ejecutable donde fue posible: `manage.py check --deploy`, `manage.py makemigrations --check`, reproducción en vivo (sin escritura) de la colisión de `Usuario.codigo`, búsqueda de SQL crudo/`csrf_exempt`, y un mapeo completo de decoradores de acceso en las 6 apps (`reservas`, `solicitudes`, `prestamos`, `laboratorio`, `inventario`, `users`).
+Metodología: lectura dirigida por área de riesgo (control de acceso, integridad de datos, configuración de despliegue), más verificación ejecutable donde fue posible: `manage.py check --deploy`, `manage.py makemigrations --check`, reproducción en vivo (sin escritura) de la colisión de `Usuario.codigo` y del estado real de `Laboratorio.encargados`/contraseña admin contra la base de datos de desarrollo, búsqueda de SQL crudo/`csrf_exempt`, y un mapeo completo de decoradores de acceso en las 6 apps (`reservas`, `solicitudes`, `prestamos`, `laboratorio`, `inventario`, `users`).
 
 ---
 
@@ -21,7 +21,29 @@ Metodología: lectura dirigida por área de riesgo (control de acceso, integrida
 - **Cómo arreglarlo:** aplicar el mismo patrón que ya existe (`es_laboratorista_del_laboratorio` en `laboratorio/models.py`, o `_check_lab_access`) en cada una de las vistas listadas arriba: para un usuario `Laboratorio`, filtrar el queryset de listado a `solicitud__laboratorio__in=<labs asignados>` y, en las vistas de detalle/acción, verificar contra `reserva.solicitud.first().laboratorio` (o `prestamo.reserva.solicitud.first().laboratorio`) antes de permitir la operación — devolviendo 403 igual que ya hace `editar_insumos_reserva`. `Administrador` sigue viendo/actuando sobre todo, sin cambios.
 - **Nota:** no hay ningún test que cubra esto (confirmado con `grep` sobre `tests/`) — el único test de aislamiento por laboratorio que existe es el de `editar_insumos_reserva`, precisamente porque ahí sí se implementó el control.
 
-### 3. Las tablas de estado (`EstadoReserva`, `EstadoPrestamo`, `EstadoItem`, `EstadoInsumo`, `TipoMovimiento`) no tienen `unique=True` en `nombre`
+### 3. `Laboratorio.encargados` está vacío en la base de datos real — el único control de acceso por lab que sí existe en el código hoy no tiene datos que lo alimenten — ✅ RESUELTO PARA 4/5 LABORATORIOS (2026-09-02)
+- **Dónde:** tabla intermedia de `Laboratorio.encargados` (M2M). Verificado en vivo (solo lectura) contra la base de datos de desarrollo con `manage.py shell`, como parte de esta auditoría.
+- **Qué encontré:**
+  - Existen 5 laboratorios (`LAB-Mecanica`, `Lab Test`, `Laboratorio de ondas`, `Lab de Ingeniería de sistemas`, `Laboratorio E2E`) y 4 cuentas de usuario con el patrón `lab_*` (`lab_mecanica`, `lab_test`, `lab_ondas`, `lab_sistemas`), todas con `rol='Laboratorio'` — por el nombre, claramente pensadas una por laboratorio.
+  - **Pero `laboratorio.encargados.all()` devuelve vacío para los 5 laboratorios, sin excepción.** Ningún usuario `lab_*` está vinculado a ningún laboratorio.
+  - Como `es_laboratorista_del_laboratorio()` (`laboratorio/models.py`) y `_check_lab_access()` (`laboratorio/views.py`) dependen *exclusivamente* de esa relación (`laboratorio.encargados.filter(id=usuario.id).exists()`), el resultado práctico es que **hoy ningún usuario `lab_*` puede acceder a nada que esté scoped por laboratorio** — ni a `editar_insumos_reserva` (el único punto del sistema que implementa el aislamiento correctamente, ver punto CRÍTICO #2), ni a `detalle_laboratorio`/`reservas_laboratorio`/`prestamos_laboratorio`/`mapa_laboratorio` en `laboratorio/views.py`. Cualquiera de esas cuentas, intentando gestionar *su propio* laboratorio, recibe hoy un `PermissionDenied` (403).
+  - Adicionalmente, `Laboratorio E2E` (el quinto laboratorio) no tiene ninguna cuenta `lab_*` asociada en absoluto — la cuenta relacionada con ese flujo (`e2e_laboratorista`, sembrada por `seed_e2e.py`) tiene el rol correcto pero tampoco está en `encargados` de ningún laboratorio.
+- **Por qué probablemente pasó (hipótesis, no confirmada con certeza):** `crear_laboratorio` (`laboratorio/views.py:49-80`) sí ejecuta `laboratorio.encargados.add(usuario_lab)` correctamente cuando se crea un laboratorio nuevo por esa vía, y los usernames `lab_*` coinciden exactamente con el patrón que ese formulario genera. Que el vínculo no exista para las 5 filas reales sugiere que estos laboratorios y/o estas cuentas se crearon por otro camino (carga manual, fixture, corrección de datos, o antes de que existiera ese flujo de auto-provisión) y el paso de vincularlos quedó pendiente — existe una UI para hacerlo después (`gestionar_encargados` / `asignar_laboratorista`), pero aparentemente no se usó para estos 5.
+- **Cómo arreglarlo:**
+  1. Vincular cada laboratorio real con su cuenta correspondiente, ya sea desde la UI (`/laboratorio/<id>/`, sección de encargados) o una vez vía `manage.py shell`:
+     ```python
+     from users.models import Usuario
+     from laboratorio.models import Laboratorio
+     Laboratorio.objects.get(nombre='LAB-Mecanica').encargados.add(Usuario.objects.get(username='lab_mecanica'))
+     Laboratorio.objects.get(nombre='Lab Test').encargados.add(Usuario.objects.get(username='lab_test'))
+     Laboratorio.objects.get(nombre='Laboratorio de ondas').encargados.add(Usuario.objects.get(username='lab_ondas'))
+     Laboratorio.objects.get(nombre='Lab de Ingenieria de sistemas').encargados.add(Usuario.objects.get(username='lab_sistemas'))
+     # decidir qué hacer con "Laboratorio E2E": ¿necesita una cuenta real, o basta con e2e_laboratorista para pruebas?
+     ```
+  2. Agregar una comprobación de "salud de datos" (management command, o un chequeo en `manage.py check`) que alerte si algún `Laboratorio` activo no tiene `encargados`, para que este tipo de vínculo faltante no vuelva a pasar desapercibido — es exactamente el tipo de problema silencioso (no rompe nada visiblemente, solo deja una función inutilizable) que no se nota hasta que alguien intenta usarla.
+- **Qué se hizo:** se vincularon las 4 cuentas reales con su laboratorio (`lab_mecanica`→`LAB-Mecanica`, `lab_test`→`Lab Test`, `lab_ondas`→`Laboratorio de ondas`, `lab_sistemas`→`Lab de Ingeniería de sistemas`) vía `Laboratorio.encargados.add(...)`. Verificado en vivo que `es_laboratorista_del_laboratorio()` ahora devuelve `True` para el laboratorio propio de cada cuenta y `False` para cualquier otro, y que la suite completa sigue en verde tras el cambio (era un cambio de datos, no de código). **`Laboratorio E2E` (ID 5) queda deliberadamente sin vincular** — no tiene una cuenta `lab_*` dedicada; queda pendiente decidir si necesita una, o si basta con `e2e_laboratorista` para ese flujo de pruebas. El punto 2 de "cómo arreglarlo" (chequeo de salud de datos) sigue pendiente, es una mejora de proceso, no de datos.
+
+### 4. Las tablas de estado (`EstadoReserva`, `EstadoPrestamo`, `EstadoItem`, `EstadoInsumo`, `TipoMovimiento`) no tienen `unique=True` en `nombre`
 - **Dónde:** `reservas/models.py:12`, `prestamos/models.py:13`, `inventario/models.py:10,16,22`.
 - **Por qué es grave:** todo el sistema depende de `EstadoReserva.objects.get(nombre='Aprobada')` (y equivalentes) en decenas de puntos — vistas, services, comandos, tests. Si alguna vez existen dos filas con el mismo `nombre` (vía Django admin, una migración de datos mal ejecutada, o una edición manual de la BD), **todas** esas llamadas `.get()` lanzan `MultipleObjectsReturned` y rompen crear reservas, aprobar, cancelar, crear préstamos, devolver ítems — el sistema completo. Verifiqué en vivo (solo lectura) que hoy no hay duplicados en la base de datos de desarrollo, pero nada a nivel de esquema lo impide.
 - **Cómo arreglarlo:** agregar `unique=True` a `nombre` en las 5 clases, con una migración (trivial dado que hoy no hay duplicados que resolver primero).
@@ -30,48 +52,48 @@ Metodología: lectura dirigida por área de riesgo (control de acceso, integrida
 
 ## ADVERTENCIA (Revisar antes de producción)
 
-### 4. `Usuario.codigo`: `unique=True` + `blank=True` sin `null=True` — reproducido en vivo
+### 5. `Usuario.codigo`: `unique=True` + `blank=True` sin `null=True` — reproducido en vivo
 - **Dónde:** `users/models.py:31`.
-- Django solo excluye de la validación de unicidad los valores `None`, no las cadenas vacías `''`. Con `blank=True` (permite dejarlo vacío en un formulario) pero sin `null=True`, **solo un usuario en todo el sistema puede quedar sin código** — reproduje esto contra la base de datos de desarrollo actual: crear un segundo `Usuario` sin código vía `UsuarioForm` falla con "Ya existe un/a Usuario con este/a Codigo" (ya hay al menos un usuario real con código vacío). Django sí bloquea esto correctamente a nivel de formulario (no es un 500), pero es un bug de modelado que va a confundir a cualquier administrador que intente crear una segunda cuenta sin código (p. ej. dos cuentas de laboratorio, o un docente al que todavía no se le asigna código).
+- Django solo excluye de la validación de unicidad los valores `None`, no las cadenas vacías `''`. Con `blank=True` (permite dejarlo vacío en un formulario) pero sin `null=True`, **solo un usuario en todo el sistema puede quedar sin código** — reproduje esto contra la base de datos de desarrollo actual: crear un segundo `Usuario` sin código vía `UsuarioForm` falla con "Ya existe un/a Usuario con este/a Codigo" (ya hay al menos un usuario real con código vacío — el superusuario `camila`). Django sí bloquea esto correctamente a nivel de formulario (no es un 500), pero es un bug de modelado que va a confundir a cualquier administrador que intente crear una segunda cuenta sin código.
 - **Cómo arreglarlo:** agregar `null=True` además de `blank=True` (con la migración correspondiente convirtiendo los `''` existentes a `NULL`), que es como Django maneja unicidad-opcional de forma estándar.
 
-### 5. `eliminar_laboratorio` no tiene las protecciones que sí tienen otros `.delete()` destructivos del mismo proyecto
+### 6. `eliminar_laboratorio` no tiene las protecciones que sí tienen otros `.delete()` destructivos del mismo proyecto
 - **Dónde:** `laboratorio/views.py:135-143`.
 - A diferencia de `eliminar_usuario`, `eliminar_curso`, `eliminar_item_inventario` (protegidos con `@requiere_contrasena_admin`) y de `eliminar_programa` (que verifica referencias activas antes de permitir el borrado — `users/views.py:286-291`), `eliminar_laboratorio` solo exige `@rol_requerido('Administrador')` y borra directo. `SolicitudReserva.laboratorio` es `on_delete=CASCADE`, así que borrar un laboratorio borra **todo su historial de solicitudes** (auditoría perdida) y deja `Reserva`/`Prestamo`/`ReservaInsumo`/`PrestamoItem` huérfanos — sin forma de rastrear a qué laboratorio pertenecían, porque `Reserva` no tiene FK directa a `Laboratorio` (solo vía `solicitud.laboratorio`, que ya no existe). Esto coincide con lo que ya señala la memoria del proyecto ("nunca hacer `.delete()`/bulk ops contra `db.sqlite3` sin respaldo — Laboratorio cascadea hasta SolicitudReserva"), pero el código no tiene ninguna barrera técnica que lo refleje.
 - **Cómo arreglarlo:** agregar `@requiere_contrasena_admin` (mínimo) y/o el mismo chequeo de referencias que usa `eliminar_programa` antes de permitir el borrado; considerar además si `Laboratorio` debería desactivarse (ya existe el campo `activo`) en vez de borrarse físicamente.
 
-### 6. `reservas_laboratorio` (la vista que sí pretende estar scoped) usa una lógica de scoping potencialmente incorrecta
+### 7. `reservas_laboratorio` (la vista que sí pretende estar scoped) usa una lógica de scoping potencialmente incorrecta
 - **Dónde:** `laboratorio/views.py:146-161`.
 - Determina "reservas de este laboratorio" vía `ReservaInsumo.objects.filter(insumo__items__laboratorio=laboratorio)` — es decir, reservas que pidieron un insumo que *tiene al menos un ítem físico* en ese laboratorio — en vez de `solicitud__laboratorio=laboratorio` (el laboratorio para el que efectivamente se hizo la reserva). Como un mismo `Insumo` puede tener `ItemInventario` en varios laboratorios, esta vista puede: (a) mostrar reservas hechas para OTRO laboratorio si pidieron un insumo que también tiene stock acá, y (b) esconder reservas legítimas de este laboratorio si el insumo pedido todavía no tiene ítems físicos cargados. No es una falla de seguridad (sigue exigiendo `_check_lab_access`), pero sí un bug de corrección que socava la confiabilidad justo de la vista que se supone es la "correcta" para un laboratorista.
 - **Cómo arreglarlo:** filtrar por `Reserva.objects.filter(solicitud__laboratorio=laboratorio)` directamente.
 
-### 7. `cursos_profesor` (pública, sin login) permite enumerar cursos de un docente conociendo solo su nombre
+### 8. `cursos_profesor` (pública, sin login) permite enumerar cursos de un docente conociendo solo su nombre
 - **Dónde:** `solicitudes/views.py:117-170`.
 - El parámetro `cedula` es opcional: si no se envía, la vista toma automáticamente el primer docente que matchee por nombre (`usuarios[0]`) y devuelve sus cursos (código, nombre, cantidad de estudiantes) — sin ninguna verificación real de identidad. Si se envía una cédula que no coincide, el mensaje de error lista los nombres de otros docentes que sí matchearon el nombre buscado ("Docentes encontrados: X, Y, Z"), lo cual ayuda a enumerar cuentas por tanteo. No es información ultra-sensible, pero contradice el modelo de "cédula como verificación" que sí se aplicó consistentemente en el autoservicio nuevo (`MisReservasService`), y el hecho de que `cedula` sea opcional aquí lo vuelve, en la práctica, no-verificación.
 - **Cómo arreglarlo:** exigir `cedula` siempre (no como fallback opcional) y no listar nombres de otros docentes en el mensaje de error.
 
-### 8. Sin protección contra fuerza bruta en ningún endpoint
+### 9. Sin protección contra fuerza bruta en ningún endpoint
 - **Dónde:** todo el proyecto — no hay `django-ratelimit`, `django-axes` ni throttling manual en ningún lado (`grep` sin resultados). Aplica tanto a `/login/` (vista de Django por defecto, sin límite de intentos) como al autoservicio nuevo por cédula+email (`/solicitudes/`, `/reservas/<id>/detalles/`, `/reservas/<id>/cancelar/`).
 - Dado que las reservas se identifican por ID secuencial y la "autenticación" del autoservicio es cédula (9 dígitos predecibles) + email institucional (patrón `nombre.apellido@udea.edu.co` fácil de adivinar o obtener), un atacante automatizado podría iterar para encontrar y cancelar reservas ajenas, o simplemente para leer sus datos. Es un modelo de identidad deliberadamente débil (decisión tomada explícitamente al construir la función, documentada en el código) — pero sin throttling, esa debilidad es explotable a escala.
 - **Cómo arreglarlo:** agregar throttling básico (por IP, por ejemplo con `django-ratelimit`) al menos sobre `/solicitudes/` (la búsqueda), `/reservas/<id>/detalles/` y `/reservas/<id>/cancelar/`, y considerar lo mismo para `/login/`.
 
-### 9. `SolicitudReserva.crear_reserva()` no es atómica
+### 10. `SolicitudReserva.crear_reserva()` no es atómica
 - **Dónde:** `solicitudes/models.py` — el método crea la `Reserva`, guarda (`full_clean()` + `save()`), luego copia los `ReservaInsumo` en un loop, y **solo al final** hace `self.reserva = reserva; self.save(...)`. Nada de esto está envuelto en `transaction.atomic()`. Lo mismo aplica a `CrearSolicitudReservaService.crear_desde_estudiante`/`crear_desde_profesor` (`crear_libre` sí es atómico, con `@transaction.atomic`).
 - Si algo falla a mitad del loop de insumos (o el proceso muere), queda una `Reserva` ya guardada, con insumos parcialmente copiados, y sin ninguna `SolicitudReserva` que la referencie todavía (huérfana) — exactamente el tipo de "datos huérfanos" que pide revisar esta auditoría.
 - **Cómo arreglarlo:** envolver el cuerpo de `crear_reserva()` (desde que se crea la `Reserva` hasta que se vincula) en `@transaction.atomic`.
 
-### 10. Condiciones de carrera en las validaciones de solapamiento/límites
+### 11. Condiciones de carrera en las validaciones de solapamiento/límites
 - **Dónde:** `Reserva.clean()`/`tiene_solapamiento()` (`reservas/models.py`), `SolicitudReserva.clean()`/`limite_pendientes_alcanzado()`/validación de horas por día (`solicitudes/models.py`). Todos son chequeos "leer, luego decidir, luego guardar" sin `select_for_update()` ni constraint de BD que los respalde.
 - Dos solicitudes concurrentes para el mismo horario/laboratorio podrían ambas pasar la validación antes de que cualquiera termine de guardar, resultando en un doble-booking. Con SQLite y el volumen de tráfico esperado hoy el riesgo práctico es bajo, pero es una debilidad arquitectónica real para un sistema de reservas.
 - **Cómo arreglarlo (si el volumen de uso crece):** `select_for_update()` sobre las reservas en conflicto potencial dentro de una transacción, o un `UniqueConstraint` a nivel de BD que lo haga imposible por diseño.
 
-### 11. Configuración de despliegue pendiente
+### 12. Configuración de despliegue pendiente
 - `manage.py check --deploy` reporta: `SECURE_HSTS_SECONDS`, `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` sin configurar. Asumiendo que en producción el sitio se sirve por HTTPS (recomendado), estas cuatro deben activarse antes de salir a producción real.
 - `ALLOWED_HOSTS = ['localhost', '127.0.0.1']` está hardcodeado — hay que actualizarlo al dominio/IP real de producción (y probablemente moverlo también a `.env`, siguiendo el mismo patrón que `SENDGRID_API_KEY`).
 
-### 12. Emails a varios encargados exponen la lista de destinatarios entre sí
+### 13. Emails a varios encargados exponen la lista de destinatarios entre sí
 - **Dónde:** `utils/notificaciones_email.py::notificar_cancelacion` (rama `cancelada_por='estudiante'`) — arma la lista de emails de `Laboratorio.encargados` y los pasa todos como `destinatarios` (header `To:`) de un mismo mensaje.
-- Cada encargado ve las direcciones de los demás encargados del mismo laboratorio. Severidad baja (todos son staff interno de la misma institución/laboratorio), pero es una práctica evitable.
+- Cada encargado ve las direcciones de los demás encargados del mismo laboratorio. Severidad baja (todos son staff interno de la misma institución/laboratorio), pero es una práctica evitable. (Nota: hoy este email nunca se dispara en la práctica porque `encargados` está vacío — ver punto CRÍTICO #3 — pero el bug de diseño sigue ahí para cuando se corrija.)
 - **Cómo arreglarlo:** usar `bcc` en vez de `to`, o enviar un mensaje individual por destinatario.
 
 ---
@@ -83,11 +105,46 @@ Metodología: lectura dirigida por área de riesgo (control de acceso, integrida
 3. **CI.** No hay integración continua configurada (ya listado como pendiente en el README) — correr `pytest` y `manage.py check --deploy` automáticamente en cada cambio evitaría que regresiones como el hueco de scoping (#2) o un `SECRET_KEY` hardcodeado lleguen a `main` sin que nadie lo note.
 4. **Uniformar `requiere_contrasena_admin`** en el resto de acciones destructivas irreversibles que hoy no lo tienen (`eliminar_laboratorio`, `eliminar_laboratorista`).
 5. **Cobertura de tests general (medida con `pytest --cov`, no solo estimada):** 69% global, 282 tests, todos en verde. Por archivo, las vistas son el punto más débil y las apps más nuevas/tocadas recientemente están mejor cubiertas:
-   - `laboratorio/views.py`: **14%** (469 líneas, 404 sin cubrir) — la app que contiene `_check_lab_access`, el patrón que el punto CRÍTICO #2 pide replicar en `reservas`/`prestamos`. Que sea el archivo peor cubierto de todo el proyecto no es casualidad: es exactamente el tipo de código (control de acceso por rol/laboratorio) donde un hueco como el de #2 pasa desapercibido más tiempo. No existe un `tests/test_views/test_laboratorio_views.py`; `laboratorio/tests.py` solo cubre `ModuloEstadoService`.
+   - `laboratorio/views.py`: **14%** (469 líneas, 404 sin cubrir) — la app que contiene `_check_lab_access`, el patrón que el punto CRÍTICO #2 pide replicar en `reservas`/`prestamos`. Que sea el archivo peor cubierto de todo el proyecto no es casualidad: es exactamente el tipo de código (control de acceso por rol/laboratorio) donde huecos como el de #2 y #3 pasan desapercibidos más tiempo. No existe un `tests/test_views/test_laboratorio_views.py`; `laboratorio/tests.py` solo cubre `ModuloEstadoService`.
    - `users/views.py`: **25%** — gestión de usuarios/roles, también código sensible desde el punto de vista de seguridad.
    - `config/views.py`: 30%, `prestamos/views.py`: 43%, `inventario/views.py`: 46%, `solicitudes/views.py`: 55%, `reservas/views.py`: 58%.
    - Los `services/` en general están bien cubiertos (90%+), igual que `models.py` de `reservas`/`prestamos` (91-97%). El patrón "primero el service con tests, después la vista" que se usó en el trabajo más reciente (`cancelar_reserva_service.py` 93%, `editar_insumos_service.py` 94%) es el que falta aplicar hacia atrás en `laboratorio` y `users`.
    - Reporte HTML completo ya generado en `htmlcov/` (`pytest --cov=. --cov-report=html`).
+6. **Datos de "salud" de laboratorios.** Más allá de arreglar el punto CRÍTICO #3 puntualmente, considerar una vista o comando de administración que liste laboratorios sin encargado asignado, para detectar a futuro este tipo de vínculo faltante sin tener que auditarlo a mano.
+
+---
+
+## Auditoría de cuentas por laboratorio y contraseña admin (2026-09-02)
+
+Verificación puntual pedida explícitamente, ejecutada contra la base de datos de desarrollo real (`manage.py shell`, solo lectura) y contra el código.
+
+### Cuentas por laboratorio
+- **Laboratorios existentes (5):** `LAB-Mecanica` (1), `Lab Test` (2), `Laboratorio de ondas` (3), `Lab de Ingeniería de sistemas` (4), `Laboratorio E2E` (5).
+- **Cuentas `lab_*` (4):** `lab_mecanica`, `lab_test`, `lab_ondas`, `lab_sistemas` — todas con `rol='Laboratorio'`, `is_staff=False`, y **sin `email` configurado** (campo vacío en las 4). Falta una cuenta para `Laboratorio E2E`.
+- **No existe** ningún campo `Laboratorio.usuario_laboratorio` (relación 1-a-1) — el mecanismo real es `Laboratorio.encargados` (M2M a `Usuario`, ver `laboratorio/models.py`).
+- **Hallazgo central (ver CRÍTICO #3 arriba) — ✅ resuelto para 4/5 durante esta misma auditoría:** esa relación `encargados` estaba **vacía para los 5 laboratorios** al momento de auditar. Se vincularon las 4 cuentas reales (`lab_mecanica`, `lab_test`, `lab_ondas`, `lab_sistemas`) a su laboratorio correspondiente; `Laboratorio E2E` queda pendiente por no tener una cuenta `lab_*` propia.
+- **Usuario admin:** sí existe (`camila_admin`, `is_staff=True`, `is_superuser=True`, `rol='Administrador'`). También hay un superusuario personal (`camila`, sin `rol` asignado — `rol=None`) y cuentas de prueba E2E (`e2e_admin`, `e2e_laboratorista`, `e2e_profesor`).
+
+### Contraseña admin
+- El script de auditoría pedido busca una variable **global** `CONTRASENA_ADMIN` en `.env` — **no existe**, y así debe ser: no es como este proyecto implementa la funcionalidad.
+- Lo que sí existe, y es un patrón más seguro que una contraseña compartida en `.env`: una contraseña admin **por usuario**, separada de la contraseña de login, hasheada en BD (`Usuario.admin_password_hash`, con `set_admin_password()`/`check_admin_password()` usando `make_password`/`check_password` de Django — PBKDF2). Cada Administrador o Laboratorio la configura desde `/usuarios/cambiar-contrasena-admin/` (`cambiar_contrasena_admin`, `users/views.py:119-144`), reautenticándose con su contraseña de login actual y con un mínimo de 8 caracteres.
+- **Decorador `requiere_contrasena_admin`:** existe (`users/decorators.py`) y protege 5 vistas en 3 archivos:
+  - `solicitudes/views.py`: `eliminar_curso`.
+  - `inventario/views.py`: `eliminar_insumo`, `eliminar_item_inventario`.
+  - `users/views.py`: `desactivar_usuario`, `eliminar_programa`.
+  - **No** se usa en `reservas/views.py`, `prestamos/views.py` ni `laboratorio/views.py` — coincide con lo ya señalado en la ADVERTENCIA #6 (`eliminar_laboratorio` sin esta protección).
+- **Estado real de las cuentas:** de los 11 usuarios en la base de datos, solo 3 tienen la contraseña admin configurada — `camila_admin`, `e2e_admin`, `e2e_laboratorista`. **Ninguna de las 4 cuentas `lab_*` reales la tiene configurada.** No es un bug (es autoservicio, cada quien la configura cuando la necesita) pero es información operativa relevante: hoy, si alguna de esas cuentas necesitara ejecutar una acción protegida (ninguna de las 5 protegidas actualmente permite rol `Laboratorio` salvo `eliminar_curso`), se encontraría con el mensaje "todavía no configuraste una contraseña admin" en vez de poder proceder.
+
+### Conclusión de esta verificación puntual
+
+Usando la taxonomía A–D pedida, la situación es una **variante de D (parcial), con un matiz importante**:
+
+- ✅ Cuentas por laboratorio: **existen** (4 de 5, con rol correcto).
+- ❌ Pero **no están vinculadas** a su laboratorio (`encargados` vacío) — por lo que, en la práctica, el aislamiento por lab no funciona para ninguna de ellas hoy, ni siquiera donde el código sí lo implementa (`editar_insumos_reserva`).
+- ✅ Contraseña admin: **sí está implementada** — con un mecanismo más seguro que el que pedía verificar el script (por usuario y en BD, no una única clave compartida en `.env`).
+- ❌ Aislamiento por laboratorio en las vistas centrales de reservas/préstamos: **falta** (ver CRÍTICO #2), y aunque se arreglara, seguiría sin funcionar hasta resolver el vínculo faltante (CRÍTICO #3).
+
+**Acción ya ejecutada** (no requería cambio de código, solo de datos): se vincularon las 4 cuentas `lab_*` a su laboratorio correspondiente vía `Laboratorio.encargados`. Queda pendiente decidir qué hacer con `Laboratorio E2E` — ver el punto CRÍTICO #3.
 
 ---
 
@@ -99,8 +156,8 @@ Metodología: lectura dirigida por área de riesgo (control de acceso, integrida
 - **`DEBUG = False`** ya está correctamente puesto (con un comentario que sugiere que esto ya se corrigió antes — buena señal de que el equipo presta atención a esto).
 - **Secretos fuera del repo:** `SENDGRID_API_KEY` y, desde la corrección del punto #1, también `SECRET_KEY` viven en `.env` (gitignoreado, con `.env.example` de referencia) — ya no hay ninguna excepción a esa política dentro de `config/settings.py`.
 - **Manejo de fallos de email:** cada notificación (`notificar_*`) está envuelta en `try/except Exception` con `logger.exception(...)` en el punto de llamada — un fallo de SendGrid nunca interrumpe el flujo de negocio (crear reserva, cancelar, etc.), solo queda registrado.
-- **Contraseña admin separada** (`Usuario.admin_password_hash`, hasheada con `make_password`/`check_password` de Django — PBKDF2) para acciones críticas, con logging de intentos (`logger_acceso_admin`) — buen patrón de defensa en profundidad para las acciones más destructivas que sí lo usan.
-- **`editar_insumos_reserva`** es el ejemplo a seguir para el resto del sistema: control de acceso por laboratorio, validación de stock, auditoría en log, notificación por email — todo presente y testeado.
+- **Contraseña admin separada** (`Usuario.admin_password_hash`, hasheada con `make_password`/`check_password` de Django — PBKDF2) para acciones críticas, con logging de intentos (`logger_acceso_admin`) — buen patrón de defensa en profundidad, más seguro que una clave compartida en `.env`, para las acciones más destructivas que sí lo usan.
+- **`editar_insumos_reserva`** es el ejemplo a seguir para el resto del sistema: control de acceso por laboratorio, validación de stock, auditoría en log, notificación por email — todo presente y testeado (aunque hoy no funcione en la práctica hasta resolver el punto CRÍTICO #3).
 
 ---
 
@@ -108,10 +165,11 @@ Metodología: lectura dirigida por área de riesgo (control de acceso, integrida
 
 ❌ **NECESITA ARREGLOS antes de producción.**
 
-Los tres puntos CRÍTICOS son concretos y accionables, no teóricos:
+Los cuatro puntos CRÍTICOS son concretos y accionables, no teóricos:
 
 1. ~~El `SECRET_KEY` ya está expuesto (está en git) y debe rotarse independientemente de cuándo se despliegue.~~ **Resuelto** — ver detalle en el punto #1 de arriba.
 2. El aislamiento por laboratorio — explícitamente pedido en el objetivo de esta auditoría ("¿Laboratorista solo ve su lab?") — **no se cumple** en la mayoría del flujo real de reservas y préstamos, solo en la funcionalidad más reciente (`editar_insumos_reserva`). Esto es una falla de control de acceso real, no una suposición: un laboratorista de un lab puede hoy aprobar, cancelar o crear préstamos sobre reservas de cualquier otro laboratorio.
-3. La falta de `unique=True` en las tablas de estado es una bomba de tiempo de bajo costo de arreglar y alto costo si detona (rompe el sistema completo).
+3. ~~Verificado en esta misma sesión: aunque se arreglara el punto anterior, hoy ninguna cuenta de laboratorio está realmente vinculada a su laboratorio (`Laboratorio.encargados` vacío) — así que ni siquiera el único control que sí existe en código (`editar_insumos_reserva`) es utilizable en la práctica todavía.~~ **Resuelto para 4/5 laboratorios** — ver detalle en el punto #3 de arriba. Falta decidir `Laboratorio E2E`.
+4. La falta de `unique=True` en las tablas de estado es una bomba de tiempo de bajo costo de arreglar y alto costo si detona (rompe el sistema completo).
 
-Ninguno de los tres requiere un rediseño — son cambios acotados (una línea de config, decoradores/filtros de queryset consistentes con un patrón que ya existe en el propio código, y una migración de `unique=True`). Una vez resueltos, junto con al menos las advertencias #4 (colisión de `codigo`) y #5 (`eliminar_laboratorio` sin protección), el sistema está en un punto razonable para producción — el resto de advertencias y recomendaciones son mejoras de robustez que pueden abordarse de forma incremental sin bloquear un primer despliegue.
+Ninguno de los cuatro requiere un rediseño — son cambios acotados (una línea de config ya resuelta, decoradores/filtros de queryset consistentes con un patrón que ya existe en el propio código, cuatro llamadas a `encargados.add()`, y una migración de `unique=True`). Una vez resueltos, junto con al menos las advertencias #5 (colisión de `codigo`) y #6 (`eliminar_laboratorio` sin protección), el sistema está en un punto razonable para producción — el resto de advertencias y recomendaciones son mejoras de robustez que pueden abordarse de forma incremental sin bloquear un primer despliegue.
