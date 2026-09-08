@@ -16,6 +16,7 @@ from .services.editar_insumos_service import EditarInsumosReservaService
 from .services.cancelar_reserva_service import CancelarReservaService
 from .services.estado_prestamo_service import ObtenerEstadoPrestamoService
 from solicitudes.services.mis_reservas_service import MisReservasService
+from users.helpers import laboratorio_de_reserva, laboratorios_visibles, verificar_acceso_laboratorio
 from laboratorio.models import HorarioLaboratorio
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -29,6 +30,11 @@ def lista_reservas(request):
     from django.utils import timezone
     from django.db.models import Q
     from laboratorio.models import Laboratorio
+
+    try:
+        labs_visibles = laboratorios_visibles(request.user)
+    except PermissionDenied:
+        return render(request, 'error_sin_laboratorio.html', status=403)
 
     ahora = timezone.now()
     estado_expirada = EstadoReserva.objects.filter(nombre='Expirada').first()
@@ -54,9 +60,17 @@ def lista_reservas(request):
     lab_filtro    = request.GET.get('lab', '')
     listas_prestamo = request.GET.get('listas_prestamo', '')
 
-    laboratorios = Laboratorio.objects.all()
+    # labs_visibles es None para Administrador (sin restricción, ve todo);
+    # para un usuario Laboratorio es la lista de labs de los que es
+    # encargado — restringe tanto el queryset como el <select> de labs, así
+    # que ni siquiera puede pedir por querystring (?lab=<otro id>) datos de
+    # un laboratorio ajeno: el filtro de abajo ya corre sobre un queryset
+    # que nunca contuvo esas reservas para empezar.
+    laboratorios = Laboratorio.objects.all() if labs_visibles is None else labs_visibles
 
     reservas = Reserva.objects.all().order_by('-fecha_reserva')
+    if labs_visibles is not None:
+        reservas = reservas.filter(solicitud__laboratorio__in=labs_visibles).distinct()
 
     if estado_filtro:
         reservas = reservas.filter(estado__nombre=estado_filtro)
@@ -287,6 +301,11 @@ def detalle_reserva(request, id):
     from django.utils import timezone
 
     reserva = get_object_or_404(Reserva, id=id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_reserva(reserva))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
+
     insumos = ReservaInsumo.objects.filter(reserva=reserva)
 
     if request.method == 'POST':
@@ -409,6 +428,10 @@ def cancelar_reserva_admin(request, id):
     cancelar_reserva (estado, préstamo, 2 horas de anticipación) — por eso
     exige un motivo, que queda en el log y en el email al solicitante."""
     reserva = get_object_or_404(Reserva, id=id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_reserva(reserva))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
 
     errores = []
     if request.method == 'POST':
@@ -428,6 +451,10 @@ def cancelar_reserva_admin(request, id):
 @rol_requerido('Administrador', 'Laboratorio')
 def aprobar_reserva(request, id):
     reserva = get_object_or_404(Reserva, id=id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_reserva(reserva))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
 
     if request.method == 'POST':
         accion = request.POST.get('accion')
@@ -532,6 +559,11 @@ def horarios_disponibles(request):
 @rol_requerido('Administrador', 'Laboratorio')
 def eliminar_insumo_reserva(request, reserva_id, insumo_id):
     reserva = get_object_or_404(Reserva, id=reserva_id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_reserva(reserva))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
+
     insumo  = get_object_or_404(ReservaInsumo, id=insumo_id, reserva=reserva)
 
     if request.method == 'POST':

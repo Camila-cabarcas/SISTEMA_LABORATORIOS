@@ -4,9 +4,10 @@ Vistas para listar, crear, ver detalle, cambiar estado y marcar como devuelto un
 """
 import logging
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from users.decorators import rol_requerido
+from users.helpers import laboratorio_de_prestamo, laboratorio_de_reserva, laboratorios_visibles, verificar_acceso_laboratorio
 from .models import Prestamo, PrestamoItem, EstadoPrestamo, InspeccionItem
 from .forms import PrestamoForm, CambiarEstadoPrestamoForm, PrestamoItemForm
 
@@ -18,6 +19,11 @@ def lista_prestamos(request):
     from django.utils import timezone
     from django.core.paginator import Paginator
     from laboratorio.models import Laboratorio
+
+    try:
+        labs_visibles = laboratorios_visibles(request.user)
+    except PermissionDenied:
+        return render(request, 'error_sin_laboratorio.html', status=403)
 
     ahora = timezone.now()
 
@@ -40,9 +46,14 @@ def lista_prestamos(request):
     fecha_fin     = request.GET.get('fecha_fin', '')
     lab_filtro    = request.GET.get('lab', '')
 
-    laboratorios = Laboratorio.objects.all()
+    # Ver el mismo comentario en reservas.views.lista_reservas — labs_visibles
+    # None es Administrador (sin restricción); si no, restringe tanto el
+    # queryset base como el <select> de labs.
+    laboratorios = Laboratorio.objects.all() if labs_visibles is None else labs_visibles
 
     prestamos = Prestamo.objects.all().order_by('-fecha_entrega')
+    if labs_visibles is not None:
+        prestamos = prestamos.filter(reserva__solicitud__laboratorio__in=labs_visibles).distinct()
 
     if estado_filtro:
         prestamos = prestamos.filter(estado__nombre=estado_filtro)
@@ -159,6 +170,10 @@ def crear_prestamo(request, reserva_id):
     from datetime import datetime
 
     reserva = get_object_or_404(Reserva, id=reserva_id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_reserva(reserva))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
 
     if datetime.now() < reserva.fecha_reserva:
         return render(
@@ -246,6 +261,11 @@ def crear_prestamo(request, reserva_id):
 def detalle_prestamo(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_prestamo(prestamo))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
+
     items = PrestamoItem.objects.filter(prestamo=prestamo)
 
     if request.method == 'POST':
@@ -293,6 +313,10 @@ def cambiar_estado_prestamo(request, id):
     from datetime import datetime
 
     prestamo = get_object_or_404(Prestamo, id=id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_prestamo(prestamo))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
 
     if request.method == 'POST':
 
@@ -327,6 +351,10 @@ def cambiar_estado_prestamo(request, id):
 def iniciar_inspeccion(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_prestamo(prestamo))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
 
     if request.method == 'POST':
 
@@ -346,6 +374,11 @@ def iniciar_inspeccion(request, id):
 def inspeccionar_prestamo(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_prestamo(prestamo))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
+
     items = PrestamoItem.objects.filter(prestamo=prestamo).select_related(
         'item_inventario', 'item_inventario__insumo'
     )
@@ -388,6 +421,11 @@ def inspeccionar_prestamo(request, id):
 def marcar_devuelto(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
+    try:
+        verificar_acceso_laboratorio(request.user, laboratorio_de_prestamo(prestamo))
+    except PermissionDenied:
+        return render(request, 'error_sin_acceso.html', status=403)
+
     inspecciones = InspeccionItem.objects.filter(prestamo=prestamo).select_related(
         'prestamo_item__item_inventario__insumo'
     )

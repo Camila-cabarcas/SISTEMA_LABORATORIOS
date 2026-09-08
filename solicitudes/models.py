@@ -205,14 +205,6 @@ class SolicitudReserva(models.Model):
             raise ValidationError(errors)
 
     def limite_pendientes_alcanzado(self):
-        """True si el solicitante (identificado por cédula si es estudiante,
-        o por usuario si es profesor — mismo criterio que la validación de
-        horas acumuladas por día de arriba) ya tiene 2 o más solicitudes
-        cuya Reserva sigue en estado "Aprobada" (las reservas se aprueban
-        automáticamente al crearse — ver crear_reserva() — así que ya no
-        existe un estado "Pendiente" intermedio contra el cual contar). Solo
-        aplica a solicitudes nuevas: una ya guardada no cuenta contra su
-        propio límite."""
         if self.pk is not None:
             return False
 
@@ -223,8 +215,11 @@ class SolicitudReserva(models.Model):
         else:
             return False
 
+        # Contar solo reservas Aprobadas CON préstamo ACTIVO/RETRASADO
         return SolicitudReserva.objects.filter(
-            filtro, reserva__estado__nombre='Aprobada'
+            filtro, 
+            reserva__estado__nombre='Aprobada',
+            reserva__prestamo__estado__nombre__in=['Activo', 'Retrasado']
         ).count() >= 2
 
     def _calcular_duracion(self):

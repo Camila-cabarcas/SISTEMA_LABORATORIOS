@@ -14,7 +14,7 @@ load_dotenv(BASE_DIR / '.env')
 
 # --- CONFIGURACIÓN DE SEGURIDAD (Aquí estaba el error) ---
 # DEBUG = True es para desarrollo. Si lo pones en False, debes configurar ALLOWED_HOSTS.
-DEBUG = False
+DEBUG = True
 
 # SECRET_KEY vive en .env (ver .env.example) — nunca hardcodeada acá. Antes
 # había una acá mismo ('django-insecure-...'), que quedó expuesta para
@@ -35,6 +35,11 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Aplicaciones instaladas
 INSTALLED_APPS = [
+    # admin_interface (y su dependencia colorfield) van ANTES de
+    # django.contrib.admin: así sobreescribe las plantillas del admin de
+    # Django con las suyas — al revés no tiene efecto.
+    'admin_interface',
+    'colorfield',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,6 +54,12 @@ INSTALLED_APPS = [
     'laboratorio',
     'solicitudes',
 ]
+
+# django-admin-interface muestra la vista previa de temas en un <iframe> del
+# propio admin — el XFrameOptionsMiddleware de Django deniega eso por
+# defecto (X-Frame-Options: DENY). SAMEORIGIN alcanza porque ese iframe
+# siempre carga una URL del mismo sitio, nunca de otro origen.
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

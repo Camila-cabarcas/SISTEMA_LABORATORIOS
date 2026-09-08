@@ -462,3 +462,107 @@ def test_cancelar_admin_cancela_sin_restriccion_de_2h(cliente_autenticado, labor
     assert response.status_code == 302
     reserva.refresh_from_db()
     assert reserva.estado.nombre == 'Cancelada'
+
+
+# ── Aislamiento por laboratorio (CRÍTICO #2 de la auditoría) ───────────────
+
+def test_lista_reservas_laboratorista_solo_ve_su_lab(client, usuario_laboratorista, laboratorio):
+    from laboratorio.models import Laboratorio
+
+    otro_laboratorio = Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='Bloque 9')
+    propia = _reserva_aprobada_con_solicitud(laboratorio, cedula='111222333')
+    ajena = _reserva_aprobada_con_solicitud(otro_laboratorio, cedula='999888777')
+    client.force_login(usuario_laboratorista)
+
+    response = client.get('/reservas/')
+
+    contenido = response.content.decode()
+    assert propia.codigo in contenido
+    assert ajena.codigo not in contenido
+
+
+def test_lista_reservas_admin_ve_todas(cliente_autenticado, laboratorio):
+    from laboratorio.models import Laboratorio
+
+    otro_laboratorio = Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='Bloque 9')
+    de_un_lab = _reserva_aprobada_con_solicitud(laboratorio, cedula='111222333')
+    de_otro_lab = _reserva_aprobada_con_solicitud(otro_laboratorio, cedula='999888777')
+
+    response = cliente_autenticado.get('/reservas/')
+
+    contenido = response.content.decode()
+    assert de_un_lab.codigo in contenido
+    assert de_otro_lab.codigo in contenido
+
+
+def test_lista_reservas_laboratorista_sin_lab_asignado_403(client, catalogos):
+    from users.models import Rol, Usuario
+
+    usuario = Usuario.objects.create_user(
+        username='lab_sin_asignar', password='x', rol=Rol.objects.get(nombre='Laboratorio'),
+    )
+    client.force_login(usuario)
+
+    response = client.get('/reservas/')
+
+    assert response.status_code == 403
+
+
+def test_detalle_reserva_laboratorista_de_otro_lab_403(client, usuario_laboratorista):
+    from laboratorio.models import Laboratorio
+
+    otro_laboratorio = Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='Bloque 9')
+    ajena = _reserva_aprobada_con_solicitud(otro_laboratorio)
+    client.force_login(usuario_laboratorista)
+
+    response = client.get(f'/reservas/{ajena.id}/')
+
+    assert response.status_code == 403
+
+
+def test_detalle_reserva_laboratorista_de_su_propio_lab_ok(client, usuario_laboratorista, laboratorio):
+    propia = _reserva_aprobada_con_solicitud(laboratorio)
+    client.force_login(usuario_laboratorista)
+
+    response = client.get(f'/reservas/{propia.id}/')
+
+    assert response.status_code == 200
+
+
+def test_aprobar_reserva_laboratorista_de_otro_lab_403(client, usuario_laboratorista):
+    from laboratorio.models import Laboratorio
+
+    otro_laboratorio = Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='Bloque 9')
+    ajena = _reserva_aprobada_con_solicitud(otro_laboratorio)
+    client.force_login(usuario_laboratorista)
+
+    response = client.post(f'/reservas/{ajena.id}/aprobar/', {'accion': 'cancelar'})
+
+    assert response.status_code == 403
+    ajena.refresh_from_db()
+    assert ajena.estado.nombre == 'Aprobada'
+
+
+def test_cancelar_admin_laboratorista_de_otro_lab_403(client, usuario_laboratorista):
+    from laboratorio.models import Laboratorio
+
+    otro_laboratorio = Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='Bloque 9')
+    ajena = _reserva_aprobada_con_solicitud(otro_laboratorio)
+    client.force_login(usuario_laboratorista)
+
+    response = client.post(f'/reservas/{ajena.id}/cancelar-admin/', {'motivo': 'x'})
+
+    assert response.status_code == 403
+    ajena.refresh_from_db()
+    assert ajena.estado.nombre == 'Aprobada'
+
+
+def test_admin_puede_actuar_sobre_cualquier_laboratorio(cliente_autenticado, laboratorio):
+    from laboratorio.models import Laboratorio
+
+    otro_laboratorio = Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='Bloque 9')
+    ajena = _reserva_aprobada_con_solicitud(otro_laboratorio)
+
+    response = cliente_autenticado.get(f'/reservas/{ajena.id}/')
+
+    assert response.status_code == 200

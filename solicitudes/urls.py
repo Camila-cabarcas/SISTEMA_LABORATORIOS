@@ -1,3 +1,4 @@
+
 """
 urls.py — solicitudes
 Rutas de la app solicitudes: formularios públicos, APIs de insumos/cursos y gestión de cursos.
@@ -37,4 +38,5 @@ urlpatterns = [
     path('registro-profesor/', registro_profesor_publico, name='registro_profesor_publico'),
     path('solicitudes-profesores/', lista_solicitudes_profesores, name='lista_solicitudes_profesores'),
     path('solicitudes-profesores/<int:id>/', detalle_solicitud_profesor, name='detalle_solicitud_profesor'),
-]
+    ]
+        

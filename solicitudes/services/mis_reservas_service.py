@@ -73,10 +73,15 @@ class MisReservasService:
         if not cedula or not email:
             return []
 
+        # Ordena por la fecha de la reserva (la columna "Fecha / Hora" que
+        # se muestra en "Mis Reservas"), más recientes primero. Antes se
+        # ordenaba por -fecha_creacion (cuándo se creó la solicitud), que
+        # no siempre coincide con fecha_reserva y hacía ver la tabla
+        # desordenada. -fecha_creacion queda como desempate estable.
         candidatas = SolicitudReserva.objects.filter(
             cedula=cedula, reserva__isnull=False,
         ).select_related(
             'reserva__estado', 'laboratorio', 'usuario',
-        ).order_by('-fecha_creacion')
+        ).order_by('-reserva__fecha_reserva', '-fecha_creacion')
 
         return [s for s in candidatas if email in MisReservasService._emails_validos(s)]
