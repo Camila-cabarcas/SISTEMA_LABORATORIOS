@@ -83,10 +83,11 @@
             <small id="curso-msg" class="d-none"></small>
         </div>
 
-        <div id="campo-email" class="mb-3" style="display:none;">
-            <label class="form-label">Email (opcional)</label>
+        <div id="campo-email" class="mb-3">
+            <label class="form-label">Email de contacto</label>
             <input type="email" name="email" class="form-control"
                    value="{{ post_data.email }}" placeholder="correo@ejemplo.com">
+            <small class="text-muted">Se guarda en la reserva y permite encontrarla en "Mis Reservas".</small>
         </div>
 
         <hr>
@@ -585,10 +586,12 @@ inicializarHorario();
 
 // ── Profesor registrado vs invitado ─────────────────────────────
 function actualizarVisibilidadProfesor() {
+    // El campo de email de contacto queda visible siempre (estudiante o
+    // profesor, registrado o invitado): la vista lo guarda en
+    // SolicitudReserva.email en todos los casos.
     if (tipoActual !== 'profesor') {
         document.getElementById('campo-profesor-registrado').style.display = 'none';
         document.getElementById('campo-curso').style.display = 'none';
-        document.getElementById('campo-email').style.display = 'none';
         return;
     }
     document.getElementById('campo-profesor-registrado').style.display = 'block';
@@ -596,13 +599,7 @@ function actualizarVisibilidadProfesor() {
     const radioInvitado = document.querySelector('input[name="profesor_invitado"]:checked');
     const esInvitado = radioInvitado && radioInvitado.value === '1';
 
-    if (esInvitado) {
-        document.getElementById('campo-curso').style.display = 'none';
-        document.getElementById('campo-email').style.display = 'block';
-    } else {
-        document.getElementById('campo-curso').style.display = 'block';
-        document.getElementById('campo-email').style.display = 'none';
-    }
+    document.getElementById('campo-curso').style.display = esInvitado ? 'none' : 'block';
 }
 
 document.querySelectorAll('input[name="profesor_invitado"]').forEach(radio => {

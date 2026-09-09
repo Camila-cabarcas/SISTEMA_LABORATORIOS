@@ -93,6 +93,16 @@
                     {% endif %}
                 </div>
             </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="id_email" class="form-label">Email Institucional</label>
+                    {{ form.email }}
+                    <small class="text-muted">Debe ser @udea.edu.co. Sirve para encontrar la reserva en "Mis Reservas".</small>
+                    {% if form.email.errors %}
+                        <div class="invalid-feedback d-block">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
         <!-- Sección LIBRE -->
@@ -771,6 +781,12 @@ function aplicarModo(esLibre) {
     const labLibre  = document.getElementById('id_laboratorio_libre');
     if (labNormal) labNormal.disabled = esLibre;
     if (labLibre)  labLibre.disabled  = !esLibre;
+    // Hay dos <input name="email"> (uno por sección); se deshabilita el de
+    // la sección oculta para que el POST lleve solo el que corresponde.
+    const emailNormal = document.getElementById('id_email');
+    const emailLibre  = document.getElementById('email_libre');
+    if (emailNormal) emailNormal.disabled = esLibre;
+    if (emailLibre)  emailLibre.disabled  = !esLibre;
     validarHorarioProf();
     cargarModulosProf();
 }

@@ -549,6 +549,42 @@ class CrearSolicitudReservaServiceTests(TestCase):
         assert reserva is not None
         self.assertEqual(solicitud.usuario_id, docente.id)
 
+    def _form_profesor(self, **overrides):
+        docente = Usuario.objects.create_user(
+            username='profe_email', password='x', first_name='Carlos', last_name='Ramirez',
+            rol=Rol.objects.get(nombre='Docente'),
+        )
+        curso = Curso.objects.create(
+            nombre='Física General', codigo='FIS-EMAIL', profesor=docente, cantidad_estudiantes=20,
+        )
+        datos = dict(
+            nombre='Carlos Ramirez', cedula='999888777', curso=curso.id,
+            laboratorio=self.laboratorio.id, fecha_reserva=self.fecha.isoformat(),
+            hora_inicio='08:00', hora_fin='10:00', necesita_modulo=False, observaciones='',
+        )
+        datos.update(overrides)
+        return ProfesorSolicitudForm(datos)
+
+    def test_crear_desde_profesor_guarda_email(self):
+        form = self._form_profesor(email='carlos@udea.edu.co')
+        self.assertTrue(form.is_valid(), form.errors)
+
+        solicitud, _ = CrearSolicitudReservaService.crear_desde_profesor(form)
+
+        self.assertEqual(solicitud.email, 'carlos@udea.edu.co')
+
+    def test_profesor_email_sin_valor_es_valido(self):
+        # email es opcional para profesor (queda vinculado por usuario).
+        form = self._form_profesor()
+        self.assertTrue(form.is_valid(), form.errors)
+        solicitud, _ = CrearSolicitudReservaService.crear_desde_profesor(form)
+        self.assertEqual(solicitud.email, '')
+
+    def test_profesor_email_no_institucional_es_invalido(self):
+        form = self._form_profesor(email='carlos@gmail.com')
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+
     def test_crear_libre_crea_solicitud_y_reserva(self):
         solicitud, reserva = CrearSolicitudReservaService.crear_libre(
             nombre='Laura Gómez',

@@ -176,6 +176,20 @@ class EstudianteSolicitudForm(forms.ModelForm):
 
 
 class ProfesorSolicitudForm(forms.ModelForm):
+    # Opcional (a diferencia de EstudianteSolicitudForm): un profesor con
+    # curso registrado queda vinculado a su cuenta Usuario y "Mis Reservas"
+    # ya lo encuentra por usuario.email — pero si lo escribe acá, se guarda
+    # en SolicitudReserva.email igual que en los demás flujos.
+    email = forms.EmailField(
+        label='Email Institucional',
+        required=False,
+        help_text='Debe ser @udea.edu.co',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'tucorreo@udea.edu.co',
+        })
+    )
+
     insumos_ids = forms.CharField(
         widget=forms.HiddenInput(),
         required=False
@@ -191,7 +205,7 @@ class ProfesorSolicitudForm(forms.ModelForm):
 
     class Meta:
         model = SolicitudReserva
-        fields = ['nombre', 'cedula', 'curso', 'laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin', 'necesita_modulo', 'observaciones']
+        fields = ['nombre', 'cedula', 'email', 'curso', 'laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin', 'necesita_modulo', 'observaciones']
         widgets = {
             'nombre': forms.TextInput(
                 attrs={
@@ -247,6 +261,12 @@ class ProfesorSolicitudForm(forms.ModelForm):
         for campo in campos_requeridos:
             if campo in self.fields:
                 self.fields[campo].required = True
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '')
+        if email and not email.lower().endswith('@udea.edu.co'):
+            raise ValidationError('El email debe ser institucional (@udea.edu.co).')
+        return email
 
     def clean(self):
         cleaned_data = super().clean() or {}

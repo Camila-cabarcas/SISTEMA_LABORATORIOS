@@ -158,12 +158,6 @@ def crear_reserva(request):
 
         profesor_invitado = tipo == 'profesor' and request.POST.get('profesor_invitado') == '1'
 
-        # SolicitudReserva no tiene un campo email propio; para no perder el
-        # dato de contacto del profesor invitado, lo dejamos registrado en
-        # observaciones en vez de descartarlo silenciosamente.
-        if profesor_invitado and email:
-            observaciones = f"Email de contacto: {email}\n{observaciones}".strip()
-
         errors = []
 
         if not nombre:    errors.append('El nombre es requerido.')
@@ -233,6 +227,7 @@ def crear_reserva(request):
                     tipo_solicitante=tipo,
                     nombre=nombre,
                     cedula=cedula,
+                    email=email,
                     programa=programa,
                     curso=curso,
                     usuario=usuario,
@@ -332,17 +327,18 @@ def detalle_reserva(request, id):
     )
     puede_editar_insumos = EditarInsumosReservaService.puede_editar(reserva, request.user)
 
-    # SolicitudReserva no tiene un campo email propio: para profesores
-    # invitados, crear_reserva lo guarda como la primera línea de
-    # observaciones ("Email de contacto: ..."). Lo separamos aquí para
-    # mostrarlo como campo propio y no duplicarlo dentro de Observaciones.
+    # El email va en SolicitudReserva.email (todos los flujos de creación lo
+    # guardan ahí). Reservas viejas creadas por el admin antes de eso lo
+    # dejaban como primera línea de observaciones ("Email de contacto: ...")
+    # — se sigue soportando ese formato heredado como respaldo.
     solicitante = reserva.solicitud.first()
-    email_solicitante = ''
+    email_solicitante = solicitante.email if solicitante else ''
     observaciones_solicitante = solicitante.observaciones if solicitante else ''
     prefijo_email = 'Email de contacto: '
     if solicitante and observaciones_solicitante.startswith(prefijo_email):
         primera_linea, _, resto = observaciones_solicitante.partition('\n')
-        email_solicitante = primera_linea[len(prefijo_email):].strip()
+        if not email_solicitante:
+            email_solicitante = primera_linea[len(prefijo_email):].strip()
         observaciones_solicitante = resto.strip()
 
     return render(request, 'reservas/detalle.html', {

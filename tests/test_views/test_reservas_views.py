@@ -63,6 +63,49 @@ def test_crear_reserva_post_exitoso(cliente_autenticado, laboratorio):
     assert solicitud.reserva.estado.nombre == 'Aprobada'
 
 
+def test_crear_reserva_guarda_email(cliente_autenticado, laboratorio):
+    fecha = (date.today() + timedelta(days=2)).isoformat()
+
+    response = cliente_autenticado.post('/reservas/crear/', {
+        'tipo_solicitante': 'estudiante',
+        'nombre': 'Ana Torres',
+        'cedula': '987654321',
+        'laboratorio': laboratorio.id,
+        'fecha': fecha,
+        'hora_inicio': '08:00',
+        'hora_fin': '10:00',
+        'observaciones': '',
+        'email': 'ana@udea.edu.co',
+    })
+
+    assert response.status_code == 302
+    solicitud = SolicitudReserva.objects.get(cedula='987654321')
+    assert solicitud.email == 'ana@udea.edu.co'
+
+
+def test_crear_reserva_profesor_invitado_guarda_email_en_el_campo(cliente_autenticado, laboratorio):
+    fecha = (date.today() + timedelta(days=2)).isoformat()
+
+    response = cliente_autenticado.post('/reservas/crear/', {
+        'tipo_solicitante': 'profesor',
+        'profesor_invitado': '1',
+        'nombre': 'Prof Externo',
+        'cedula': '321321321',
+        'laboratorio': laboratorio.id,
+        'fecha': fecha,
+        'hora_inicio': '08:00',
+        'hora_fin': '10:00',
+        'observaciones': 'Actividad de extensión',
+        'email': 'externo@udea.edu.co',
+    })
+
+    assert response.status_code == 302
+    solicitud = SolicitudReserva.objects.get(cedula='321321321')
+    assert solicitud.email == 'externo@udea.edu.co'
+    # El email ya no se stashea dentro de observaciones.
+    assert 'Email de contacto' not in solicitud.observaciones
+
+
 def test_detalle_reserva_get(cliente_autenticado, usuario_admin):
     estado = EstadoReserva.objects.get(nombre='Pendiente')
     reserva = Reserva.objects.create(
