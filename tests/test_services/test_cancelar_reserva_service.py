@@ -133,9 +133,10 @@ class TestCancelarPropietario:
 
         CancelarReservaService.cancelar_propietario(reserva, '111222333', 'ana@udea.edu.co')
 
-        # notificar_cancelacion corre en un hilo aparte (async_=True); acá
-        # solo interesa que el cableado exista, así que se manda de nuevo en
-        # primer plano para poder revisar mail.outbox sin condición de carrera.
+        # El fixture autouse _emails_sincronos (conftest.py raíz) ya hace
+        # síncrono todo envío, así que cancelar_propietario dejó su email en
+        # mail.outbox sin hilo de por medio. Se limpia y se manda de nuevo en
+        # primer plano para aislar el mensaje que interesa revisar.
         from utils.notificaciones_email import notificar_cancelacion
         mail.outbox.clear()
         notificar_cancelacion(reserva, cancelada_por='estudiante', async_=False)
