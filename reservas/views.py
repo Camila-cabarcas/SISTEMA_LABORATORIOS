@@ -376,11 +376,25 @@ def detalle_reserva_propietario(request, id):
     )
     puede_cancelar = CancelarReservaService.puede_cancelar_propietario(reserva)
 
+    # Email con el que se creó la reserva: para estudiante y reserva libre
+    # es solicitud.email (obligatorio en esos formularios); para el flujo
+    # normal de profesor, que no pide email propio, se cae a la cuenta
+    # Usuario vinculada — misma preferencia que
+    # MisReservasService._emails_validos.
+    email_registrado = solicitud.email or (
+        solicitud.usuario.email if solicitud and solicitud.usuario else ''
+    )
+    # estado_prestamo ya resolvió el Prestamo más reciente (o None); se
+    # expone directo al template para la sección "¿Se realizó el préstamo?".
+    prestamo = estado_prestamo['prestamo']
+
     return render(request, 'reservas/detalles.html', {
         'reserva': reserva,
         'solicitud': solicitud,
         'insumos': insumos,
         'estado_prestamo': estado_prestamo,
+        'prestamo': prestamo,
+        'email_registrado': email_registrado,
         'puede_editar_insumos': puede_editar_insumos,
         'puede_cancelar': puede_cancelar,
         'limite_cancelacion': CancelarReservaService.limite_cancelacion(reserva),

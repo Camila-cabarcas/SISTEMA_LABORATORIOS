@@ -43,6 +43,18 @@
 </div>
 
 <div class="card p-4 mb-4">
+    <h5 class="mb-3">Email registrado</h5>
+    {% if email_registrado %}
+    <p class="mb-0">
+        <i class="fa-regular fa-envelope me-1 text-muted"></i>{{ email_registrado }}
+    </p>
+    <p class="text-muted small mb-0">Email con el que se creó esta reserva.</p>
+    {% else %}
+    <p class="text-muted mb-0">No hay un email registrado para esta reserva.</p>
+    {% endif %}
+</div>
+
+<div class="card p-4 mb-4">
     <h5 class="mb-3">Insumos</h5>
     {% if insumos %}
     <ul class="mb-0">
@@ -104,6 +116,36 @@
         <strong>⚠️ PRÉSTAMO RETRASADO</strong>
         <p class="mb-0">Debes devolver los ítems urgentemente.</p>
     </div>
+    {% endif %}
+</div>
+
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">¿Se realizó el préstamo?</h5>
+    {% if prestamo %}
+    <table role="presentation" class="table table-borderless w-auto mb-0">
+        <tr>
+            <th class="pe-4">Código</th>
+            <td>{{ prestamo.codigo|default:"—" }}</td>
+        </tr>
+        <tr>
+            <th class="pe-4">Estado</th>
+            <td>
+                <span class="badge {% if prestamo.estado.nombre == 'Devuelto' %}bg-success{% elif prestamo.estado.nombre == 'Retrasado' %}bg-danger{% elif prestamo.estado.nombre == 'Activo' %}bg-primary{% else %}bg-secondary{% endif %}">
+                    {{ prestamo.estado.nombre|default:"—" }}
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <th class="pe-4">Fecha entrega</th>
+            <td>{{ prestamo.fecha_entrega|date:"d/m/Y H:i"|default:"—" }}</td>
+        </tr>
+        <tr>
+            <th class="pe-4">Fecha devolución</th>
+            <td>{{ prestamo.fecha_devolucion|date:"d/m/Y H:i"|default:"—" }}</td>
+        </tr>
+    </table>
+    {% else %}
+    <p class="text-muted mb-0">Sin préstamo realizado.</p>
     {% endif %}
 </div>
 

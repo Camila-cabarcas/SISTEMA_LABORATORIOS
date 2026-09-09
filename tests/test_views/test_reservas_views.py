@@ -327,6 +327,42 @@ def test_detalle_propietario_muestra_prestamo_activo(client, laboratorio, usuari
     assert 'PRÉSTAMO ACTIVO' in response.content.decode()
 
 
+def test_detalle_propietario_muestra_email_registrado(client, laboratorio, catalogos):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio, email='ana@udea.edu.co')
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/?cedula=111222333&email=ana@udea.edu.co')
+
+    contenido = response.content.decode()
+    assert 'Email registrado' in contenido
+    assert 'ana@udea.edu.co' in contenido
+
+
+def test_detalle_propietario_seccion_prestamo_sin_prestamo(client, laboratorio, catalogos):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio)
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/?cedula=111222333&email=ana@udea.edu.co')
+
+    contenido = response.content.decode()
+    assert '¿Se realizó el préstamo?' in contenido
+    assert 'Sin préstamo realizado.' in contenido
+
+
+def test_detalle_propietario_seccion_prestamo_con_prestamo(client, laboratorio, usuario_admin):
+    reserva = _reserva_aprobada_con_solicitud(laboratorio)
+    prestamo = Prestamo.objects.create(
+        reserva=reserva, responsable=usuario_admin,
+        estado=EstadoPrestamo.objects.get(nombre='Activo'),
+    )
+
+    response = client.get(f'/reservas/{reserva.id}/detalles/?cedula=111222333&email=ana@udea.edu.co')
+
+    contenido = response.content.decode()
+    assert '¿Se realizó el préstamo?' in contenido
+    assert prestamo.codigo in contenido
+    assert 'Fecha entrega' in contenido
+    assert 'Fecha devolución' in contenido
+
+
 def test_detalle_propietario_muestra_prestamo_retrasado(client, laboratorio, usuario_admin):
     reserva = _reserva_aprobada_con_solicitud(laboratorio)
     Prestamo.objects.create(
