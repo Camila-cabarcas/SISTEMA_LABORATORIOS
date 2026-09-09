@@ -98,6 +98,13 @@ class FinalizarInspeccionService:
             prestamo.fecha_devolucion = timezone.now()
             prestamo.save()
 
+            # Vetos automáticos por infracciones detectadas en esta
+            # devolución: atraso, ítem dañado/extraviado, ítem no entregado.
+            # RegistrarVetoService no propaga excepciones — un fallo acá no
+            # debe abortar la devolución.
+            from vetos.services import RegistrarVetoService
+            RegistrarVetoService.registrar_por_devolucion(prestamo, inspecciones)
+
             resumen = {
                 'bien': sum(1 for i in inspecciones if i.estado_inspeccion == 'bien'),
                 'danado': sum(1 for i in inspecciones if i.estado_inspeccion == 'danado'),

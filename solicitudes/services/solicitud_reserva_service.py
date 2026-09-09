@@ -209,6 +209,13 @@ class CrearSolicitudReservaService:
                 'completen o sean canceladas antes de crear una nueva.'
             )
 
+        # Este flujo no pasa por SolicitudReserva.clean() (ver docstring),
+        # así que el bloqueo por veto activo se valida explícitamente acá.
+        veto = solicitud.veto_activo()
+        if veto is not None:
+            from vetos.services import mensaje_bloqueo
+            raise ValidationError(mensaje_bloqueo(veto))
+
         solicitud.save()
 
         if necesita_modulo:

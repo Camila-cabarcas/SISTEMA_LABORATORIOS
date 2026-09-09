@@ -1,0 +1,43 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Levantar veto</h1>
+
+<div class="card p-4" style="max-width: 640px;">
+    <table role="presentation" class="table table-borderless w-auto">
+        <tr><th class="pe-4">Sancionado</th><td>{{ veto.usuario.username|default:veto.cedula|default:"—" }}</td></tr>
+        <tr><th class="pe-4">Tipo</th><td>{{ veto.get_tipo_display }}</td></tr>
+        <tr><th class="pe-4">Motivo</th><td>{{ veto.motivo|default:"—" }}</td></tr>
+        <tr>
+            <th class="pe-4">Bloqueo</th>
+            <td>
+                {% if veto.es_indefinido %}
+                    Indefinido (hasta reponer o pagar)
+                {% else %}
+                    Hasta el {{ veto.fecha_fin|date:"d/m/Y" }}
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    {% if veto.tipo == 'DANO' or veto.tipo == 'FALTA_INSUMO' %}
+    <div class="alert alert-warning">
+        Este veto es por daño o falta de insumo. Levántalo solo después de
+        verificar que el solicitante repuso o pagó el ítem.
+    </div>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        {% if veto.tipo == 'DANO' or veto.tipo == 'FALTA_INSUMO' %}
+        <input type="hidden" name="pagado" value="1">
+        <button type="submit" class="btn btn-success">Confirmar reposición y levantar</button>
+        {% else %}
+        <button type="submit" class="btn btn-success">Levantar veto</button>
+        {% endif %}
+        <a href="{% url 'vetos:lista' %}" class="btn btn-link">Cancelar</a>
+    </form>
+</div>
+
+{% endblock %}

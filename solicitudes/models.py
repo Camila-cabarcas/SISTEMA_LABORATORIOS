@@ -201,8 +201,26 @@ class SolicitudReserva(models.Model):
                 'completen o sean canceladas antes de crear una nueva.'
             )
 
+        veto = self.veto_activo()
+        if veto is not None:
+            from vetos.services import mensaje_bloqueo
+            errors[NON_FIELD_ERRORS] = mensaje_bloqueo(veto)
+
         if errors:
             raise ValidationError(errors)
+
+    def veto_activo(self):
+        """El Veto vigente que le impide a este solicitante crear una nueva
+        reserva, o None. Identifica al solicitante por cédula (estudiante) o
+        por usuario (profesor), mismo criterio que
+        limite_pendientes_alcanzado(). Solo aplica a solicitudes nuevas —
+        editar una ya guardada no se bloquea."""
+        if self.pk is not None:
+            return None
+        if not self.cedula and not self.usuario_id:
+            return None
+        from vetos.services import consultar_bloqueo
+        return consultar_bloqueo(cedula=self.cedula or None, usuario=self.usuario)
 
     def limite_pendientes_alcanzado(self):
         """True si el solicitante (identificado por cédula si es estudiante,

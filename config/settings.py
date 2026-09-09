@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'users',
     'laboratorio',
     'solicitudes',
+    'vetos',
 ]
 
 # django-admin-interface muestra la vista previa de temas en un <iframe> del

@@ -197,6 +197,12 @@ def crear_reserva(request):
             if fecha_obj <= date.today():
                 errors.append('El profesor debe reservar con al menos un día de anticipación.')
 
+        if cedula:
+            from vetos.services import consultar_bloqueo, mensaje_bloqueo
+            veto = consultar_bloqueo(cedula=cedula)
+            if veto is not None:
+                errors.append(mensaje_bloqueo(veto))
+
         if not errors:
             laboratorio = Laboratorio.objects.filter(id=lab_id).first()
             if not laboratorio:

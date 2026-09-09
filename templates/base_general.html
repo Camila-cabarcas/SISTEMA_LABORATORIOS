@@ -46,10 +46,11 @@
             </li>
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle {% if '/prestamos/' in request.path or '/reservas/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-clipboard-list me-1"></i>Actividad</a>
+                <a class="nav-link dropdown-toggle {% if '/prestamos/' in request.path or '/reservas/' in request.path or '/vetos/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-clipboard-list me-1"></i>Actividad</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
                     <li><a class="dropdown-item" href="/prestamos/"><i class="fa-solid fa-hand-holding me-2"></i>Préstamos</a></li>
                     <li><a class="dropdown-item" href="/reservas/"><i class="fa-solid fa-calendar-check me-2"></i>Reservas</a></li>
+                    <li><a class="dropdown-item" href="/vetos/"><i class="fa-solid fa-ban me-2"></i>Vetos</a></li>
                 </ul>
             </li>
 

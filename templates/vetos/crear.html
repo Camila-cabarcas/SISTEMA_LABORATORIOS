@@ -1,0 +1,39 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+
+<h1 class="mb-4">Registrar veto — "No canceló"</h1>
+
+<div class="card p-4" style="max-width: 640px;">
+    <p class="text-muted">
+        Registra la infracción A: el solicitante <strong>no canceló</strong> su
+        reserva y <strong>dejó pasar el préstamo</strong>. El sistema aplica
+        1&nbsp;día de bloqueo (o 7&nbsp;días si acumula 3 o más infracciones de
+        este tipo).
+    </p>
+
+    {% if reserva %}
+    <div class="alert alert-info">Asociado a la reserva <strong>{{ reserva.codigo }}</strong>.</div>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        {% if reserva %}<input type="hidden" name="reserva" value="{{ reserva.id }}">{% endif %}
+
+        <div class="mb-3">
+            <label class="form-label">{{ form.cedula.label }}</label>
+            {{ form.cedula }}
+            {% if form.cedula.errors %}<div class="invalid-feedback d-block">{{ form.cedula.errors }}</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">{{ form.motivo.label }}</label>
+            {{ form.motivo }}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Registrar veto</button>
+        <a href="{% url 'vetos:lista' %}" class="btn btn-link">Cancelar</a>
+    </form>
+</div>
+
+{% endblock %}
