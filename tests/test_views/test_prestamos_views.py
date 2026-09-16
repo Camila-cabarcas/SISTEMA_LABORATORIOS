@@ -145,6 +145,47 @@ def test_crear_prestamo_post_dispara_notificacion(cliente_autenticado, usuario_a
     assert llamadas == [(reserva.id, 'prestamo')]
 
 
+def test_crear_prestamo_muestra_aviso_sin_stock(cliente_autenticado, usuario_admin, laboratorio, insumo):
+    # `insumo` (fixture de conftest) no tiene ningún ItemInventario todavía
+    # — PrestamoStockService.hay_disponible() debe dar False y la vista
+    # debe avisarlo en vez de solo mostrar un <select> vacío.
+    reserva = Reserva.objects.create(
+        usuario=usuario_admin,
+        fecha_reserva=timezone.now() - timedelta(minutes=5),
+        estado=EstadoReserva.objects.get(nombre='Aprobada'),
+    )
+    ReservaInsumo.objects.create(reserva=reserva, insumo=insumo, cantidad=1)
+
+    response = cliente_autenticado.get(f'/prestamos/crear/{reserva.id}/')
+
+    assert response.status_code == 200
+    assert 'Sin stock disponible' in response.content.decode()
+
+
+def test_crear_prestamo_no_agrega_item_ya_no_disponible(cliente_autenticado, usuario_admin, laboratorio, insumo):
+    # Item que ya no está Disponible (p.ej. otro laboratorista lo prestó
+    # entre que se cargó el formulario y este POST) no debe poder agregarse
+    # al préstamo aunque venga en items[] — ver el comentario en
+    # crear_prestamo sobre por qué se filtra por estado en el POST también.
+    reserva = Reserva.objects.create(
+        usuario=usuario_admin,
+        fecha_reserva=timezone.now() - timedelta(minutes=5),
+        estado=EstadoReserva.objects.get(nombre='Aprobada'),
+    )
+    ReservaInsumo.objects.create(reserva=reserva, insumo=insumo, cantidad=1)
+    item = ItemInventario.objects.create(
+        codigo='ITEM-YA-PRESTADO', insumo=insumo,
+        estado=EstadoItem.objects.get(nombre='Prestado'),
+        laboratorio=laboratorio,
+    )
+
+    response = cliente_autenticado.post(f'/prestamos/crear/{reserva.id}/', {'items': [item.id]})
+
+    assert response.status_code == 302
+    prestamo = Prestamo.objects.get(reserva=reserva)
+    assert prestamo.prestamoitem_set.count() == 0
+
+
 # ── Aislamiento por laboratorio (CRÍTICO #2 de la auditoría) ───────────────
 
 def test_lista_prestamos_laboratorista_solo_ve_su_lab(client, usuario_laboratorista, usuario_admin, laboratorio):

@@ -32,9 +32,19 @@ class EstadoInsumo(models.Model):
 
 
 class Insumo(models.Model):
-    nombre = models.CharField(
-        max_length=100,
-        unique=True
+    # Antes unique=True a secas: un mismo nombre ("Multímetro", "Cables...")
+    # es realista en más de un laboratorio, así que la unicidad ahora es por
+    # (nombre, laboratorio) — ver Meta.constraints. laboratorio es opcional
+    # (null=True) para no romper insumos existentes que no pertenecen a
+    # ninguno en particular.
+    nombre = models.CharField(max_length=100)
+
+    laboratorio = models.ForeignKey(
+        'laboratorio.Laboratorio',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='insumos',
     )
 
     descripcion = models.TextField(
@@ -55,11 +65,41 @@ class Insumo(models.Model):
         blank=True
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nombre', 'laboratorio'],
+                name='insumo_nombre_laboratorio_unico',
+            ),
+        ]
+
+    def _items_activos(self):
+        """Ítems no eliminados (soft-delete) de este insumo — misma base que
+        ItemInventario.activos, ver su comentario."""
+        return self.items.filter(deleted_at__isnull=True)
+
     def cantidad_disponible(self):
-        return self.items.filter(
-            estado__nombre='Disponible',
-            deleted_at__isnull=True,
-        ).count()
+        return self._items_activos().filter(estado__nombre='Disponible').count()
+
+    # Alias explícito pedido por el diagnóstico de stock — mismo resultado
+    # que cantidad_disponible(): "Total - Prestados - Dañados - Perdidos" es
+    # matemáticamente lo mismo que contar directo los 'Disponible', porque
+    # ItemInventario.estado es un FK obligatorio y esos 4 estados particionan
+    # el conjunto de ítems activos (cada ítem está en exactamente uno).
+    def stock_disponible(self):
+        return self.cantidad_disponible()
+
+    def stock_total(self):
+        return self._items_activos().count()
+
+    def stock_prestado(self):
+        return self._items_activos().filter(estado__nombre='Prestado').count()
+
+    def stock_danado(self):
+        return self._items_activos().filter(estado__nombre='Dañado').count()
+
+    def stock_perdido(self):
+        return self._items_activos().filter(estado__nombre='Perdido').count()
 
     def stock_minimo_alcanzado(self):
         if self.stock_minimo == 0:
@@ -71,6 +111,8 @@ class Insumo(models.Model):
             raise ValidationError({'stock_minimo': 'El stock mínimo no puede ser negativo.'})
 
     def __str__(self):
+        if self.laboratorio_id:
+            return f"{self.nombre} ({self.laboratorio.nombre})"
         return self.nombre
 
     

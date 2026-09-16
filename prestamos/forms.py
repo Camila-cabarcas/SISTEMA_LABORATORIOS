@@ -43,6 +43,13 @@ class CambiarEstadoPrestamoForm(forms.ModelForm):
 
 
 class PrestamoItemForm(forms.ModelForm):
+    """Formulario para agregar un ítem a un préstamo ya creado (ver
+    prestamos/views.py:detalle_prestamo). El queryset se restringe a ítems
+    Disponible por la misma razón que crear_prestamo filtra los suyos: un
+    ítem Prestado/Dañado/Perdido no debe poder agregarse a un préstamo —
+    el signal que corre al crear el PrestamoItem lo pasaría a 'Prestado' sin
+    importar en qué estado estuviera, lo que permitiría prestarlo dos veces
+    a la vez."""
 
     class Meta:
 

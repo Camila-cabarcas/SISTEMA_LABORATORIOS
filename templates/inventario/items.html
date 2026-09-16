@@ -41,6 +41,8 @@
                 <th>Código</th>
                 <th>Insumo</th>
                 <th>Estado</th>
+                <th>Laboratorio</th>
+                <th>Última acción</th>
                 <th>Fecha Registro</th>
                 <th>Acciones</th>
 
@@ -60,7 +62,22 @@
 
                 <td>{{ item.insumo.nombre }}</td>
 
-                <td>{{ item.estado.nombre }}</td>
+                <td>
+                    <span class="badge {% if item.estado.nombre == 'Disponible' %}bg-success{% elif item.estado.nombre == 'Prestado' %}bg-primary{% elif item.estado.nombre == 'Dañado' %}bg-warning text-dark{% elif item.estado.nombre == 'Perdido' %}bg-danger{% else %}bg-secondary{% endif %}">
+                        {{ item.estado.nombre }}
+                    </span>
+                </td>
+
+                <td>{{ item.laboratorio.nombre|default:"—" }}</td>
+
+                <td class="small">
+                    {% if item.ultimo_movimiento %}
+                        {{ item.ultimo_movimiento.tipo_movimiento.nombre }}
+                        <span class="text-muted">({{ item.ultimo_movimiento.fecha|date:"d/m/Y H:i" }})</span>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
 
                 <td>{{ item.fecha_registro }}</td>
 
@@ -69,7 +86,7 @@
                         href="/inventario/items/{{ item.id }}/historial/"
                         class="btn btn-info btn-sm"
                     >
-                        Historial
+                        Ver Historial Completo
                     </a>
                     <a
                         href="/inventario/items/{{ item.id }}/eliminar/"

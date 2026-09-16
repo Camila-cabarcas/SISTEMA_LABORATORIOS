@@ -262,3 +262,94 @@ class EstadosUnicidadTests(TestCase):
 
         encontrado = EstadoItem.objects.get(nombre='Dañado')
         self.assertEqual(encontrado.nombre, 'Dañado')
+
+
+class VistasInventarioMejoradasTests(TestCase):
+    """Smoke tests HTTP de las 3 vistas de listado (insumos, items,
+    movimientos) tras agregar laboratorio/desglose de stock/filtros — sobre
+    todo para atrapar errores de template (etiquetas mal cerradas, filtros
+    inexistentes) que un test de unidad sobre el modelo no vería."""
+
+    def setUp(self):
+        from laboratorio.models import Laboratorio
+
+        rol_admin = Rol.objects.get_or_create(nombre='Administrador')[0]
+        self.admin = Usuario.objects.create_user(
+            username='admin_vistas_inv', password='pass123', codigo='ADMIN-VISTAS-INV', rol=rol_admin,
+        )
+        self.laboratorio = Laboratorio.objects.create(nombre='Laboratorio de Mecánica', ubicacion='Bloque 1')
+
+        estado_disponible = EstadoItem.objects.get_or_create(nombre='Disponible')[0]
+        EstadoItem.objects.get_or_create(nombre='Prestado')
+        EstadoItem.objects.get_or_create(nombre='Dañado')
+        EstadoItem.objects.get_or_create(nombre='Perdido')
+
+        self.insumo = Insumo.objects.create(
+            nombre='Martillo', laboratorio=self.laboratorio, descripcion='Para tests', stock_minimo=1,
+        )
+        self.item = ItemInventario.objects.create(
+            codigo='MART-001', insumo=self.insumo, estado=estado_disponible, laboratorio=self.laboratorio,
+        )
+
+        tipo = TipoMovimiento.objects.get_or_create(nombre='Registro inicial')[0]
+        from inventario.models import MovimientoInventario
+        MovimientoInventario.objects.create(
+            item_inventario=self.item, usuario=self.admin, tipo_movimiento=tipo,
+            observacion='Alta inicial.',
+        )
+
+        self.client = Client()
+        self.client.login(username='admin_vistas_inv', password='pass123')
+
+    def test_lista_insumos_muestra_desglose_y_laboratorio(self):
+        response = self.client.get('/inventario/')
+
+        self.assertEqual(response.status_code, 200)
+        contenido = response.content.decode()
+        self.assertIn('Martillo', contenido)
+        self.assertIn(self.laboratorio.nombre, contenido)
+        self.assertIn('En Préstamo', contenido)
+        self.assertIn('Extraviado', contenido)
+
+    def test_lista_insumos_busqueda_no_rompe_alertas_de_stock(self):
+        # stock_minimo=1 con 1 ítem Disponible: dispara alertas_stock. Antes
+        # de la corrección, buscar (?busqueda=...) perdía la anotación
+        # cantidad_disponible_count y esto lanzaba AttributeError.
+        response = self.client.get('/inventario/', {'busqueda': 'Mart'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Martillo', response.content.decode())
+
+    def test_lista_items_muestra_laboratorio_y_ultima_accion(self):
+        response = self.client.get('/inventario/items/')
+
+        self.assertEqual(response.status_code, 200)
+        contenido = response.content.decode()
+        self.assertIn('MART-001', contenido)
+        self.assertIn(self.laboratorio.nombre, contenido)
+        self.assertIn('Registro inicial', contenido)
+
+    def test_lista_movimientos_con_filtros(self):
+        response = self.client.get('/inventario/movimientos/', {
+            'insumo': self.insumo.id,
+            'lab': self.laboratorio.id,
+            'usuario': self.admin.id,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        contenido = response.content.decode()
+        self.assertIn('MART-001', contenido)
+        self.assertIn('Registro inicial', contenido)
+
+    def test_lista_movimientos_filtro_sin_resultados(self):
+        # 'MART-001' igual aparece en la página (el <select> del formulario
+        # "Registrar Movimiento" lista todos los ítems sin filtrar) — lo que
+        # importa es que la TABLA filtrada quede vacía, no el resto de la
+        # página.
+        from laboratorio.models import Laboratorio
+        otro_lab = Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='Bloque 2')
+
+        response = self.client.get('/inventario/movimientos/', {'lab': otro_lab.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('No hay movimientos con esos filtros.', response.content.decode())

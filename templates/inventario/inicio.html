@@ -64,10 +64,13 @@
 
                 <th>ID</th>
                 <th>Nombre</th>
-                <th>Descripción</th>
-                <th>Marca</th>
+                <th>Laboratorio</th>
                 <th>Estado</th>
+                <th>Stock Total</th>
                 <th>Disponible</th>
+                <th>En Préstamo</th>
+                <th>Dañado</th>
+                <th>Extraviado</th>
                 <th>Stock mínimo</th>
                 <th>Acciones</th>
 
@@ -81,21 +84,34 @@
 <tr {% if insumo.stock_minimo > 0 and insumo.cantidad_disponible_count <= insumo.stock_minimo %}class="table-warning"{% endif %}>
 
     <td>{{ insumo.id }}</td>
-    <td>{{ insumo.nombre }}</td>
-    <td>{{ insumo.descripcion }}</td>
-    <td>{{ insumo.marca }}</td>
+    <td>
+        {{ insumo.nombre }}
+        {% if insumo.descripcion %}<br><small class="text-muted">{{ insumo.descripcion }}</small>{% endif %}
+    </td>
+    <td>{{ insumo.laboratorio.nombre|default:"—" }}</td>
 
     <!-- ✅ Muestra el nombre del EstadoInsumo, ej: "Activo" -->
-    <td>{{ insumo.estado }}</td>
+    <td>{{ insumo.estado|default:"—" }}</td>
+
+    <td>{{ insumo.stock_total }}</td>
 
     <!-- ✅ Usa la anotación del queryset -->
-    <td>{{ insumo.cantidad_disponible_count }}</td>
+    <td>
+        <span class="fw-bold {% if insumo.cantidad_disponible_count == 0 %}text-danger{% elif insumo.stock_minimo > 0 and insumo.cantidad_disponible_count <= insumo.stock_minimo %}text-warning{% else %}text-success{% endif %}">
+            {{ insumo.cantidad_disponible_count }}
+        </span>
+    </td>
+
+    <td>{{ insumo.stock_prestado }}</td>
+    <td>{{ insumo.stock_danado }}</td>
+    <td>{{ insumo.stock_perdido }}</td>
 
     <td>{{ insumo.stock_minimo }}</td>
 
     <td>
         <a href="/inventario/editar/{{ insumo.id }}/" class="btn btn-warning btn-sm"><i class="fa-solid fa-pen me-1"></i>Editar</a>
         <a href="/inventario/eliminar/{{ insumo.id }}/" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash me-1"></i>Eliminar</a>
+        <a href="/inventario/items/?insumo={{ insumo.id }}" class="btn btn-info btn-sm"><i class="fa-solid fa-clock-rotate-left me-1"></i>Ver Historial</a>
     </td>
 </tr>
 {% endfor %}

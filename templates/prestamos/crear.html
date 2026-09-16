@@ -20,6 +20,14 @@
 </div>
 {% endif %}
 
+{% if insumos_sin_stock %}
+<div class="alert alert-warning">
+    <strong>Sin stock disponible</strong> para:
+    {% for insumo in insumos_sin_stock %}{{ insumo.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+    Espera a que se devuelva un ítem o elige otro insumo.
+</div>
+{% endif %}
+
 <div class="card p-4">
 
     <form method="POST">

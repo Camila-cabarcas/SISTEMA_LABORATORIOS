@@ -4,6 +4,7 @@ Vistas para listar, crear, ver detalle, cambiar estado y marcar como devuelto un
 """
 import logging
 
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from users.decorators import rol_requerido
@@ -189,9 +190,12 @@ def crear_prestamo(request, reserva_id):
             {'reserva': reserva, 'mensaje': 'expirada'}
         )
 
+    from .services.prestamo_stock_service import PrestamoStockService
+
     # Obtener ítems disponibles por insumo de la reserva
     insumos_reserva = ReservaInsumo.objects.filter(reserva=reserva)
     items_por_insumo = {}
+    insumos_sin_stock = []
 
     for ri in insumos_reserva:
         items_disponibles = ItemInventario.activos.filter(
@@ -199,6 +203,8 @@ def crear_prestamo(request, reserva_id):
             estado__nombre='Disponible'
         )
         items_por_insumo[ri] = items_disponibles
+        if not PrestamoStockService.hay_disponible(ri.insumo, ri.cantidad):
+            insumos_sin_stock.append(ri.insumo)
 
     if request.method == 'POST':
 
@@ -217,6 +223,7 @@ def crear_prestamo(request, reserva_id):
                 {
                     'reserva': reserva,
                     'items_por_insumo': items_por_insumo,
+                    'insumos_sin_stock': insumos_sin_stock,
                     'errores': e.messages,
                 }
             )
@@ -226,15 +233,31 @@ def crear_prestamo(request, reserva_id):
         # Guardar los ítems seleccionados. .activos (no .objects): un ítem
         # soft-deleted no debe poder prestarse aunque alguien arme el POST
         # a mano con su id — el formulario ya no lo ofrece, pero esto lo
-        # bloquea también a ese nivel.
+        # bloquea también a ese nivel. estado__nombre='Disponible' además:
+        # si el ítem se prestó/dañó entre que se renderizó el formulario y
+        # este POST, no se agrega igual — sin este filtro, el signal de
+        # PrestamoItem lo pasaría a 'Prestado' sin importar en qué estado
+        # estuviera (posible doble préstamo del mismo ítem).
         items_seleccionados = request.POST.getlist('items')
+        items_no_disponibles = 0
         for item_id in items_seleccionados:
-            item = ItemInventario.activos.filter(id=item_id).first()
+            item = ItemInventario.activos.filter(
+                id=item_id, estado__nombre='Disponible',
+            ).first()
             if not item:
+                items_no_disponibles += 1
                 continue
             PrestamoItem.objects.create(
                 prestamo=prestamo,
                 item_inventario=item
+            )
+
+        if items_no_disponibles:
+            messages.warning(
+                request,
+                f'{items_no_disponibles} ítem(s) ya no estaban disponibles y no '
+                f'se agregaron al préstamo — elígelos de nuevo si sigues '
+                f'necesitándolos.',
             )
 
         try:
@@ -252,7 +275,8 @@ def crear_prestamo(request, reserva_id):
         'prestamos/crear.html',
         {
             'reserva': reserva,
-            'items_por_insumo': items_por_insumo
+            'items_por_insumo': items_por_insumo,
+            'insumos_sin_stock': insumos_sin_stock,
         }
     )
 

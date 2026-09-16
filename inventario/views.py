@@ -40,7 +40,7 @@ def inicio(request):
 
     busqueda = request.GET.get('busqueda')
 
-    insumos = Insumo.objects.select_related('estado').annotate(
+    insumos = Insumo.objects.select_related('estado', 'laboratorio').annotate(
         cantidad_disponible_count=Count(
             'items',
             filter=Q(items__estado__nombre='Disponible', items__deleted_at__isnull=True)
@@ -48,7 +48,7 @@ def inicio(request):
     )
 
     if busqueda:
-        insumos = Insumo.objects.filter(nombre__icontains=busqueda)
+        insumos = insumos.filter(nombre__icontains=busqueda)
     
     alertas_stock = [
         insumo for insumo in insumos
@@ -125,14 +125,36 @@ def items_inventario(request):
     else:
         form = ItemInventarioForm()
 
-    items = ItemInventario.activos.all()
+    items = ItemInventario.activos.select_related(
+        'insumo', 'estado', 'laboratorio',
+    ).order_by('insumo__nombre', 'codigo')
+
+    insumo_id = request.GET.get('insumo', '')
+    if insumo_id:
+        items = items.filter(insumo_id=insumo_id)
+
+    # SQLite no soporta distinct(field_names) (eso es solo Postgres), así
+    # que la última acción por ítem se arma a mano: se recorre ordenado por
+    # fecha descendente y se queda solo la primera fila vista por ítem. Se
+    # cuelga como atributo de cada item (en vez de un dict aparte) para que
+    # el template la lea directo con item.ultimo_movimiento.
+    ultimos_por_item = {}
+    movimientos_recientes = MovimientoInventario.objects.filter(
+        item_inventario__in=items,
+    ).select_related('tipo_movimiento').order_by('-fecha')
+    for m in movimientos_recientes:
+        ultimos_por_item.setdefault(m.item_inventario_id, m)
+
+    items = list(items)
+    for item in items:
+        item.ultimo_movimiento = ultimos_por_item.get(item.id)
 
     return render(
         request,
         'inventario/items.html',
         {
             'form': form,
-            'items': items
+            'items': items,
         }
     )
 
@@ -155,14 +177,46 @@ def movimientos_inventario(request):
     else:
         form = MovimientoInventarioForm()
 
-    movimientos = MovimientoInventario.objects.all().order_by('-fecha')
+    movimientos = MovimientoInventario.objects.select_related(
+        'item_inventario__insumo', 'item_inventario__laboratorio', 'usuario', 'tipo_movimiento',
+    ).order_by('-fecha')
+
+    insumo_id   = request.GET.get('insumo', '')
+    lab_id      = request.GET.get('lab', '')
+    usuario_id  = request.GET.get('usuario', '')
+    fecha_inicio = request.GET.get('fecha_inicio', '')
+    fecha_fin    = request.GET.get('fecha_fin', '')
+
+    if insumo_id:
+        movimientos = movimientos.filter(item_inventario__insumo_id=insumo_id)
+    if lab_id:
+        movimientos = movimientos.filter(item_inventario__laboratorio_id=lab_id)
+    if usuario_id:
+        movimientos = movimientos.filter(usuario_id=usuario_id)
+    if fecha_inicio:
+        movimientos = movimientos.filter(fecha__date__gte=fecha_inicio)
+    if fecha_fin:
+        movimientos = movimientos.filter(fecha__date__lte=fecha_fin)
+
+    from laboratorio.models import Laboratorio
+    from users.models import Usuario
 
     return render(
         request,
         'inventario/movimientos.html',
         {
             'form': form,
-            'movimientos': movimientos
+            'movimientos': movimientos,
+            'insumos': Insumo.objects.order_by('nombre'),
+            'laboratorios': Laboratorio.objects.order_by('nombre'),
+            'usuarios': Usuario.objects.filter(
+                id__in=MovimientoInventario.objects.values_list('usuario_id', flat=True).distinct()
+            ).order_by('username'),
+            'insumo_id': insumo_id,
+            'lab_id': lab_id,
+            'usuario_id': usuario_id,
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
         }
     )
 

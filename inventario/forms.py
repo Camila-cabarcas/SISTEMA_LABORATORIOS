@@ -17,8 +17,11 @@ class InsumoForm(forms.ModelForm):
 
         fields = [
             'nombre',
+            'laboratorio',
             'descripcion',
-            'estado'
+            'marca',
+            'stock_minimo',
+            'estado',
         ]
 
         widgets = {
@@ -30,10 +33,30 @@ class InsumoForm(forms.ModelForm):
                 }
             ),
 
+            'laboratorio': forms.Select(
+                attrs={
+                    'class': 'form-select'
+                }
+            ),
+
             'descripcion': forms.Textarea(
                 attrs={
                     'class': 'form-control',
                     'placeholder': 'Descripción'
+                }
+            ),
+
+            'marca': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Marca (opcional)'
+                }
+            ),
+
+            'stock_minimo': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'min': '0'
                 }
             ),
 
