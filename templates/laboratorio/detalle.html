@@ -1,11 +1,34 @@
 {% extends 'base_general.html' %}
 {% load static %}
 
+{% block main_class %}container-fluid{% endblock %}
+
+{% block extra_head %}
+<style>
+    .sidebar-lab {
+        padding: 15px;
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+        border-radius: 5px;
+        position: sticky;
+        top: 20px;
+    }
+    .sidebar-lab .list-group-item { margin-bottom: 5px; border-radius: 4px; }
+</style>
+{% endblock %}
+
 {% block contenido %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="mb-0">{{ laboratorio.nombre }}</h1>
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h1 class="mb-1">{{ laboratorio.nombre }}</h1>
+        <p class="text-muted mb-0">
+            📍 {{ laboratorio.ubicacion }}
+            {% if cuenta_lab %} · Usuario: <code>{{ cuenta_lab.username }}</code>{% endif %}
+        </p>
+    </div>
     <div class="d-flex gap-2">
+        <a href="/laboratorio/{{ laboratorio.id }}/mapa/" class="btn btn-outline-primary btn-sm">🗺️ Mapa</a>
         {% if is_admin %}
         <a href="/laboratorio/{{ laboratorio.id }}/editar/" class="btn btn-warning btn-sm">Editar</a>
         <a href="/laboratorio/{{ laboratorio.id }}/eliminar/" class="btn btn-danger btn-sm">Eliminar</a>
@@ -13,6 +36,7 @@
         <a href="/laboratorio/" class="btn btn-secondary btn-sm">Volver</a>
     </div>
 </div>
+<hr>
 
 {% if not encargado_principal %}
 <div class="alert alert-warning">
@@ -21,178 +45,82 @@
 </div>
 {% endif %}
 
-<div class="row g-4 mb-4">
+<div class="row g-4">
 
-    <!-- Información general -->
-    <div class="col-md-6">
-        <div class="card p-4 h-100">
-            <h5 class="mb-3">Información general</h5>
-            <p><strong>Ubicación:</strong> {{ laboratorio.ubicacion }}</p>
-            <p><strong>Programa:</strong> {{ laboratorio.programa|default:"—" }}</p>
-            <p class="mb-3">
-                <strong>Encargado:</strong>
-                {% if encargado_principal %}
-                    {{ encargado_principal.laboratorista.nombre }}
-                    {{ encargado_principal.laboratorista.apellido }}
-                    <span class="badge bg-warning text-dark ms-1">Encargado</span>
-                {% else %}
-                    <span class="text-muted">Sin encargado asignado</span>
-                {% endif %}
-            </p>
-            <div class="d-flex gap-2">
-                <a href="/laboratorio/{{ laboratorio.id }}/mapa/" class="btn btn-outline-primary btn-sm">
-                    🗺️ Mapa
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <nav class="sidebar-lab" aria-label="Secciones del laboratorio">
+            <h6 class="text-uppercase text-muted small mb-2">Gestión del laboratorio</h6>
+            <div class="list-group mb-3" id="secciones-lab">
+                <a href="?seccion=personal"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if seccion_activa == 'personal' %}active{% endif %}"
+                   {% if seccion_activa == 'personal' %}aria-current="page"{% endif %}>
+                    👥 Personal asignado <span class="badge bg-secondary rounded-pill">{{ total_personal }}</span>
+                </a>
+                <a href="?seccion=cursos"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if seccion_activa == 'cursos' %}active{% endif %}"
+                   {% if seccion_activa == 'cursos' %}aria-current="page"{% endif %}>
+                    📚 Cursos asignados <span class="badge bg-secondary rounded-pill">{{ total_cursos }}</span>
+                </a>
+                <a href="?seccion=inventario"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if seccion_activa == 'inventario' %}active{% endif %}"
+                   {% if seccion_activa == 'inventario' %}aria-current="page"{% endif %}>
+                    📦 Inventario <span class="badge bg-secondary rounded-pill">{{ total_insumos }}</span>
                 </a>
             </div>
-        </div>
+
+            <h6 class="text-uppercase text-muted small mb-2">Otras vistas</h6>
+            <div class="list-group" id="vistas-externas-lab">
+                <a href="{% url 'lista_reservas' %}?lab={{ laboratorio.id }}"
+                   class="list-group-item list-group-item-action" target="_blank" rel="noopener">
+                    📋 Ver reservas →
+                </a>
+                <a href="{% url 'lista_prestamos' %}?lab={{ laboratorio.id }}"
+                   class="list-group-item list-group-item-action" target="_blank" rel="noopener">
+                    🤝 Ver préstamos →
+                </a>
+            </div>
+        </nav>
     </div>
 
-    <!-- Cuenta de acceso -->
-    <div class="col-md-6">
-        <div class="card p-4 h-100">
-            <h5 class="mb-3">Cuenta de acceso</h5>
-            {% if cuenta_lab %}
-            <p><strong>Usuario:</strong> <code>{{ cuenta_lab.username }}</code></p>
-            <small class="text-muted">
-                Para cambiar la contraseña hazlo desde el panel de administración.
-            </small>
-            {% else %}
-            <p class="text-muted">Sin cuenta de acceso asignada.</p>
-            {% endif %}
-        </div>
-    </div>
+    <!-- Contenido -->
+    <div class="col-md-9">
 
-</div>
-
-<!-- Personal asignado -->
-<div class="card p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Personal asignado</h5>
-        {% if user.rol.nombre == 'Administrador' %}
-        <a href="{% url 'asignar_laboratorista' laboratorio.id %}"
-           class="btn btn-primary btn-sm">
-            + Asignar laboratorista
-        </a>
-        {% endif %}
-    </div>
-
-    {% if asignaciones_lab %}
-    <table class="table table-striped align-middle">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Cédula</th>
-                <th>Correo</th>
-                <th>Programa</th>
-                <th>Rol</th>
-                <th>Responsabilidades</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for asignacion in asignaciones_lab %}
-            {% if asignacion.laboratorista.activo %}
-            <tr>
-                <td>{{ asignacion.laboratorista }}</td>
-                <td>{{ asignacion.laboratorista.cedula }}</td>
-                <td>{{ asignacion.laboratorista.correo|default:"—" }}</td>
-                <td>{{ asignacion.laboratorista.programa|default:"—" }}</td>
-                <td>
-                    {% if asignacion.tipo == 'encargado' %}
-                        <span class="badge bg-warning text-dark">Encargado</span>
+        <!-- Información general (siempre visible) -->
+        <div class="card p-4 mb-4" id="info-general">
+            <h5 class="mb-3">Información general</h5>
+            <div class="row">
+                <div class="col-md-4"><strong>Ubicación:</strong> {{ laboratorio.ubicacion }}</div>
+                <div class="col-md-4"><strong>Programa:</strong> {{ laboratorio.programa|default:"—" }}</div>
+                <div class="col-md-4">
+                    <strong>Encargado:</strong>
+                    {% if encargado_principal %}
+                        {{ encargado_principal.laboratorista.nombre }}
+                        {{ encargado_principal.laboratorista.apellido }}
                     {% else %}
-                        <span class="badge bg-secondary">Laboratorista</span>
+                        <span class="text-muted">Sin encargado asignado</span>
                     {% endif %}
-                </td>
-                <td>
-                    {% for r in asignacion.laboratorista.responsabilidades %}
-                        <span class="badge bg-light text-dark border me-1">{{ r }}</span>
-                    {% empty %}
-                        <span class="text-muted">—</span>
-                    {% endfor %}
-                </td>
-            </tr>
-            {% endif %}
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="text-muted">No hay laboratoristas asignados a este laboratorio.</p>
-    {% endif %}
-</div>
-
-<!-- Cursos asignados -->
-<div class="card p-4 mb-4">
-    <h5 class="mb-3">📚 Cursos asignados</h5>
-
-    {% if cursos %}
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Código</th>
-                <th>Nombre</th>
-                <th>Profesor</th>
-                <th>Estudiantes</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for curso in cursos %}
-            <tr>
-                <td>{{ curso.codigo }}</td>
-                <td>{{ curso.nombre }}</td>
-                <td>{{ curso.profesor.get_full_name|default:curso.profesor.username }}</td>
-                <td>{{ curso.cantidad_estudiantes }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="text-muted">No hay cursos asignados a este laboratorio.</p>
-    {% endif %}
-</div>
-
-<!-- Pestañas: Inventario / Reservas / Préstamos -->
-<div class="card p-4">
-    <ul class="nav nav-tabs mb-3" id="tabs-laboratorio" role="tablist">
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if tab == 'inventario' %}active{% endif %}" data-bs-toggle="tab" data-tab="inventario"
-               href="#tab-inventario" role="tab" aria-controls="tab-inventario"
-               aria-selected="{% if tab == 'inventario' %}true{% else %}false{% endif %}">
-                📦 Inventario <span class="badge bg-secondary">{{ insumos_page.paginator.count }}</span>
-            </a>
-        </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if tab == 'reservas' %}active{% endif %}" data-bs-toggle="tab" data-tab="reservas"
-               href="#tab-reservas" role="tab" aria-controls="tab-reservas"
-               aria-selected="{% if tab == 'reservas' %}true{% else %}false{% endif %}">
-                📋 Reservas <span class="badge bg-secondary">{{ reservas_page.paginator.count }}</span>
-            </a>
-        </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if tab == 'prestamos' %}active{% endif %}" data-bs-toggle="tab" data-tab="prestamos"
-               href="#tab-prestamos" role="tab" aria-controls="tab-prestamos"
-               aria-selected="{% if tab == 'prestamos' %}true{% else %}false{% endif %}">
-                🤝 Préstamos <span class="badge bg-secondary">{{ prestamos_page.paginator.count }}</span>
-            </a>
-        </li>
-    </ul>
-
-    <div class="tab-content">
-        <div id="tab-inventario" class="tab-pane fade {% if tab == 'inventario' %}show active{% endif %}" role="tabpanel">
-            {% include 'laboratorio/partials/tab_inventario.html' %}
+                </div>
+            </div>
         </div>
-        <div id="tab-reservas" class="tab-pane fade {% if tab == 'reservas' %}show active{% endif %}" role="tabpanel">
-            {% include 'laboratorio/partials/tab_reservas.html' %}
-        </div>
-        <div id="tab-prestamos" class="tab-pane fade {% if tab == 'prestamos' %}show active{% endif %}" role="tabpanel">
-            {% include 'laboratorio/partials/tab_prestamos.html' %}
-        </div>
+
+        <!-- Sección activa -->
+        {% if seccion_activa == 'cursos' %}
+            {% include 'laboratorio/partials/seccion_cursos.html' %}
+        {% elif seccion_activa == 'inventario' %}
+            {% include 'laboratorio/partials/seccion_inventario.html' %}
+            {% include 'laboratorio/partials/modal_items.html' %}
+        {% else %}
+            {% include 'laboratorio/partials/seccion_personal.html' %}
+        {% endif %}
+
     </div>
 </div>
-
-{% include 'laboratorio/partials/modal_items.html' %}
 
 {% endblock %}
 
 {% block extra_scripts %}
+{% if seccion_activa == 'inventario' %}
 <script src="{% static 'js/laboratorio_detalle.js' %}"></script>
+{% endif %}
 {% endblock %}

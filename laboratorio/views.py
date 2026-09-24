@@ -13,9 +13,8 @@ from .models import Laboratorio, EventoLaboratorio, Laboratorista, Laboratorista
 from .forms import LaboratorioForm
 from .services.modulo_service import ModuloEstadoService
 from inventario.models import Insumo, ItemInventario, MovimientoInventario
-from reservas.models import EstadoReserva, Reserva, ReservaInsumo
-from prestamos.models import EstadoPrestamo, Prestamo, PrestamoItem
-from solicitudes.models import SolicitudReserva
+from reservas.models import ReservaInsumo
+from prestamos.models import PrestamoItem
 
 
 def _check_lab_access(request, laboratorio):
@@ -93,10 +92,10 @@ def crear_laboratorio(request):
     return render(request, 'laboratorio/crear.html', {'form': form})
 
 
-# ── Detalle de laboratorio (pestañas Inventario / Reservas / Préstamos) ──────
+# ── Detalle de laboratorio (sidebar: Personal / Cursos / Inventario) ─────────
 
 POR_PAGINA_DETALLE = 10
-TABS_DETALLE = ('inventario', 'reservas', 'prestamos')
+SECCIONES_DETALLE = ('personal', 'cursos', 'inventario')
 
 # (valor del filtro = EstadoItem.nombre, etiqueta visible)
 ESTADOS_ITEM_FILTRO = [
@@ -105,15 +104,6 @@ ESTADOS_ITEM_FILTRO = [
     ('Dañado', 'Dañado'),
     ('Perdido', 'Extraviado'),
 ]
-
-
-def _querystring_sin(request, clave_pagina, tab):
-    """GET actual sin la página de una pestaña y con tab=<tab>: base de sus
-    enlaces de paginación, que así conservan los filtros de las otras."""
-    params = request.GET.copy()
-    params.pop(clave_pagina, None)
-    params['tab'] = tab
-    return params.urlencode()
 
 
 def _insumos_del_laboratorio(laboratorio, busqueda='', estado=''):
@@ -141,111 +131,59 @@ def _insumos_del_laboratorio(laboratorio, busqueda='', estado=''):
     ).order_by('nombre', 'id')
 
 
-def _reservas_del_laboratorio(laboratorio, estado='', buscar=''):
-    """Reservas hechas para el laboratorio (vía SolicitudReserva) o que
-    reservan insumos con ítems en él (criterio de reservas_laboratorio)."""
-    reservas = Reserva.objects.filter(
-        Q(id__in=ReservaInsumo.objects.filter(
-            insumo__items__laboratorio=laboratorio).values('reserva_id'))
-        | Q(id__in=SolicitudReserva.objects.filter(
-            laboratorio=laboratorio).values('reserva_id'))
-    )
-    if estado:
-        reservas = reservas.filter(estado__nombre=estado)
-    if buscar:
-        reservas = reservas.filter(
-            Q(codigo__icontains=buscar)
-            | Q(usuario__username__icontains=buscar)
-            | Q(usuario__first_name__icontains=buscar)
-            | Q(usuario__last_name__icontains=buscar)
-            | Q(id__in=SolicitudReserva.objects.filter(
-                Q(nombre__icontains=buscar) | Q(cedula__icontains=buscar)).values('reserva_id'))
-        )
-    # Nombre/cédula de la solicitud pública (en ese flujo Reserva.usuario es
-    # NULL) por subconsulta, sin JOIN que duplique filas.
-    solicitud = SolicitudReserva.objects.filter(reserva=OuterRef('pk')).order_by('id')
-    return reservas.select_related('usuario', 'estado').annotate(
-        solicitante_nombre=Subquery(solicitud.values('nombre')[:1]),
-        solicitante_cedula=Subquery(solicitud.values('cedula')[:1]),
-    ).order_by('-fecha_reserva', '-id')
-
-
-def _prestamos_del_laboratorio(laboratorio, estado=''):
-    """Préstamos con ítems de este laboratorio (criterio de prestamos_laboratorio)."""
-    prestamos = Prestamo.objects.filter(
-        id__in=PrestamoItem.objects.filter(
-            item_inventario__laboratorio=laboratorio).values('prestamo_id')
-    )
-    if estado:
-        prestamos = prestamos.filter(estado__nombre=estado)
-    return prestamos.select_related('responsable', 'estado').order_by('-fecha_entrega', '-id')
-
-
 @rol_requerido('Administrador', 'Laboratorio')
 def detalle_laboratorio(request, id):
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
     is_admin = request.user.rol.nombre == 'Administrador'
 
+    seccion_activa = request.GET.get('seccion', '')
+    if seccion_activa not in SECCIONES_DETALLE:
+        seccion_activa = 'personal'
+
     cuenta_lab          = laboratorio.encargados.filter(username__startswith='lab_').first()
     encargado_principal = LaboratoristaLab.objects.filter(
         laboratorio=laboratorio, tipo='encargado'
     ).select_related('laboratorista').first()
-    asignaciones_lab = laboratorio.asignaciones.select_related('laboratorista').all()
+    personal = laboratorio.asignaciones.filter(
+        laboratorista__activo=True
+    ).select_related('laboratorista')
+    cursos = laboratorio.cursos.select_related('profesor').order_by('codigo')
 
-    tab = request.GET.get('tab', '')
-    if tab not in TABS_DETALLE:
-        tab = 'inventario'
-
-    # Pestaña Inventario
-    busqueda = request.GET.get('busqueda', '').strip()
-    filtro_estado = request.GET.get('estado', '').strip()
-    if filtro_estado not in dict(ESTADOS_ITEM_FILTRO):
-        filtro_estado = ''
-    insumos_page = Paginator(
-        _insumos_del_laboratorio(laboratorio, busqueda, filtro_estado), POR_PAGINA_DETALLE
-    ).get_page(request.GET.get('page'))
-
-    # Pestaña Reservas
-    filtro_estado_reserva = request.GET.get('r_estado', '').strip()
-    busqueda_reserva = request.GET.get('r_buscar', '').strip()
-    reservas_page = Paginator(
-        _reservas_del_laboratorio(laboratorio, filtro_estado_reserva, busqueda_reserva), POR_PAGINA_DETALLE
-    ).get_page(request.GET.get('r_page'))
-
-    # Pestaña Préstamos
-    filtro_estado_prestamo = request.GET.get('p_estado', '').strip()
-    prestamos_page = Paginator(
-        _prestamos_del_laboratorio(laboratorio, filtro_estado_prestamo), POR_PAGINA_DETALLE
-    ).get_page(request.GET.get('p_page'))
-
-    return render(request, 'laboratorio/detalle.html', {
+    context = {
         'laboratorio':        laboratorio,
         'is_admin':           is_admin,
-        'encargados':         laboratorio.encargados.all(),
+        'seccion_activa':     seccion_activa,
         'cuenta_lab':         cuenta_lab,
         'encargado_principal': encargado_principal,
-        'asignaciones_lab':   asignaciones_lab,
-        'cursos':             laboratorio.cursos.select_related('profesor').order_by('codigo'),
-        'tab':                tab,
+        'personal':           personal,
+        'cursos':             cursos,
+        # Contadores del sidebar
+        'total_personal':     personal.count(),
+        'total_cursos':       cursos.count(),
+        'total_insumos':      _insumos_del_laboratorio(laboratorio).count(),
+    }
 
-        'insumos_page':       insumos_page,
-        'filtro_estado':      filtro_estado,
-        'busqueda':           busqueda,
-        'estados_item':       ESTADOS_ITEM_FILTRO,
-        'qs_inventario':      _querystring_sin(request, 'page', 'inventario'),
+    # Solo la sección visible consulta su tabla paginada.
+    if seccion_activa == 'inventario':
+        busqueda = request.GET.get('busqueda', '').strip()
+        filtro_estado = request.GET.get('estado', '').strip()
+        if filtro_estado not in dict(ESTADOS_ITEM_FILTRO):
+            filtro_estado = ''
+        params = request.GET.copy()
+        params.pop('page', None)
+        params['seccion'] = 'inventario'
+        context.update({
+            'insumos_page':  Paginator(
+                _insumos_del_laboratorio(laboratorio, busqueda, filtro_estado), POR_PAGINA_DETALLE
+            ).get_page(request.GET.get('page')),
+            'busqueda':      busqueda,
+            'filtro_estado': filtro_estado,
+            'estados_item':  ESTADOS_ITEM_FILTRO,
+            'qs_inventario': params.urlencode(),
+        })
 
-        'reservas_page':      reservas_page,
-        'filtro_estado_reserva': filtro_estado_reserva,
-        'busqueda_reserva':   busqueda_reserva,
-        'estados_reserva':    EstadoReserva.objects.order_by('nombre').values_list('nombre', flat=True),
-        'qs_reservas':        _querystring_sin(request, 'r_page', 'reservas'),
-
-        'prestamos_page':     prestamos_page,
-        'filtro_estado_prestamo': filtro_estado_prestamo,
-        'estados_prestamo':   EstadoPrestamo.objects.order_by('nombre').values_list('nombre', flat=True),
-        'qs_prestamos':       _querystring_sin(request, 'p_page', 'prestamos'),
-    })
+    return render(request, 'laboratorio/detalle.html', context)
 
 
 @rol_requerido('Administrador', 'Laboratorio')

@@ -1,0 +1,37 @@
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">📚 Cursos asignados</h5>
+        {% if is_admin %}
+        <a href="{% url 'lista_cursos' %}?laboratorio={{ laboratorio.id }}" class="btn btn-outline-primary btn-sm">
+            Gestionar cursos
+        </a>
+        {% endif %}
+    </div>
+
+    {% if cursos %}
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Profesor</th>
+                    <th>Estudiantes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for curso in cursos %}
+                <tr>
+                    <td>{{ curso.codigo }}</td>
+                    <td>{{ curso.nombre }}</td>
+                    <td>{{ curso.profesor.get_full_name|default:curso.profesor.username }}</td>
+                    <td>{{ curso.cantidad_estudiantes }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No hay cursos asignados a este laboratorio.</p>
+    {% endif %}
+</div>

@@ -1,9 +1,7 @@
 /*
- * laboratorio_detalle.js — detalle de laboratorio
- * - Click en una fila de insumo: abre #modal-items y carga sus ítems por
- *   fetch (JSON de laboratorio.views.modal_items_insumo).
- * - Al cambiar de pestaña actualiza ?tab= en la URL, para que recargar la
- *   página o volver atrás conserve la pestaña activa.
+ * laboratorio_detalle.js — detalle de laboratorio, sección Inventario
+ * Click en una fila de insumo: abre #modal-items y carga sus ítems por
+ * fetch (JSON de laboratorio.views.modal_items_insumo).
  */
 (function () {
     'use strict';
@@ -72,12 +70,4 @@
             });
         });
     }
-
-    document.querySelectorAll('#tabs-laboratorio [data-bs-toggle="tab"]').forEach(function (enlace) {
-        enlace.addEventListener('shown.bs.tab', function () {
-            var url = new URL(window.location.href);
-            url.searchParams.set('tab', enlace.dataset.tab);
-            window.history.replaceState(null, '', url);
-        });
-    });
 })();

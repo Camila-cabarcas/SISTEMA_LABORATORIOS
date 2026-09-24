@@ -1,7 +1,8 @@
 """
 Tests HTTP para laboratorio/views.py::detalle_laboratorio (/laboratorio/<id>/)
-reorganizado en pestañas Inventario / Reservas / Préstamos, y para el
-endpoint JSON del modal de ítems (modal_items_insumo).
+con sidebar de secciones (Personal / Cursos / Inventario) y enlaces a las
+listas de reservas/préstamos filtradas por laboratorio, y para el endpoint
+JSON del modal de ítems (modal_items_insumo).
 """
 from datetime import timedelta
 
@@ -9,10 +10,10 @@ import pytest
 from django.utils import timezone
 
 from inventario.models import EstadoItem, Insumo, ItemInventario, MovimientoInventario, TipoMovimiento
-from laboratorio.models import Laboratorio
-from prestamos.models import EstadoPrestamo, Prestamo, PrestamoItem
+from laboratorio.models import Laboratorio, Laboratorista, LaboratoristaLab
+from prestamos.models import EstadoPrestamo, Prestamo
 from reservas.models import EstadoReserva, Reserva
-from solicitudes.models import SolicitudReserva
+from solicitudes.models import Curso, SolicitudReserva
 from users.models import Rol, Usuario
 
 pytestmark = pytest.mark.django_db
@@ -20,6 +21,10 @@ pytestmark = pytest.mark.django_db
 
 def _url(laboratorio):
     return f'/laboratorio/{laboratorio.id}/'
+
+
+def _get(cliente, laboratorio, **params):
+    return cliente.get(_url(laboratorio), params)
 
 
 def _insumo(nombre, laboratorio=None, **extra):
@@ -31,6 +36,14 @@ def _item(codigo, insumo, laboratorio, estado='Disponible'):
         codigo=codigo, insumo=insumo, laboratorio=laboratorio,
         estado=EstadoItem.objects.get(nombre=estado),
     )
+
+
+def _laboratorista(laboratorio, cedula, nombre='Pedro', tipo='laboratorista', activo=True):
+    lab = Laboratorista.objects.create(
+        nombre=nombre, apellido='Gil', cedula=cedula, correo=f'{cedula}@udea.edu.co', activo=activo,
+    )
+    LaboratoristaLab.objects.create(laboratorista=lab, laboratorio=laboratorio, tipo=tipo)
+    return lab
 
 
 @pytest.fixture
@@ -58,73 +71,195 @@ def inventario(catalogos, laboratorio, otro_laboratorio):
     return {'multimetro': multimetro, 'osciloscopio': osciloscopio}
 
 
-# ── Estructura / pestañas ─────────────────────────────────────────────────────
+# ── Sidebar y layout ──────────────────────────────────────────────────────────
 
-def test_renderiza_secciones_fijas_y_tres_pestanas(cliente_autenticado, laboratorio):
-    response = cliente_autenticado.get(_url(laboratorio))
+def test_sidebar_se_renderiza_con_las_tres_secciones(cliente_autenticado, laboratorio):
+    contenido = _get(cliente_autenticado, laboratorio).content.decode()
 
-    assert response.status_code == 200
-    contenido = response.content.decode()
-    for texto in ['Información general', 'Personal asignado', 'Cursos asignados',
-                  'id="tab-inventario"', 'id="tab-reservas"', 'id="tab-prestamos"',
-                  'id="modal-items"', 'js/laboratorio_detalle.js']:
+    assert 'id="secciones-lab"' in contenido
+    for href, texto in [('?seccion=personal', 'Personal asignado'),
+                        ('?seccion=cursos', 'Cursos asignados'),
+                        ('?seccion=inventario', 'Inventario')]:
+        assert f'href="{href}"' in contenido
         assert texto in contenido
-    assert 'Ítems en este laboratorio' not in contenido
 
 
-def test_pestana_inventario_activa_por_defecto(cliente_autenticado, laboratorio):
-    response = cliente_autenticado.get(_url(laboratorio))
+def test_seccion_por_defecto_es_personal(cliente_autenticado, laboratorio):
+    response = _get(cliente_autenticado, laboratorio)
 
-    assert response.context['tab'] == 'inventario'
-    assert 'id="tab-inventario" class="tab-pane fade show active"' in response.content.decode()
+    assert response.context['seccion_activa'] == 'personal'
+    assert 'No hay laboratoristas asignados' in response.content.decode()
 
 
-@pytest.mark.parametrize('tab', ['reservas', 'prestamos'])
-def test_parametro_tab_activa_esa_pestana(cliente_autenticado, laboratorio, tab):
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': tab})
+@pytest.mark.parametrize('seccion', ['personal', 'cursos', 'inventario'])
+def test_boton_marca_la_seccion_activa(cliente_autenticado, laboratorio, seccion):
+    response = _get(cliente_autenticado, laboratorio, seccion=seccion)
 
+    assert response.context['seccion_activa'] == seccion
     contenido = response.content.decode()
-    assert f'id="tab-{tab}" class="tab-pane fade show active"' in contenido
-    assert 'id="tab-inventario" class="tab-pane fade show active"' not in contenido
+    assert contenido.count('aria-current="page"') == 1
+    enlace = contenido.split(f'href="?seccion={seccion}"')[1].split('>')[0]
+    assert 'active' in enlace
 
 
-def test_tab_invalido_vuelve_a_inventario(cliente_autenticado, laboratorio):
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'xyz'})
+def test_seccion_invalida_vuelve_a_personal(cliente_autenticado, laboratorio):
+    response = _get(cliente_autenticado, laboratorio, seccion='xyz')
 
-    assert response.context['tab'] == 'inventario'
+    assert response.context['seccion_activa'] == 'personal'
 
 
-# ── Pestaña Inventario ───────────────────────────────────────────────────────
+@pytest.mark.parametrize('seccion', ['personal', 'cursos', 'inventario'])
+def test_informacion_general_siempre_visible(cliente_autenticado, laboratorio, seccion):
+    laboratorio.programa = 'Ingeniería Química'
+    laboratorio.save()
 
-def test_inventario_agrupa_por_insumo_con_conteos_del_laboratorio(cliente_autenticado, laboratorio, inventario):
-    response = cliente_autenticado.get(_url(laboratorio))
+    contenido = _get(cliente_autenticado, laboratorio, seccion=seccion).content.decode()
+
+    assert 'id="info-general"' in contenido
+    assert 'Bloque 5 - Piso 2' in contenido
+    assert 'Ingeniería Química' in contenido
+
+
+def test_contadores_del_sidebar(cliente_autenticado, laboratorio, inventario, usuario_admin):
+    _laboratorista(laboratorio, '100')
+    _laboratorista(laboratorio, '200', activo=False)  # inactivo: no cuenta
+    docente = Usuario.objects.create_user(
+        username='doc', password='x', rol=Rol.objects.get(nombre='Docente'), codigo='DOC_1')
+    Curso.objects.create(nombre='Química', codigo='QUIM-101', profesor=docente,
+                         cantidad_estudiantes=20, laboratorio=laboratorio)
+
+    ctx = _get(cliente_autenticado, laboratorio).context
+
+    assert (ctx['total_personal'], ctx['total_cursos'], ctx['total_insumos']) == (1, 1, 2)
+
+
+# ── Enlaces a Reservas / Préstamos ────────────────────────────────────────────
+
+def test_enlaces_externos_llevan_filtro_de_lab_y_abren_en_nueva_pestana(cliente_autenticado, laboratorio):
+    contenido = _get(cliente_autenticado, laboratorio).content.decode()
+
+    for url in [f'/reservas/?lab={laboratorio.id}', f'/prestamos/?lab={laboratorio.id}']:
+        assert f'href="{url}"' in contenido
+        etiqueta = contenido.split(f'href="{url}"')[1].split('>')[0]
+        assert 'target="_blank"' in etiqueta
+        assert 'rel="noopener"' in etiqueta
+
+
+def test_ya_no_hay_pestanas_de_reservas_ni_prestamos(cliente_autenticado, laboratorio):
+    contenido = _get(cliente_autenticado, laboratorio).content.decode()
+
+    assert 'tab-reservas' not in contenido
+    assert 'tab-prestamos' not in contenido
+
+
+def _reserva_en(laboratorio, nombre):
+    reserva = Reserva.objects.create(
+        fecha_reserva=timezone.now() + timedelta(days=1),
+        estado=EstadoReserva.objects.get(nombre='Aprobada'),
+    )
+    SolicitudReserva.objects.create(
+        tipo_solicitante='estudiante', nombre=nombre, cedula='1',
+        laboratorio=laboratorio, fecha_reserva=reserva.fecha_reserva, reserva=reserva,
+    )
+    return reserva
+
+
+def test_lista_reservas_filtrada_por_lab(cliente_autenticado, catalogos, laboratorio, otro_laboratorio):
+    propia = _reserva_en(laboratorio, 'Ana')
+    _reserva_en(otro_laboratorio, 'Luis')
+
+    response = cliente_autenticado.get('/reservas/', {'lab': laboratorio.id})
+
+    assert [r.id for r in response.context['reservas']] == [propia.id]
+
+
+def test_lista_prestamos_filtrada_por_lab(cliente_autenticado, usuario_admin, catalogos, laboratorio, otro_laboratorio):
+    prestamos = {}
+    for lab, nombre in [(laboratorio, 'Ana'), (otro_laboratorio, 'Luis')]:
+        prestamos[lab.id] = Prestamo.objects.create(
+            reserva=_reserva_en(lab, nombre), responsable=usuario_admin,
+            estado=EstadoPrestamo.objects.get(nombre='Activo'),
+        )
+
+    response = cliente_autenticado.get('/prestamos/', {'lab': laboratorio.id})
+
+    assert [p.id for p in response.context['prestamos']] == [prestamos[laboratorio.id].id]
+
+
+# ── Sección Personal ─────────────────────────────────────────────────────────
+
+def test_seccion_personal_lista_laboratoristas_activos(cliente_autenticado, laboratorio):
+    _laboratorista(laboratorio, '100', nombre='Pedro', tipo='encargado')
+    _laboratorista(laboratorio, '200', nombre='Inactivo', activo=False)
+
+    contenido = _get(cliente_autenticado, laboratorio, seccion='personal').content.decode()
+
+    assert 'Pedro Gil' in contenido
+    assert '100@udea.edu.co' in contenido
+    assert 'Inactivo Gil' not in contenido
+    assert '+ Asignar laboratorista' in contenido  # admin
+
+
+def test_seccion_personal_no_muestra_cursos_ni_inventario(cliente_autenticado, laboratorio, inventario):
+    contenido = _get(cliente_autenticado, laboratorio, seccion='personal').content.decode()
+
+    assert 'Cursos asignados</h5>' not in contenido
+    assert 'Multímetro' not in contenido
+    assert 'id="modal-items"' not in contenido
+    assert 'laboratorio_detalle.js' not in contenido
+
+
+# ── Sección Cursos ───────────────────────────────────────────────────────────
+
+def test_seccion_cursos_muestra_tabla(cliente_autenticado, catalogos, laboratorio):
+    docente = Usuario.objects.create_user(
+        username='doc', password='x', rol=Rol.objects.get(nombre='Docente'),
+        codigo='DOC_1', first_name='Ana', last_name='Gómez')
+    Curso.objects.create(nombre='Química General', codigo='QUIM-101', profesor=docente,
+                         cantidad_estudiantes=30, laboratorio=laboratorio)
+
+    contenido = _get(cliente_autenticado, laboratorio, seccion='cursos').content.decode()
+
+    for texto in ['<td>QUIM-101</td>', '<td>Química General</td>', '<td>Ana Gómez</td>', '<td>30</td>']:
+        assert texto in contenido
+    assert 'No hay laboratoristas asignados' not in contenido
+
+
+# ── Sección Inventario ───────────────────────────────────────────────────────
+
+def test_seccion_inventario_agrupa_por_insumo_con_conteos_del_laboratorio(cliente_autenticado, laboratorio, inventario):
+    response = _get(cliente_autenticado, laboratorio, seccion='inventario')
 
     insumos = {i.nombre: i for i in response.context['insumos_page']}
     assert set(insumos) == {'Multímetro', 'Osciloscopio'}
     mul = insumos['Multímetro']
     assert (mul.stock_total, mul.stock_disponible, mul.stock_prestado, mul.stock_danado, mul.stock_perdido) == (5, 2, 1, 1, 1)
-    assert insumos['Osciloscopio'].stock_total == 1
-    assert 'MUL-1' not in response.content.decode()  # la tabla ya no lista ítems sueltos
+    contenido = response.content.decode()
+    assert 'id="modal-items"' in contenido
+    assert 'js/laboratorio_detalle.js' in contenido
+
+
+def test_otras_secciones_no_consultan_inventario_paginado(cliente_autenticado, laboratorio):
+    assert 'insumos_page' not in _get(cliente_autenticado, laboratorio, seccion='cursos').context
 
 
 def test_insumo_sin_items_del_laboratorio_aparece_en_cero(cliente_autenticado, laboratorio, catalogos):
     _insumo('Pipeta', laboratorio)
 
-    response = cliente_autenticado.get(_url(laboratorio))
+    [pipeta] = list(_get(cliente_autenticado, laboratorio, seccion='inventario').context['insumos_page'])
 
-    [pipeta] = list(response.context['insumos_page'])
     assert pipeta.stock_total == 0
 
 
 def test_buscador_de_insumos(cliente_autenticado, laboratorio, inventario):
-    response = cliente_autenticado.get(_url(laboratorio), {'busqueda': 'osci'})
-    assert [i.nombre for i in response.context['insumos_page']] == ['Osciloscopio']
+    def nombres(busqueda):
+        r = _get(cliente_autenticado, laboratorio, seccion='inventario', busqueda=busqueda)
+        return [i.nombre for i in r.context['insumos_page']], r
 
-    response = cliente_autenticado.get(_url(laboratorio), {'busqueda': 'fluke'})  # por marca
-    assert [i.nombre for i in response.context['insumos_page']] == ['Multímetro']
-
-    response = cliente_autenticado.get(_url(laboratorio), {'busqueda': 'no-existe'})
-    assert list(response.context['insumos_page']) == []
+    assert nombres('osci')[0] == ['Osciloscopio']
+    assert nombres('fluke')[0] == ['Multímetro']  # por marca
+    vacio, response = nombres('no-existe')
+    assert vacio == []
     assert 'No hay insumos que coincidan con los filtros.' in response.content.decode()
 
 
@@ -135,44 +270,49 @@ def test_buscador_de_insumos(cliente_autenticado, laboratorio, inventario):
     ('Perdido', ['Multímetro']),
 ])
 def test_filtro_por_estado(cliente_autenticado, laboratorio, inventario, estado, esperados):
-    response = cliente_autenticado.get(_url(laboratorio), {'estado': estado})
+    response = _get(cliente_autenticado, laboratorio, seccion='inventario', estado=estado)
 
     assert [i.nombre for i in response.context['insumos_page']] == esperados
     assert response.context['filtro_estado'] == estado
 
 
 def test_filtro_por_estado_mantiene_conteos_completos(cliente_autenticado, laboratorio, inventario):
-    response = cliente_autenticado.get(_url(laboratorio), {'estado': 'Prestado'})
+    [mul] = list(_get(cliente_autenticado, laboratorio, seccion='inventario', estado='Prestado').context['insumos_page'])
 
-    [mul] = list(response.context['insumos_page'])
     assert mul.stock_total == 5  # el filtro elige insumos, no recorta sus conteos
 
 
 def test_filtro_por_estado_invalido_se_ignora(cliente_autenticado, laboratorio, inventario):
-    response = cliente_autenticado.get(_url(laboratorio), {'estado': 'Mantenimiento'})
+    response = _get(cliente_autenticado, laboratorio, seccion='inventario', estado='Mantenimiento')
 
     assert response.context['filtro_estado'] == ''
     assert len(response.context['insumos_page']) == 2
+
+
+def test_formulario_de_inventario_conserva_la_seccion(cliente_autenticado, laboratorio):
+    contenido = _get(cliente_autenticado, laboratorio, seccion='inventario').content.decode()
+
+    assert '<input type="hidden" name="seccion" value="inventario">' in contenido
 
 
 def test_paginacion_inventario_10_por_pagina(cliente_autenticado, laboratorio, catalogos):
     for n in range(23):
         _insumo(f'Insumo {n:02d}', laboratorio)
 
-    pagina_1 = cliente_autenticado.get(_url(laboratorio))
-    pagina_3 = cliente_autenticado.get(_url(laboratorio), {'page': 3})
+    pagina_1 = _get(cliente_autenticado, laboratorio, seccion='inventario')
+    pagina_3 = _get(cliente_autenticado, laboratorio, seccion='inventario', page=3)
 
     assert len(pagina_1.context['insumos_page']) == 10
     assert pagina_1.context['insumos_page'].paginator.num_pages == 3
     assert [i.nombre for i in pagina_3.context['insumos_page']] == ['Insumo 20', 'Insumo 21', 'Insumo 22']
-    assert 'href="?tab=inventario&page=2"' in pagina_1.content.decode()
+    assert 'href="?seccion=inventario&page=2"' in pagina_1.content.decode()
 
 
 def test_paginacion_conserva_filtros(cliente_autenticado, laboratorio, catalogos):
     for n in range(12):
         _insumo(f'Cable {n:02d}', laboratorio)
 
-    response = cliente_autenticado.get(_url(laboratorio), {'busqueda': 'cable', 'page': 2})
+    response = _get(cliente_autenticado, laboratorio, seccion='inventario', busqueda='cable', page=2)
 
     assert len(response.context['insumos_page']) == 2
     assert 'busqueda=cable' in response.context['qs_inventario']
@@ -180,7 +320,7 @@ def test_paginacion_conserva_filtros(cliente_autenticado, laboratorio, catalogos
 
 
 def test_pagina_fuera_de_rango_muestra_la_ultima(cliente_autenticado, laboratorio, inventario):
-    response = cliente_autenticado.get(_url(laboratorio), {'page': 99})
+    response = _get(cliente_autenticado, laboratorio, seccion='inventario', page=99)
 
     assert response.status_code == 200
     assert response.context['insumos_page'].number == 1
@@ -189,7 +329,7 @@ def test_pagina_fuera_de_rango_muestra_la_ultima(cliente_autenticado, laboratori
 # ── Modal de ítems (JSON) ────────────────────────────────────────────────────
 
 def test_fila_de_insumo_apunta_al_endpoint_del_modal(cliente_autenticado, laboratorio, inventario):
-    contenido = cliente_autenticado.get(_url(laboratorio)).content.decode()
+    contenido = _get(cliente_autenticado, laboratorio, seccion='inventario').content.decode()
 
     assert f'data-url="/laboratorio/{laboratorio.id}/insumos/{inventario["multimetro"].id}/items/"' in contenido
 
@@ -248,129 +388,3 @@ def test_modal_items_requiere_login(client, laboratorio, inventario):
     response = client.get(f'/laboratorio/{laboratorio.id}/insumos/{inventario["multimetro"].id}/items/')
 
     assert response.status_code == 302
-
-
-# ── Pestaña Reservas ─────────────────────────────────────────────────────────
-
-def _reserva_publica(laboratorio, nombre, cedula, estado='Pendiente', dias=1):
-    reserva = Reserva.objects.create(
-        fecha_reserva=timezone.now() + timedelta(days=dias),
-        estado=EstadoReserva.objects.get(nombre=estado),
-    )
-    SolicitudReserva.objects.create(
-        tipo_solicitante='estudiante', nombre=nombre, cedula=cedula,
-        laboratorio=laboratorio, fecha_reserva=reserva.fecha_reserva, reserva=reserva,
-    )
-    return reserva
-
-
-def test_pestana_reservas_lista_las_del_laboratorio(cliente_autenticado, catalogos, laboratorio, otro_laboratorio):
-    propia = _reserva_publica(laboratorio, 'Ana Ruiz', '111')
-    _reserva_publica(otro_laboratorio, 'Luis Mora', '222')
-
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'reservas'})
-
-    assert [r.id for r in response.context['reservas_page']] == [propia.id]
-    contenido = response.content.decode()
-    assert 'Ana Ruiz' in contenido
-    assert 'Luis Mora' not in contenido
-    assert f'href="/reservas/{propia.id}/"' in contenido
-
-
-def test_pestana_reservas_incluye_reservas_de_insumos_del_lab(cliente_autenticado, reserva_con_prestamo, laboratorio):
-    from reservas.models import ReservaInsumo
-    ReservaInsumo.objects.create(reserva=reserva_con_prestamo.reserva, insumo=reserva_con_prestamo.item.insumo, cantidad=1)
-
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'reservas'})
-
-    assert [r.id for r in response.context['reservas_page']] == [reserva_con_prestamo.reserva.id]
-
-
-def test_reservas_filtro_por_estado(cliente_autenticado, catalogos, laboratorio):
-    _reserva_publica(laboratorio, 'Ana Ruiz', '111', 'Pendiente')
-    aprobada = _reserva_publica(laboratorio, 'Luis Mora', '222', 'Aprobada')
-
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'reservas', 'r_estado': 'Aprobada'})
-
-    assert [r.id for r in response.context['reservas_page']] == [aprobada.id]
-
-
-@pytest.mark.parametrize('termino', ['ana', 'RUIZ', '111'])
-def test_reservas_filtro_por_estudiante(cliente_autenticado, catalogos, laboratorio, termino):
-    ana = _reserva_publica(laboratorio, 'Ana Ruiz', '111')
-    _reserva_publica(laboratorio, 'Luis Mora', '222')
-
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'reservas', 'r_buscar': termino})
-
-    assert [r.id for r in response.context['reservas_page']] == [ana.id]
-
-
-def test_reservas_paginacion(cliente_autenticado, catalogos, laboratorio):
-    for n in range(12):
-        _reserva_publica(laboratorio, f'Estudiante {n}', f'C{n}', dias=n + 1)
-
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'reservas', 'r_page': 2})
-
-    assert response.context['reservas_page'].number == 2
-    assert len(response.context['reservas_page']) == 2
-
-
-def test_reservas_vacia_muestra_mensaje(cliente_autenticado, laboratorio):
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'reservas'})
-
-    assert 'No hay reservas para este laboratorio.' in response.content.decode()
-
-
-# ── Pestaña Préstamos ────────────────────────────────────────────────────────
-
-def test_pestana_prestamos_lista_los_del_laboratorio(cliente_autenticado, reserva_con_prestamo, laboratorio):
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'prestamos'})
-
-    prestamo = reserva_con_prestamo.prestamo
-    assert [p.id for p in response.context['prestamos_page']] == [prestamo.id]
-    assert f'href="/prestamos/{prestamo.id}/"' in response.content.decode()
-
-
-def test_prestamos_de_otro_lab_no_aparecen(cliente_autenticado, reserva_con_prestamo, otro_laboratorio):
-    response = cliente_autenticado.get(_url(otro_laboratorio), {'tab': 'prestamos'})
-
-    assert list(response.context['prestamos_page']) == []
-    assert 'No hay préstamos con ítems de este laboratorio.' in response.content.decode()
-
-
-def test_prestamos_filtro_por_estado(cliente_autenticado, reserva_con_prestamo, laboratorio):
-    activo = cliente_autenticado.get(_url(laboratorio), {'tab': 'prestamos', 'p_estado': 'Activo'})
-    devuelto = cliente_autenticado.get(_url(laboratorio), {'tab': 'prestamos', 'p_estado': 'Devuelto'})
-
-    assert len(activo.context['prestamos_page']) == 1
-    assert list(devuelto.context['prestamos_page']) == []
-
-
-def test_prestamos_paginacion(cliente_autenticado, usuario_admin, laboratorio, insumo, catalogos):
-    for n in range(11):
-        reserva = Reserva.objects.create(
-            usuario=usuario_admin, fecha_reserva=timezone.now() + timedelta(days=n),
-            estado=EstadoReserva.objects.get(nombre='Aprobada'),
-        )
-        prestamo = Prestamo.objects.create(
-            reserva=reserva, responsable=usuario_admin,
-            estado=EstadoPrestamo.objects.get(nombre='Devuelto'),
-        )
-        PrestamoItem.objects.create(prestamo=prestamo, item_inventario=_item(f'IT-{n}', insumo, laboratorio))
-
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'prestamos', 'p_page': 2})
-
-    assert response.context['prestamos_page'].paginator.count == 11
-    assert len(response.context['prestamos_page']) == 1
-
-
-# ── Filtros independientes entre pestañas ─────────────────────────────────────
-
-def test_filtros_de_una_pestana_no_afectan_a_otra(cliente_autenticado, catalogos, laboratorio, inventario):
-    _reserva_publica(laboratorio, 'Ana Ruiz', '111')
-
-    response = cliente_autenticado.get(_url(laboratorio), {'tab': 'reservas', 'r_buscar': 'zzz', 'busqueda': 'osci'})
-
-    assert list(response.context['reservas_page']) == []
-    assert [i.nombre for i in response.context['insumos_page']] == ['Osciloscopio']
-    assert 'r_buscar=zzz' in response.context['qs_inventario']

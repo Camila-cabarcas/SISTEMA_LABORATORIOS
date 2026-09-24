@@ -1,0 +1,53 @@
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">👥 Personal asignado</h5>
+        {% if is_admin %}
+        <a href="{% url 'asignar_laboratorista' laboratorio.id %}" class="btn btn-primary btn-sm">
+            + Asignar laboratorista
+        </a>
+        {% endif %}
+    </div>
+
+    {% if personal %}
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Cédula</th>
+                    <th>Correo</th>
+                    <th>Programa</th>
+                    <th>Rol</th>
+                    <th>Responsabilidades</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asignacion in personal %}
+                <tr>
+                    <td>{{ asignacion.laboratorista }}</td>
+                    <td>{{ asignacion.laboratorista.cedula }}</td>
+                    <td>{{ asignacion.laboratorista.correo|default:"—" }}</td>
+                    <td>{{ asignacion.laboratorista.programa|default:"—" }}</td>
+                    <td>
+                        {% if asignacion.tipo == 'encargado' %}
+                            <span class="badge bg-warning text-dark">Encargado</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Laboratorista</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% for r in asignacion.laboratorista.responsabilidades %}
+                            <span class="badge bg-light text-dark border me-1">{{ r }}</span>
+                        {% empty %}
+                            <span class="text-muted">—</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No hay laboratoristas asignados a este laboratorio.</p>
+    {% endif %}
+</div>

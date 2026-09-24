@@ -200,7 +200,7 @@ def test_detalle_laboratorio_incluye_cursos_en_contexto(cliente_autenticado, doc
     _curso(docente, 'MECAN-101', mecanica, 'Mecánica I')
     _curso(docente, 'ONDAS-101', labs_reales['ondas'], 'Ondas y Óptica')
 
-    response = cliente_autenticado.get(f'/laboratorio/{mecanica.id}/')
+    response = cliente_autenticado.get(f'/laboratorio/{mecanica.id}/?seccion=cursos')
 
     assert response.status_code == 200
     assert [c.codigo for c in response.context['cursos']] == ['MECAN-101', 'MECAN-102']
@@ -209,7 +209,7 @@ def test_detalle_laboratorio_incluye_cursos_en_contexto(cliente_autenticado, doc
 def test_detalle_laboratorio_renderiza_tabla_de_cursos(cliente_autenticado, docente, laboratorio):
     _curso(docente, 'QUIM-101', laboratorio, 'Química General')
 
-    contenido = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/').content.decode()
+    contenido = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/?seccion=cursos').content.decode()
 
     assert 'Cursos asignados' in contenido
     assert '<td>QUIM-101</td>' in contenido
@@ -220,7 +220,7 @@ def test_detalle_laboratorio_renderiza_tabla_de_cursos(cliente_autenticado, doce
 
 
 def test_detalle_laboratorio_sin_cursos_muestra_mensaje(cliente_autenticado, laboratorio):
-    response = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/')
+    response = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/?seccion=cursos')
 
     assert list(response.context['cursos']) == []
     assert 'No hay cursos asignados a este laboratorio.' in response.content.decode()
