@@ -26,6 +26,13 @@ class Curso(models.Model):
         limit_choices_to={'rol__nombre': 'Docente'}
     )
     cantidad_estudiantes = models.PositiveIntegerField()
+    laboratorio = models.ForeignKey(
+        Laboratorio,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='cursos',
+    )
 
     def clean(self):
         errors = {}
@@ -37,6 +44,8 @@ class Curso(models.Model):
             raise ValidationError(errors)
 
     def __str__(self):
+        if self.laboratorio_id:
+            return f"{self.codigo} - {self.nombre} ({self.laboratorio.nombre})"
         return f"{self.codigo} - {self.nombre}"
 
 

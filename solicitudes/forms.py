@@ -343,7 +343,7 @@ class CursoForm(forms.ModelForm):
 
     class Meta:
         model = Curso
-        fields = ['nombre', 'codigo', 'profesor', 'cantidad_estudiantes']
+        fields = ['nombre', 'codigo', 'laboratorio', 'profesor', 'cantidad_estudiantes']
         widgets = {
             'nombre': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Nombre del curso'}
@@ -351,6 +351,7 @@ class CursoForm(forms.ModelForm):
             'codigo': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Código único del curso'}
             ),
+            'laboratorio': forms.Select(attrs={'class': 'form-select'}),
             'profesor': forms.Select(attrs={'class': 'form-select'}),
             'cantidad_estudiantes': forms.NumberInput(
                 attrs={'class': 'form-control', 'min': '1'}
@@ -360,6 +361,8 @@ class CursoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from users.models import Usuario
+        self.fields['laboratorio'].queryset = Laboratorio.objects.filter(activo=True).order_by('nombre')
+        self.fields['laboratorio'].empty_label = 'Sin laboratorio asignado'
         self.fields['profesor'].queryset = Usuario.objects.filter(
             rol__nombre='Docente', is_active=True
         ).order_by('last_name', 'first_name')

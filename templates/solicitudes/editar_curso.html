@@ -34,6 +34,14 @@
         </div>
 
         <div class="mb-3">
+            <label class="form-label">Laboratorio</label>
+            {{ form.laboratorio }}
+            {% if form.laboratorio.errors %}
+                <div class="invalid-feedback d-block">{{ form.laboratorio.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
             <label class="form-label">Profesor *</label>
             {{ form.profesor }}
             {% if form.profesor.errors %}

@@ -14,6 +14,7 @@ from django.db.models import Q
 from users.models import Usuario, ProgramaAcademico
 from users.decorators import rol_requerido, requiere_contrasena_admin
 from inventario.models import Insumo
+from laboratorio.models import Laboratorio
 from .models import SolicitudReserva, Curso, SolicitudRegistroProfesor
 from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm, CursoForm
 from .services.solicitud_reserva_service import CrearSolicitudReservaService, ValidarSolicitudReservaService
@@ -344,7 +345,8 @@ def buscar_insumos(request):
 @rol_requerido('Administrador', 'Laboratorio')
 def lista_cursos(request):
     q = request.GET.get('q', '').strip()
-    cursos = Curso.objects.select_related('profesor').order_by('codigo')
+    laboratorio_id = request.GET.get('laboratorio', '').strip()
+    cursos = Curso.objects.select_related('profesor', 'laboratorio').order_by('codigo')
     if q:
         cursos = cursos.filter(
             Q(nombre__icontains=q)              |
@@ -352,9 +354,17 @@ def lista_cursos(request):
             Q(profesor__first_name__icontains=q) |
             Q(profesor__last_name__icontains=q)
         )
+    if laboratorio_id == 'ninguno':
+        cursos = cursos.filter(laboratorio__isnull=True)
+    elif laboratorio_id.isdigit():
+        cursos = cursos.filter(laboratorio_id=int(laboratorio_id))
+    else:
+        laboratorio_id = ''
     return render(request, 'solicitudes/lista_cursos.html', {
         'cursos': cursos,
         'q': q,
+        'laboratorios': Laboratorio.objects.order_by('nombre'),
+        'laboratorio_id': laboratorio_id,
     })
 
 
