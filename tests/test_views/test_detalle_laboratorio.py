@@ -420,13 +420,16 @@ def test_seccion_reservas_lista_las_del_laboratorio(cliente_autenticado, catalog
     assert 'id="info-general"' in contenido
 
 
-def test_seccion_reservas_incluye_reservas_de_insumos_del_lab(cliente_autenticado, reserva_con_prestamo, laboratorio):
+def test_seccion_reservas_excluye_reservas_de_otro_lab_con_insumos_de_este(cliente_autenticado, reserva_con_prestamo, laboratorio):
+    # reserva_con_prestamo.reserva reserva un insumo con ítems en `laboratorio`,
+    # pero no tiene solicitud para él: no es una reserva de este laboratorio.
     from reservas.models import ReservaInsumo
     ReservaInsumo.objects.create(reserva=reserva_con_prestamo.reserva, insumo=reserva_con_prestamo.item.insumo, cantidad=1)
 
     response = _get(cliente_autenticado, laboratorio, seccion='reservas')
 
-    assert [r.id for r in response.context['page_obj']] == [reserva_con_prestamo.reserva.id]
+    assert list(response.context['page_obj']) == []
+    assert response.context['total_reservas'] == 0
 
 
 def test_seccion_reservas_filtros(cliente_autenticado, catalogos, laboratorio):
@@ -461,9 +464,8 @@ def test_seccion_reservas_vacia(cliente_autenticado, catalogos, laboratorio):
 
 # ── Sección Préstamos ────────────────────────────────────────────────────────
 
-def test_seccion_prestamos_por_reserva_y_por_items(cliente_autenticado, reserva_con_prestamo, usuario_admin, laboratorio, otro_laboratorio):
-    # reserva_con_prestamo: préstamo con un ítem de `laboratorio` (sin solicitud)
-    por_reserva = Prestamo.objects.create(
+def test_seccion_prestamos_lista_solo_los_del_laboratorio(cliente_autenticado, usuario_admin, catalogos, laboratorio, otro_laboratorio):
+    propio = Prestamo.objects.create(
         reserva=_reserva_en(laboratorio, 'Ana'), responsable=usuario_admin,
         estado=EstadoPrestamo.objects.get(nombre='Devuelto'))
     Prestamo.objects.create(
@@ -473,11 +475,24 @@ def test_seccion_prestamos_por_reserva_y_por_items(cliente_autenticado, reserva_
     response = _get(cliente_autenticado, laboratorio, seccion='prestamos')
 
     assert response.status_code == 200
-    assert {p.id for p in response.context['page_obj']} == {reserva_con_prestamo.prestamo.id, por_reserva.id}
-    assert f'href="/prestamos/{por_reserva.id}/"' in response.content.decode()
+    assert [p.id for p in response.context['page_obj']] == [propio.id]
+    assert f'href="/prestamos/{propio.id}/"' in response.content.decode()
 
 
-def test_seccion_prestamos_filtro_por_estado(cliente_autenticado, reserva_con_prestamo, laboratorio):
+def test_seccion_prestamos_excluye_prestamo_ajeno_con_items_de_este_lab(cliente_autenticado, reserva_con_prestamo, laboratorio):
+    # reserva_con_prestamo.prestamo lleva un ítem de `laboratorio`, pero su
+    # reserva no tiene solicitud para él: no es un préstamo de este laboratorio.
+    response = _get(cliente_autenticado, laboratorio, seccion='prestamos')
+
+    assert list(response.context['page_obj']) == []
+    assert response.context['total_prestamos'] == 0
+
+
+def test_seccion_prestamos_filtro_por_estado(cliente_autenticado, usuario_admin, catalogos, laboratorio):
+    Prestamo.objects.create(
+        reserva=_reserva_en(laboratorio, 'Ana'), responsable=usuario_admin,
+        estado=EstadoPrestamo.objects.get(nombre='Activo'))
+
     activo = _get(cliente_autenticado, laboratorio, seccion='prestamos', estado='Activo')
     devuelto = _get(cliente_autenticado, laboratorio, seccion='prestamos', estado='Devuelto')
 
@@ -490,3 +505,62 @@ def test_seccion_prestamos_vacia(cliente_autenticado, catalogos, laboratorio):
     contenido = _get(cliente_autenticado, laboratorio, seccion='prestamos').content.decode()
 
     assert 'No hay préstamos para este laboratorio.' in contenido
+
+
+# ── Aislamiento entre laboratorios ───────────────────────────────────────────
+
+@pytest.fixture
+def dos_labs(usuario_admin, catalogos, laboratorio, otro_laboratorio):
+    """Lab A (`laboratorio`) y Lab B (`otro_laboratorio`), cada uno con 2
+    reservas y 1 préstamo propios, más dos registros de B que tocan
+    inventario de A (antes se colaban en A)."""
+    from reservas.models import ReservaInsumo
+    from prestamos.models import PrestamoItem
+
+    activo = EstadoPrestamo.objects.get(nombre='Activo')
+    datos = {}
+    for clave, lab in [('a', laboratorio), ('b', otro_laboratorio)]:
+        r1 = _reserva_en(lab, f'Estudiante {clave}1')
+        r2 = _reserva_en(lab, f'Estudiante {clave}2')
+        p = Prestamo.objects.create(reserva=r1, responsable=usuario_admin, estado=activo)
+        datos[clave] = {'reservas': {r1.id, r2.id}, 'prestamos': {p.id}}
+
+    # Reserva y préstamo de B que usan un insumo/ítem de A.
+    insumo_a = _insumo('Multímetro', laboratorio)
+    item_a = _item('MUL-A', insumo_a, laboratorio)
+    reserva_b = _reserva_en(otro_laboratorio, 'Cruzado B')
+    ReservaInsumo.objects.create(reserva=reserva_b, insumo=insumo_a, cantidad=1)
+    prestamo_b = Prestamo.objects.create(reserva=reserva_b, responsable=usuario_admin, estado=activo)
+    PrestamoItem.objects.create(prestamo=prestamo_b, item_inventario=item_a)
+    datos['b']['reservas'].add(reserva_b.id)
+    datos['b']['prestamos'].add(prestamo_b.id)
+    return datos
+
+
+@pytest.mark.parametrize('clave, fixture_lab', [('a', 'laboratorio'), ('b', 'otro_laboratorio')])
+def test_reservas_solo_del_laboratorio_actual(cliente_autenticado, dos_labs, request, clave, fixture_lab):
+    lab = request.getfixturevalue(fixture_lab)
+
+    response = _get(cliente_autenticado, lab, seccion='reservas')
+
+    assert {r.id for r in response.context['page_obj']} == dos_labs[clave]['reservas']
+    assert response.context['total_reservas'] == len(dos_labs[clave]['reservas'])
+
+
+@pytest.mark.parametrize('clave, fixture_lab', [('a', 'laboratorio'), ('b', 'otro_laboratorio')])
+def test_prestamos_solo_del_laboratorio_actual(cliente_autenticado, dos_labs, request, clave, fixture_lab):
+    lab = request.getfixturevalue(fixture_lab)
+
+    response = _get(cliente_autenticado, lab, seccion='prestamos')
+
+    assert {p.id for p in response.context['page_obj']} == dos_labs[clave]['prestamos']
+    assert response.context['total_prestamos'] == len(dos_labs[clave]['prestamos'])
+
+
+def test_contadores_coinciden_con_las_listas_filtradas(cliente_autenticado, dos_labs, laboratorio):
+    ctx = _get(cliente_autenticado, laboratorio).context
+    lista_reservas = cliente_autenticado.get('/reservas/', {'lab': laboratorio.id}).context['reservas']
+    lista_prestamos = cliente_autenticado.get('/prestamos/', {'lab': laboratorio.id}).context['prestamos']
+
+    assert ctx['total_reservas'] == lista_reservas.paginator.count == 2
+    assert ctx['total_prestamos'] == lista_prestamos.paginator.count == 1

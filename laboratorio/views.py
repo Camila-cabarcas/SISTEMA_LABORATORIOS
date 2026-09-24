@@ -2,11 +2,13 @@
 views.py — laboratorio
 Vistas para gestionar laboratorios, eventos, mapa visual de módulos y APIs de estado en tiempo real.
 """
+from typing import Any
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from users.decorators import rol_requerido
 from users.models import Usuario
 from .models import Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab
@@ -133,14 +135,12 @@ def _insumos_del_laboratorio(laboratorio, busqueda='', estado=''):
 
 
 def _reservas_del_laboratorio(laboratorio, estado='', buscar=''):
-    """Reservas del laboratorio: las hechas para él (SolicitudReserva, mismo
-    criterio que lista_reservas?lab=) y las que reservan insumos con ítems
-    en él (criterio de reservas_laboratorio)."""
+    """Solo las reservas hechas para este laboratorio (su SolicitudReserva
+    apunta a él), mismo criterio que lista_reservas?lab=. No se incluyen las
+    que solo reservan insumos con ítems aquí: eso metía reservas de otros
+    laboratorios. Subconsulta en vez de JOIN para no duplicar filas."""
     reservas = Reserva.objects.filter(
-        Q(id__in=SolicitudReserva.objects.filter(
-            laboratorio=laboratorio).values('reserva_id'))
-        | Q(id__in=ReservaInsumo.objects.filter(
-            insumo__items__laboratorio=laboratorio).values('reserva_id'))
+        id__in=SolicitudReserva.objects.filter(laboratorio=laboratorio).values('reserva_id')
     )
     if estado:
         reservas = reservas.filter(estado__nombre=estado)
@@ -163,13 +163,11 @@ def _reservas_del_laboratorio(laboratorio, estado='', buscar=''):
 
 
 def _prestamos_del_laboratorio(laboratorio, estado=''):
-    """Préstamos del laboratorio: los de reservas hechas para él (mismo
-    criterio que lista_prestamos?lab=) y los que incluyen ítems suyos."""
+    """Solo los préstamos cuya reserva se hizo para este laboratorio, mismo
+    criterio que lista_prestamos?lab=. No se incluyen por sus ítems: eso
+    metía préstamos de reservas de otros laboratorios."""
     prestamos = Prestamo.objects.filter(
-        Q(reserva_id__in=SolicitudReserva.objects.filter(
-            laboratorio=laboratorio).values('reserva_id'))
-        | Q(id__in=PrestamoItem.objects.filter(
-            item_inventario__laboratorio=laboratorio).values('prestamo_id'))
+        reserva_id__in=SolicitudReserva.objects.filter(laboratorio=laboratorio).values('reserva_id')
     )
     if estado:
         prestamos = prestamos.filter(estado__nombre=estado)
@@ -216,6 +214,11 @@ def detalle_laboratorio(request, id):
     # sidebar los descartan al cambiar de sección.
     busqueda = request.GET.get('busqueda', '').strip()
     filtro_estado = request.GET.get('estado', '').strip()
+    # Cada rama asigna un QuerySet de otro modelo (Insumo / Reserva /
+    # Prestamo); sin anotación, Pylance infiere la unión de los tres y
+    # Paginator[_T] no puede resolver _T. La plantilla de cada sección sabe
+    # qué modelo recibe, así que basta QuerySet[Any].
+    filas: QuerySet[Any] | None
     if seccion_activa == 'inventario':
         if filtro_estado not in dict(ESTADOS_ITEM_FILTRO):
             filtro_estado = ''
