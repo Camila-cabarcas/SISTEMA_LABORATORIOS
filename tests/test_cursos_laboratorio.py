@@ -1,7 +1,7 @@
 """
 Tests de la relación Curso ↔ Laboratorio: el campo Curso.laboratorio, la
-columna/filtro de laboratorio en /solicitudes/cursos/ y el management
-command asignar_cursos_labs.
+columna/filtro de laboratorio en /solicitudes/cursos/, el management
+command asignar_cursos_labs y la sección de cursos en el detalle del laboratorio.
 """
 from io import StringIO
 
@@ -190,3 +190,37 @@ def test_command_sin_docentes_falla(labs_reales, catalogos):
     with pytest.raises(CommandError):
         call_command('asignar_cursos_labs', stdout=StringIO())
     assert Curso.objects.count() == 0
+
+
+# ── Detalle de laboratorio ──────────────────────────────────────────────────
+
+def test_detalle_laboratorio_incluye_cursos_en_contexto(cliente_autenticado, docente, labs_reales):
+    mecanica = labs_reales['mecanica']
+    _curso(docente, 'MECAN-102', mecanica, 'Mecánica II')
+    _curso(docente, 'MECAN-101', mecanica, 'Mecánica I')
+    _curso(docente, 'ONDAS-101', labs_reales['ondas'], 'Ondas y Óptica')
+
+    response = cliente_autenticado.get(f'/laboratorio/{mecanica.id}/')
+
+    assert response.status_code == 200
+    assert [c.codigo for c in response.context['cursos']] == ['MECAN-101', 'MECAN-102']
+
+
+def test_detalle_laboratorio_renderiza_tabla_de_cursos(cliente_autenticado, docente, laboratorio):
+    _curso(docente, 'QUIM-101', laboratorio, 'Química General')
+
+    contenido = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/').content.decode()
+
+    assert 'Cursos asignados' in contenido
+    assert '<td>QUIM-101</td>' in contenido
+    assert '<td>Química General</td>' in contenido
+    assert '<td>Ana Gómez</td>' in contenido
+    assert '<td>30</td>' in contenido
+    assert 'No hay cursos asignados' not in contenido
+
+
+def test_detalle_laboratorio_sin_cursos_muestra_mensaje(cliente_autenticado, laboratorio):
+    response = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/')
+
+    assert list(response.context['cursos']) == []
+    assert 'No hay cursos asignados a este laboratorio.' in response.content.decode()

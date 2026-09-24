@@ -1,0 +1,73 @@
+<form method="get" class="row g-2 align-items-end mb-3">
+    <input type="hidden" name="tab" value="inventario">
+    <div class="col-md-6">
+        <input type="text" name="busqueda" value="{{ busqueda }}" class="form-control form-control-sm"
+               placeholder="Buscar insumo por nombre, marca o descripción...">
+    </div>
+    <div class="col-md-4">
+        <select name="estado" class="form-select form-select-sm">
+            <option value="">Todos los estados</option>
+            {% for valor, etiqueta in estados_item %}
+            <option value="{{ valor }}" {% if filtro_estado == valor %}selected{% endif %}>
+                Con ítems {{ etiqueta|lower }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
+        {% if busqueda or filtro_estado %}
+        <a href="?tab=inventario" class="btn btn-secondary btn-sm">Limpiar</a>
+        {% endif %}
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th class="text-center">Total</th>
+                <th class="text-center">Disponible</th>
+                <th class="text-center">Prestado</th>
+                <th class="text-center">Dañado</th>
+                <th class="text-center">Extraviado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for insumo in insumos_page %}
+            <tr class="fila-insumo" style="cursor: pointer;"
+                data-url="{% url 'modal_items_insumo' laboratorio.id insumo.id %}"
+                data-nombre="{{ insumo.nombre }}">
+                <td>#{{ insumo.id }}</td>
+                <td>
+                    {{ insumo.nombre }}
+                    {% if insumo.marca %}<small class="text-muted d-block">{{ insumo.marca }}</small>{% endif %}
+                </td>
+                <td class="text-center fw-semibold">{{ insumo.stock_total }}</td>
+                <td class="text-center">{{ insumo.stock_disponible }}</td>
+                <td class="text-center">{{ insumo.stock_prestado }}</td>
+                <td class="text-center">{{ insumo.stock_danado }}</td>
+                <td class="text-center">{{ insumo.stock_perdido }}</td>
+                <td>
+                    <button type="button" class="btn btn-outline-info btn-sm">Ver ítems</button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-3">
+                    {% if busqueda or filtro_estado %}
+                        No hay insumos que coincidan con los filtros.
+                    {% else %}
+                        No hay insumos en este laboratorio.
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'laboratorio/partials/paginacion.html' with page=insumos_page param='page' qs=qs_inventario %}

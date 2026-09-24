@@ -1,0 +1,32 @@
+{% comment %}
+Paginación de una pestaña del detalle de laboratorio.
+Parámetros: page (Page), param (nombre GET de la página), qs (querystring base sin `param`).
+{% endcomment %}
+{% if page.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-2">
+    <small class="text-muted">
+        Página {{ page.number }} de {{ page.paginator.num_pages }} · {{ page.paginator.count }} resultados
+    </small>
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page.has_previous %}
+            <li class="page-item"><a class="page-link" href="?{{ qs }}&{{ param }}=1">«</a></li>
+            <li class="page-item"><a class="page-link" href="?{{ qs }}&{{ param }}={{ page.previous_page_number }}">‹</a></li>
+            {% endif %}
+
+            {% for num in page.paginator.page_range %}
+                {% if page.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page.number|add:'-3' and num < page.number|add:'3' %}
+                <li class="page-item"><a class="page-link" href="?{{ qs }}&{{ param }}={{ num }}">{{ num }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page.has_next %}
+            <li class="page-item"><a class="page-link" href="?{{ qs }}&{{ param }}={{ page.next_page_number }}">›</a></li>
+            <li class="page-item"><a class="page-link" href="?{{ qs }}&{{ param }}={{ page.paginator.num_pages }}">»</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}

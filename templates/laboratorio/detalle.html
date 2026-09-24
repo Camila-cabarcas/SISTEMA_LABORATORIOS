@@ -1,4 +1,5 @@
 {% extends 'base_general.html' %}
+{% load static %}
 
 {% block contenido %}
 
@@ -39,12 +40,6 @@
                 {% endif %}
             </p>
             <div class="d-flex gap-2">
-                <a href="/laboratorio/{{ laboratorio.id }}/reservas/" class="btn btn-outline-info btn-sm">
-                    Ver Reservas
-                </a>
-                <a href="/laboratorio/{{ laboratorio.id }}/prestamos/" class="btn btn-outline-info btn-sm">
-                    Ver Préstamos
-                </a>
                 <a href="/laboratorio/{{ laboratorio.id }}/mapa/" class="btn btn-outline-primary btn-sm">
                     🗺️ Mapa
                 </a>
@@ -125,32 +120,79 @@
     {% endif %}
 </div>
 
-<!-- Ítems en este laboratorio -->
-<div class="card p-4">
-    <h5 class="mb-3">Ítems en este laboratorio</h5>
+<!-- Cursos asignados -->
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">📚 Cursos asignados</h5>
 
-    {% if items %}
+    {% if cursos %}
     <table class="table table-striped">
         <thead>
             <tr>
                 <th>Código</th>
-                <th>Insumo</th>
-                <th>Estado</th>
+                <th>Nombre</th>
+                <th>Profesor</th>
+                <th>Estudiantes</th>
             </tr>
         </thead>
         <tbody>
-            {% for item in items %}
+            {% for curso in cursos %}
             <tr>
-                <td>{{ item.codigo }}</td>
-                <td>{{ item.insumo.nombre }}</td>
-                <td>{{ item.estado.nombre }}</td>
+                <td>{{ curso.codigo }}</td>
+                <td>{{ curso.nombre }}</td>
+                <td>{{ curso.profesor.get_full_name|default:curso.profesor.username }}</td>
+                <td>{{ curso.cantidad_estudiantes }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p class="text-muted">No hay ítems asignados a este laboratorio.</p>
+    <p class="text-muted">No hay cursos asignados a este laboratorio.</p>
     {% endif %}
 </div>
 
+<!-- Pestañas: Inventario / Reservas / Préstamos -->
+<div class="card p-4">
+    <ul class="nav nav-tabs mb-3" id="tabs-laboratorio" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if tab == 'inventario' %}active{% endif %}" data-bs-toggle="tab" data-tab="inventario"
+               href="#tab-inventario" role="tab" aria-controls="tab-inventario"
+               aria-selected="{% if tab == 'inventario' %}true{% else %}false{% endif %}">
+                📦 Inventario <span class="badge bg-secondary">{{ insumos_page.paginator.count }}</span>
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if tab == 'reservas' %}active{% endif %}" data-bs-toggle="tab" data-tab="reservas"
+               href="#tab-reservas" role="tab" aria-controls="tab-reservas"
+               aria-selected="{% if tab == 'reservas' %}true{% else %}false{% endif %}">
+                📋 Reservas <span class="badge bg-secondary">{{ reservas_page.paginator.count }}</span>
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if tab == 'prestamos' %}active{% endif %}" data-bs-toggle="tab" data-tab="prestamos"
+               href="#tab-prestamos" role="tab" aria-controls="tab-prestamos"
+               aria-selected="{% if tab == 'prestamos' %}true{% else %}false{% endif %}">
+                🤝 Préstamos <span class="badge bg-secondary">{{ prestamos_page.paginator.count }}</span>
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div id="tab-inventario" class="tab-pane fade {% if tab == 'inventario' %}show active{% endif %}" role="tabpanel">
+            {% include 'laboratorio/partials/tab_inventario.html' %}
+        </div>
+        <div id="tab-reservas" class="tab-pane fade {% if tab == 'reservas' %}show active{% endif %}" role="tabpanel">
+            {% include 'laboratorio/partials/tab_reservas.html' %}
+        </div>
+        <div id="tab-prestamos" class="tab-pane fade {% if tab == 'prestamos' %}show active{% endif %}" role="tabpanel">
+            {% include 'laboratorio/partials/tab_prestamos.html' %}
+        </div>
+    </div>
+</div>
+
+{% include 'laboratorio/partials/modal_items.html' %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/laboratorio_detalle.js' %}"></script>
 {% endblock %}
