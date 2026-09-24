@@ -1,0 +1,78 @@
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">📋 Reservas</h5>
+        <a href="{% url 'lista_reservas' %}?lab={{ laboratorio.id }}" class="btn btn-outline-secondary btn-sm">
+            Abrir en lista de reservas
+        </a>
+    </div>
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <input type="hidden" name="seccion" value="reservas">
+        <div class="col-md-6">
+            <input type="text" name="busqueda" value="{{ busqueda }}" class="form-control form-control-sm"
+                   placeholder="Buscar por estudiante, cédula o código...">
+        </div>
+        <div class="col-md-4">
+            <select name="estado" class="form-select form-select-sm">
+                <option value="">Todos los estados</option>
+                {% for estado in estados %}
+                <option value="{{ estado }}" {% if filtro_estado == estado %}selected{% endif %}>{{ estado }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
+            {% if busqueda or filtro_estado %}
+            <a href="?seccion=reservas" class="btn btn-secondary btn-sm">Limpiar</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Solicitante</th>
+                    <th>Fecha reserva</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reserva in page_obj %}
+                <tr>
+                    <td>{{ reserva.codigo|default:reserva.id }}</td>
+                    <td>
+                        {% if reserva.usuario %}
+                            {{ reserva.usuario.get_full_name|default:reserva.usuario.username }}
+                        {% elif reserva.solicitante_nombre %}
+                            {{ reserva.solicitante_nombre }}
+                            {% if reserva.solicitante_cedula %}<small class="text-muted">({{ reserva.solicitante_cedula }})</small>{% endif %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ reserva.fecha_reserva|date:"d/m/Y H:i" }}</td>
+                    <td><span class="badge bg-info">{{ reserva.estado.nombre|default:"—" }}</span></td>
+                    <td>
+                        <a href="{% url 'detalle_reserva' reserva.id %}" class="btn btn-info btn-sm">Ver</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-3">
+                        {% if busqueda or filtro_estado %}
+                            No hay reservas que coincidan con los filtros.
+                        {% else %}
+                            No hay reservas para este laboratorio.
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include 'laboratorio/partials/paginacion.html' with page=page_obj param='page' qs=qs_seccion %}
+</div>

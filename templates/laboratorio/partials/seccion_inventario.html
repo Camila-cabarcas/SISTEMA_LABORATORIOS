@@ -40,7 +40,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for insumo in insumos_page %}
+            {% for insumo in page_obj %}
             <tr class="fila-insumo" style="cursor: pointer;"
                 data-url="{% url 'modal_items_insumo' laboratorio.id insumo.id %}"
                 data-nombre="{{ insumo.nombre }}">
@@ -73,5 +73,5 @@
     </table>
 </div>
 
-{% include 'laboratorio/partials/paginacion.html' with page=insumos_page param='page' qs=qs_inventario %}
+{% include 'laboratorio/partials/paginacion.html' with page=page_obj param='page' qs=qs_seccion %}
 </div>

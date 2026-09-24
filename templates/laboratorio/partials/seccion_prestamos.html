@@ -1,0 +1,81 @@
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">🤝 Préstamos</h5>
+        <a href="{% url 'lista_prestamos' %}?lab={{ laboratorio.id }}" class="btn btn-outline-secondary btn-sm">
+            Abrir en lista de préstamos
+        </a>
+    </div>
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <input type="hidden" name="seccion" value="prestamos">
+        <div class="col-md-4">
+            <select name="estado" class="form-select form-select-sm">
+                <option value="">Todos los estados</option>
+                {% for estado in estados %}
+                <option value="{{ estado }}" {% if filtro_estado == estado %}selected{% endif %}>{{ estado }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
+            {% if filtro_estado %}
+            <a href="?seccion=prestamos" class="btn btn-secondary btn-sm">Limpiar</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Responsable</th>
+                    <th>Fecha entrega</th>
+                    <th>Estado</th>
+                    <th>Fecha devolución</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prestamo in page_obj %}
+                <tr>
+                    <td>{{ prestamo.codigo|default:prestamo.id }}</td>
+                    <td>{{ prestamo.responsable.get_full_name|default:prestamo.responsable.username }}</td>
+                    <td>{{ prestamo.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        {% if prestamo.estado.nombre == 'Retrasado' %}
+                            <span class="badge bg-danger">{{ prestamo.estado.nombre }}</span>
+                        {% elif prestamo.estado.nombre == 'Devuelto' %}
+                            <span class="badge bg-success">{{ prestamo.estado.nombre }}</span>
+                        {% else %}
+                            <span class="badge bg-info">{{ prestamo.estado.nombre }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if prestamo.fecha_devolucion %}
+                            {{ prestamo.fecha_devolucion|date:"d/m/Y H:i" }}
+                        {% else %}
+                            <span class="text-muted">Pendiente</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'detalle_prestamo' prestamo.id %}" class="btn btn-info btn-sm">Ver</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-3">
+                        {% if filtro_estado %}
+                            No hay préstamos con estado "{{ filtro_estado }}".
+                        {% else %}
+                            No hay préstamos para este laboratorio.
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include 'laboratorio/partials/paginacion.html' with page=page_obj param='page' qs=qs_seccion %}
+</div>

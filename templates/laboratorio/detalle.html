@@ -67,17 +67,15 @@
                    {% if seccion_activa == 'inventario' %}aria-current="page"{% endif %}>
                     📦 Inventario <span class="badge bg-secondary rounded-pill">{{ total_insumos }}</span>
                 </a>
-            </div>
-
-            <h6 class="text-uppercase text-muted small mb-2">Otras vistas</h6>
-            <div class="list-group" id="vistas-externas-lab">
-                <a href="{% url 'lista_reservas' %}?lab={{ laboratorio.id }}"
-                   class="list-group-item list-group-item-action" target="_blank" rel="noopener">
-                    📋 Ver reservas →
+                <a href="?seccion=reservas"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if seccion_activa == 'reservas' %}active{% endif %}"
+                   {% if seccion_activa == 'reservas' %}aria-current="page"{% endif %}>
+                    📋 Reservas <span class="badge bg-secondary rounded-pill">{{ total_reservas }}</span>
                 </a>
-                <a href="{% url 'lista_prestamos' %}?lab={{ laboratorio.id }}"
-                   class="list-group-item list-group-item-action" target="_blank" rel="noopener">
-                    🤝 Ver préstamos →
+                <a href="?seccion=prestamos"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if seccion_activa == 'prestamos' %}active{% endif %}"
+                   {% if seccion_activa == 'prestamos' %}aria-current="page"{% endif %}>
+                    🤝 Préstamos <span class="badge bg-secondary rounded-pill">{{ total_prestamos }}</span>
                 </a>
             </div>
         </nav>
@@ -110,6 +108,10 @@
         {% elif seccion_activa == 'inventario' %}
             {% include 'laboratorio/partials/seccion_inventario.html' %}
             {% include 'laboratorio/partials/modal_items.html' %}
+        {% elif seccion_activa == 'reservas' %}
+            {% include 'laboratorio/partials/seccion_reservas.html' %}
+        {% elif seccion_activa == 'prestamos' %}
+            {% include 'laboratorio/partials/seccion_prestamos.html' %}
         {% else %}
             {% include 'laboratorio/partials/seccion_personal.html' %}
         {% endif %}

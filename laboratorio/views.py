@@ -13,8 +13,9 @@ from .models import Laboratorio, EventoLaboratorio, Laboratorista, Laboratorista
 from .forms import LaboratorioForm
 from .services.modulo_service import ModuloEstadoService
 from inventario.models import Insumo, ItemInventario, MovimientoInventario
-from reservas.models import ReservaInsumo
-from prestamos.models import PrestamoItem
+from reservas.models import EstadoReserva, Reserva, ReservaInsumo
+from prestamos.models import EstadoPrestamo, Prestamo, PrestamoItem
+from solicitudes.models import SolicitudReserva
 
 
 def _check_lab_access(request, laboratorio):
@@ -92,10 +93,10 @@ def crear_laboratorio(request):
     return render(request, 'laboratorio/crear.html', {'form': form})
 
 
-# ── Detalle de laboratorio (sidebar: Personal / Cursos / Inventario) ─────────
+# ── Detalle de laboratorio (sidebar: Personal / Cursos / Inventario / Reservas / Préstamos)
 
 POR_PAGINA_DETALLE = 10
-SECCIONES_DETALLE = ('personal', 'cursos', 'inventario')
+SECCIONES_DETALLE = ('personal', 'cursos', 'inventario', 'reservas', 'prestamos')
 
 # (valor del filtro = EstadoItem.nombre, etiqueta visible)
 ESTADOS_ITEM_FILTRO = [
@@ -131,6 +132,50 @@ def _insumos_del_laboratorio(laboratorio, busqueda='', estado=''):
     ).order_by('nombre', 'id')
 
 
+def _reservas_del_laboratorio(laboratorio, estado='', buscar=''):
+    """Reservas del laboratorio: las hechas para él (SolicitudReserva, mismo
+    criterio que lista_reservas?lab=) y las que reservan insumos con ítems
+    en él (criterio de reservas_laboratorio)."""
+    reservas = Reserva.objects.filter(
+        Q(id__in=SolicitudReserva.objects.filter(
+            laboratorio=laboratorio).values('reserva_id'))
+        | Q(id__in=ReservaInsumo.objects.filter(
+            insumo__items__laboratorio=laboratorio).values('reserva_id'))
+    )
+    if estado:
+        reservas = reservas.filter(estado__nombre=estado)
+    if buscar:
+        reservas = reservas.filter(
+            Q(codigo__icontains=buscar)
+            | Q(usuario__username__icontains=buscar)
+            | Q(usuario__first_name__icontains=buscar)
+            | Q(usuario__last_name__icontains=buscar)
+            | Q(id__in=SolicitudReserva.objects.filter(
+                Q(nombre__icontains=buscar) | Q(cedula__icontains=buscar)).values('reserva_id'))
+        )
+    # Nombre/cédula de la solicitud pública (en ese flujo Reserva.usuario es
+    # NULL) por subconsulta, sin JOIN que duplique filas.
+    solicitud = SolicitudReserva.objects.filter(reserva=OuterRef('pk')).order_by('id')
+    return reservas.select_related('usuario', 'estado').annotate(
+        solicitante_nombre=Subquery(solicitud.values('nombre')[:1]),
+        solicitante_cedula=Subquery(solicitud.values('cedula')[:1]),
+    ).order_by('-fecha_reserva', '-id')
+
+
+def _prestamos_del_laboratorio(laboratorio, estado=''):
+    """Préstamos del laboratorio: los de reservas hechas para él (mismo
+    criterio que lista_prestamos?lab=) y los que incluyen ítems suyos."""
+    prestamos = Prestamo.objects.filter(
+        Q(reserva_id__in=SolicitudReserva.objects.filter(
+            laboratorio=laboratorio).values('reserva_id'))
+        | Q(id__in=PrestamoItem.objects.filter(
+            item_inventario__laboratorio=laboratorio).values('prestamo_id'))
+    )
+    if estado:
+        prestamos = prestamos.filter(estado__nombre=estado)
+    return prestamos.select_related('responsable', 'estado').order_by('-fecha_entrega', '-id')
+
+
 @rol_requerido('Administrador', 'Laboratorio')
 def detalle_laboratorio(request, id):
     laboratorio = get_object_or_404(Laboratorio, id=id)
@@ -158,29 +203,43 @@ def detalle_laboratorio(request, id):
         'encargado_principal': encargado_principal,
         'personal':           personal,
         'cursos':             cursos,
-        # Contadores del sidebar
+        # Contadores del sidebar (COUNT en BD, sin traer las filas)
         'total_personal':     personal.count(),
         'total_cursos':       cursos.count(),
         'total_insumos':      _insumos_del_laboratorio(laboratorio).count(),
+        'total_reservas':     _reservas_del_laboratorio(laboratorio).count(),
+        'total_prestamos':    _prestamos_del_laboratorio(laboratorio).count(),
     }
 
-    # Solo la sección visible consulta su tabla paginada.
+    # Solo la sección visible consulta su tabla paginada. Las tres usan los
+    # mismos parámetros GET (busqueda / estado / page): los enlaces del
+    # sidebar los descartan al cambiar de sección.
+    busqueda = request.GET.get('busqueda', '').strip()
+    filtro_estado = request.GET.get('estado', '').strip()
     if seccion_activa == 'inventario':
-        busqueda = request.GET.get('busqueda', '').strip()
-        filtro_estado = request.GET.get('estado', '').strip()
         if filtro_estado not in dict(ESTADOS_ITEM_FILTRO):
             filtro_estado = ''
+        filas = _insumos_del_laboratorio(laboratorio, busqueda, filtro_estado)
+        context['estados_item'] = ESTADOS_ITEM_FILTRO
+    elif seccion_activa == 'reservas':
+        filas = _reservas_del_laboratorio(laboratorio, filtro_estado, busqueda)
+        context['estados'] = EstadoReserva.objects.order_by('nombre').values_list('nombre', flat=True)
+    elif seccion_activa == 'prestamos':
+        busqueda = ''
+        filas = _prestamos_del_laboratorio(laboratorio, filtro_estado)
+        context['estados'] = EstadoPrestamo.objects.order_by('nombre').values_list('nombre', flat=True)
+    else:
+        filas = None
+
+    if filas is not None:
         params = request.GET.copy()
         params.pop('page', None)
-        params['seccion'] = 'inventario'
+        params['seccion'] = seccion_activa
         context.update({
-            'insumos_page':  Paginator(
-                _insumos_del_laboratorio(laboratorio, busqueda, filtro_estado), POR_PAGINA_DETALLE
-            ).get_page(request.GET.get('page')),
+            'page_obj':      Paginator(filas, POR_PAGINA_DETALLE).get_page(request.GET.get('page')),
             'busqueda':      busqueda,
             'filtro_estado': filtro_estado,
-            'estados_item':  ESTADOS_ITEM_FILTRO,
-            'qs_inventario': params.urlencode(),
+            'qs_seccion':    params.urlencode(),
         })
 
     return render(request, 'laboratorio/detalle.html', context)
