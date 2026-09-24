@@ -56,6 +56,11 @@ def test_asignar_curso_a_laboratorio(docente, laboratorio):
     assert list(laboratorio.cursos.all()) == [curso]
 
 
+def test_fixture_curso(curso):
+    assert curso.profesor.rol.nombre == 'Docente'
+    assert curso.laboratorio is None
+
+
 def test_str_muestra_laboratorio(docente, laboratorio):
     assert str(_curso(docente, 'QUIM-101', laboratorio, 'Química')) == 'QUIM-101 - Química (Laboratorio de Química)'
     assert str(_curso(docente, 'FIS-101', None, 'Física')) == 'FIS-101 - Física'

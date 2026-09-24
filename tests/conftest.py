@@ -81,11 +81,21 @@ def laboratorio(db):
 
 
 @pytest.fixture
-def curso(db):
+def curso(catalogos):
+    profesor = Usuario.objects.create_user(
+        username='docente_curso_test',
+        password='clave12345',
+        rol=Rol.objects.get(nombre='Docente'),
+        first_name='Prof.',
+        last_name='Pérez',
+        # codigo explícito: ver nota en usuario_laboratorista.
+        codigo='DOC_CURSO_001',
+    )
     return Curso.objects.create(
         codigo='QUIM101',
         nombre='Química General',
-        docente='Prof. Pérez',
+        profesor=profesor,
+        cantidad_estudiantes=30,
     )
 
 
