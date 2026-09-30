@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, Max, OuterRef, Q, QuerySet, Subquery
 from users.decorators import rol_requerido
 from users.helpers import es_administrador
 from users.models import Usuario
@@ -598,6 +598,9 @@ def editar_mapa_laboratorio(request, lab_id):
         'laboratorio':  laboratorio,
         'modulos':      modulos,
         'sin_posicion': modulos.filter(posicion_x=0, posicion_y=0).count(),
+        # El lienzo crece si algún módulo queda por debajo de los 600 px
+        # (80 = alto de .modulo-item, + margen).
+        'alto_canvas':  max(600, (modulos.aggregate(m=Max('posicion_y'))['m'] or 0) + 80 + 20),
     })
 
 
