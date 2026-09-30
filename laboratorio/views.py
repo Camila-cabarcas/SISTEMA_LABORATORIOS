@@ -6,10 +6,12 @@ from typing import Any
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from users.decorators import rol_requerido
+from users.helpers import es_administrador
 from users.models import Usuario
 from .models import Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab
 from .forms import LaboratorioForm
@@ -577,6 +579,23 @@ def mapa_laboratorio(request, id):
         'hora_fin_filtro':    hora_fin_str,
         'filtro_valido':      filtro_valido,
         'error_filtro':       error_filtro,
+    })
+
+
+@login_required
+def editar_mapa_laboratorio(request, lab_id):
+    """Editor del mapa (drag & drop de módulos). Solo Administrador: 403 para
+    cualquier otro rol. Se decide por rol (es_administrador), no por
+    is_staff; ver users/helpers.py."""
+    if not es_administrador(request.user):
+        raise PermissionDenied
+    laboratorio = get_object_or_404(Laboratorio, id=lab_id)
+    modulos = laboratorio.modulos.order_by('nombre', 'id')
+
+    return render(request, 'laboratorio/editar_mapa.html', {
+        'laboratorio':  laboratorio,
+        'modulos':      modulos,
+        'sin_posicion': modulos.filter(posicion_x=0, posicion_y=0).count(),
     })
 
 

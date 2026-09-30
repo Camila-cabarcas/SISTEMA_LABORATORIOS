@@ -1,0 +1,67 @@
+{% extends "base_general.html" %}
+
+{% block extra_head %}
+<style>
+    #editor-canvas {
+        position: relative;
+        width: 100%;
+        height: 600px;
+        border: 2px solid #ccc;
+        background-color: #f9f9f9;
+        overflow: hidden;
+    }
+    .modulo-item {
+        position: absolute;
+        width: 120px;
+        height: 80px;
+        background-color: #0d6efd;
+        color: #fff;
+        border-radius: 5px;
+        padding: 10px;
+        cursor: move;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        text-align: center;
+        user-select: none;
+    }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Editar Mapa - {{ laboratorio.nombre }}</h2>
+    <a href="{% url 'mapa_laboratorio' laboratorio.id %}" class="btn btn-secondary">
+        ← Volver
+    </a>
+</div>
+
+<div class="alert alert-info">
+    👆 Arrastra los módulos para reorganizar el laboratorio.
+</div>
+
+{% if sin_posicion > 1 %}
+<div class="alert alert-warning">
+    {{ sin_posicion }} módulos aún no tienen posición guardada y aparecen superpuestos en la esquina superior izquierda.
+</div>
+{% endif %}
+
+<div id="editor-canvas">
+    {% for modulo in modulos %}
+    <div class="modulo-item"
+         data-id="{{ modulo.id }}"
+         data-x="{{ modulo.posicion_x }}"
+         data-y="{{ modulo.posicion_y }}"
+         style="left: {{ modulo.posicion_x }}px; top: {{ modulo.posicion_y }}px;">
+        {{ modulo.nombre }}
+    </div>
+    {% empty %}
+    <p class="text-muted p-3 mb-0">Este laboratorio no tiene módulos.</p>
+    {% endfor %}
+</div>
+
+<button id="btn-guardar" class="btn btn-success mt-3" disabled>
+    ✅ Guardar Cambios
+</button>
+{% endblock %}

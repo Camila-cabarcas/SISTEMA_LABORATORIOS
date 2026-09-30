@@ -138,6 +138,9 @@ class Modulo(models.Model):
         on_delete=models.CASCADE,
         related_name='modulos'
     )
+    # Posición en el mapa (drag & drop), en píxeles.
+    posicion_x = models.IntegerField(default=0, help_text="Posición X en píxeles")
+    posicion_y = models.IntegerField(default=0, help_text="Posición Y en píxeles")
 
     def clean(self):
         if self.capacidad is not None and self.capacidad < 1:
