@@ -273,3 +273,31 @@ def test_csrf_token_del_editor_es_aceptado(usuario_admin, laboratorio, modulos):
 
     assert sin_token.status_code == 403
     assert con_token.status_code == 200
+
+
+# ── Botón "Editar Mapa" en el mapa normal ────────────────────────────────────
+
+def test_mapa_muestra_boton_editar_al_administrador(cliente_autenticado, laboratorio):
+    response = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/mapa/')
+
+    assert response.status_code == 200
+    contenido = response.content.decode()
+    assert f'href="/laboratorio/{laboratorio.id}/editar-mapa/"' in contenido
+    assert '✏️ Editar Mapa' in contenido
+    etiqueta = contenido.split(f'href="/laboratorio/{laboratorio.id}/editar-mapa/"')[1].split('>')[0]
+    assert 'target=' not in etiqueta  # misma pestaña
+
+
+def test_mapa_no_muestra_boton_editar_al_encargado(client, catalogos, laboratorio):
+    # El rol Laboratorio ve el mapa (y es_admin=True ahí), pero el editor le
+    # daría 403: el botón no debe aparecer.
+    encargado = _usuario('Laboratorio', 'encargado_mapa')
+    laboratorio.encargados.add(encargado)
+    client.force_login(encargado)
+
+    response = client.get(f'/laboratorio/{laboratorio.id}/mapa/')
+
+    assert response.status_code == 200
+    assert response.context['es_admin'] is True
+    assert response.context['puede_editar_mapa'] is False
+    assert '/editar-mapa/' not in response.content.decode()

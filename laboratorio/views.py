@@ -576,6 +576,9 @@ def mapa_laboratorio(request, id):
         'fecha':              fecha.strftime('%Y-%m-%d'),
         'fecha_display':      fecha.strftime('%d/%m/%Y'),
         'es_admin':           request.user.rol.nombre in ['Administrador', 'Laboratorio'],
+        # Solo Administrador: mismo criterio que editar_mapa_laboratorio
+        # (es_admin de arriba también incluye al rol Laboratorio).
+        'puede_editar_mapa':  es_administrador(request.user),
         'horas_disponibles':  horas_disponibles,
         'hora_inicio_filtro': hora_inicio_str,
         'hora_fin_filtro':    hora_fin_str,

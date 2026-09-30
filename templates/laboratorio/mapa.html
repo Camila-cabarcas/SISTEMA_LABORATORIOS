@@ -6,9 +6,16 @@
     <h2 class="mb-0">Mapa de módulos</h2>
     <small class="text-muted">{{ laboratorio.nombre }} — {{ laboratorio.ubicacion }}</small>
   </div>
-  <a href="{% url 'detalle_laboratorio' laboratorio.id %}" class="btn btn-outline-secondary btn-sm">
-    &larr; Volver
-  </a>
+  <div class="d-flex gap-2">
+    {% if puede_editar_mapa %}
+    <a href="{% url 'editar_mapa' laboratorio.id %}" class="btn btn-warning btn-sm">
+      ✏️ Editar Mapa
+    </a>
+    {% endif %}
+    <a href="{% url 'detalle_laboratorio' laboratorio.id %}" class="btn btn-outline-secondary btn-sm">
+      &larr; Volver
+    </a>
+  </div>
 </div>
 
 <div class="card mb-4 shadow-sm">
