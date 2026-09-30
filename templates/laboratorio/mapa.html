@@ -96,6 +96,10 @@
        data-estado="{{ item.estado }}"
        data-disponible="{{ item.modulo.disponible|yesno:'true,false' }}"
        data-motivo="{{ item.motivo }}"
+       {% if usa_posiciones %}
+       data-x="{{ item.x }}"
+       data-y="{{ item.y }}"
+       {% endif %}
        {% if item.solicitud %}
        data-sol-nombre="{{ item.solicitud.nombre }}"
        data-sol-cedula="{{ item.solicitud.cedula }}"
@@ -119,6 +123,12 @@
     <div class="lab-wall lab-wall-top">
       <div class="wall-label">↑ Pizarrón</div>
     </div>
+    {% if usa_posiciones %}
+    {# Posiciones guardadas con el editor de mapa (mismas coordenadas). #}
+    <div class="mapa-posiciones-scroll">
+      <div id="mapa-posiciones" style="width: {{ ancho_mapa }}px; height: {{ alto_mapa }}px;"></div>
+    </div>
+    {% else %}
     <div class="lab-body">
       <div class="lab-col lab-col-left"  id="zona-izquierda"></div>
       <div class="lab-center-area">
@@ -129,6 +139,7 @@
       <div class="lab-col lab-col-right" id="zona-derecha"></div>
     </div>
     <div class="lab-row lab-row-bottom" id="zona-inferior"></div>
+    {% endif %}
     <div class="lab-door">🚪 Entrada</div>
   </div>
 </div>
@@ -277,6 +288,10 @@
 .modulo-nombre { font-weight: 600; font-size: .82rem; text-align: center; line-height: 1.2; }
 .modulo-capacidad { font-size: .68rem; opacity: .85; margin-top: 3px; }
 .modulo-horario { font-size: .62rem; opacity: .9; margin-top: 2px; text-align: center; }
+/* Modo posiciones: mismas coordenadas y tamaño (120×80) que el editor. */
+.mapa-posiciones-scroll { overflow-x: auto; }
+#mapa-posiciones { position: relative; margin: 0 auto; }
+#mapa-posiciones .modulo-seat { position: absolute; width: 120px; min-height: 80px; }
 </style>
 
 <script>
@@ -301,16 +316,28 @@ const zonas = [
   { id: 'zona-inferior',   count: porFila },
 ];
 
-let idx = 0;
-zonas.forEach(zona => {
-  const c = document.getElementById(zona.id);
-  if (!c) return;
-  for (let i = 0; i < zona.count && idx < total; i++, idx++) {
-    c.appendChild(crearSeat(fuente[idx]));
-  }
-});
-const cm = document.getElementById('zona-centro-mid');
-while (idx < total) { cm.appendChild(crearSeat(fuente[idx])); idx++; }
+const lienzoPosiciones = document.getElementById('mapa-posiciones');
+if (lienzoPosiciones) {
+  // Modo posiciones: la vista ya resolvió x/y de cada módulo (guardada o por defecto).
+  fuente.forEach(data => {
+    const seat = crearSeat(data);
+    seat.style.left = data.dataset.x + 'px';
+    seat.style.top  = data.dataset.y + 'px';
+    lienzoPosiciones.appendChild(seat);
+  });
+} else {
+  // Modo zonas (ningún módulo tiene posición guardada): reparto de siempre.
+  let idx = 0;
+  zonas.forEach(zona => {
+    const c = document.getElementById(zona.id);
+    if (!c) return;
+    for (let i = 0; i < zona.count && idx < total; i++, idx++) {
+      c.appendChild(crearSeat(fuente[idx]));
+    }
+  });
+  const cm = document.getElementById('zona-centro-mid');
+  while (idx < total) { cm.appendChild(crearSeat(fuente[idx])); idx++; }
+}
 
 function crearSeat(data) {
   const d   = data.dataset;

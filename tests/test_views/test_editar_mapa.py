@@ -301,3 +301,107 @@ def test_mapa_no_muestra_boton_editar_al_encargado(client, catalogos, laboratori
     assert response.context['es_admin'] is True
     assert response.context['puede_editar_mapa'] is False
     assert '/editar-mapa/' not in response.content.decode()
+
+
+# ── Mapa normal: usa las posiciones guardadas ─────────────────────────────────
+
+def _mapa(cliente, laboratorio):
+    return cliente.get(f'/laboratorio/{laboratorio.id}/mapa/')
+
+
+def _datos_por_id(response):
+    return {item['modulo'].id: item for item in response.context['modulos_data']}
+
+
+def test_mapa_sin_posiciones_guardadas_usa_zonas_como_antes(cliente_autenticado, laboratorio, modulos):
+    Modulo.objects.filter(laboratorio=laboratorio).update(posicion_x=0, posicion_y=0)
+
+    response = _mapa(cliente_autenticado, laboratorio)
+
+    contenido = response.content.decode()
+    assert response.context['usa_posiciones'] is False
+    assert 'id="zona-izquierda"' in contenido
+    assert 'id="mapa-posiciones"' not in contenido
+    assert 'data-x=' not in contenido
+
+
+def test_mapa_con_posiciones_dibuja_en_coordenadas_guardadas(cliente_autenticado, laboratorio, modulos):
+    a, b = modulos
+    Modulo.objects.filter(id=a.id).update(posicion_x=140, posicion_y=60)
+    Modulo.objects.filter(id=b.id).update(posicion_x=400, posicion_y=250)
+
+    response = _mapa(cliente_autenticado, laboratorio)
+
+    contenido = response.content.decode()
+    assert response.context['usa_posiciones'] is True
+    assert 'id="mapa-posiciones"' in contenido
+    assert 'id="zona-izquierda"' not in contenido
+    datos = _datos_por_id(response)
+    assert (datos[a.id]['x'], datos[a.id]['y']) == (140, 60)
+    assert (datos[b.id]['x'], datos[b.id]['y']) == (400, 250)
+    assert f'data-id="{a.id}"' in contenido
+    assert 'data-x="140"' in contenido and 'data-y="60"' in contenido
+
+
+def test_mapa_modulos_en_cero_toman_posicion_por_defecto(cliente_autenticado, laboratorio):
+    from laboratorio.services.posiciones_mapa import calcular_posiciones
+    m = [Modulo.objects.create(nombre=f'M{i}', capacidad=2, laboratorio=laboratorio) for i in range(4)]
+    Modulo.objects.filter(id=m[2].id).update(posicion_x=500, posicion_y=300)
+
+    datos = _datos_por_id(_mapa(cliente_autenticado, laboratorio))
+
+    defecto = calcular_posiciones(4)
+    assert (datos[m[2].id]['x'], datos[m[2].id]['y']) == (500, 300)
+    for i in (0, 1, 3):
+        assert (datos[m[i].id]['x'], datos[m[i].id]['y']) == defecto[i]
+
+
+def test_mapa_x_cero_con_y_distinta_de_cero_es_posicion_valida(cliente_autenticado, laboratorio, modulos):
+    a, _ = modulos
+    Modulo.objects.filter(laboratorio=laboratorio).update(posicion_x=0, posicion_y=0)
+    Modulo.objects.filter(id=a.id).update(posicion_x=0, posicion_y=250)
+
+    response = _mapa(cliente_autenticado, laboratorio)
+
+    assert response.context['usa_posiciones'] is True
+    datos = _datos_por_id(response)
+    assert (datos[a.id]['x'], datos[a.id]['y']) == (0, 250)
+
+
+def test_mapa_lienzo_se_ajusta_a_los_modulos(cliente_autenticado, laboratorio, modulos):
+    a, b = modulos
+    Modulo.objects.filter(id=a.id).update(posicion_x=1200, posicion_y=20)
+    Modulo.objects.filter(id=b.id).update(posicion_x=10, posicion_y=700)
+
+    response = _mapa(cliente_autenticado, laboratorio)
+
+    assert response.context['ancho_mapa'] == 1200 + 120 + 10
+    assert response.context['alto_mapa'] == 700 + 80 + 10
+    assert 'style="width: 1330px; height: 790px;"' in response.content.decode()
+
+
+def test_cambios_del_editor_se_ven_en_el_mapa(cliente_autenticado, laboratorio, modulos):
+    a, b = modulos
+    _post(cliente_autenticado, laboratorio, {'modulos': [
+        {'id': a.id, 'x': 333, 'y': 44},
+        {'id': b.id, 'x': 55, 'y': 222},
+    ]})
+
+    datos = _datos_por_id(_mapa(cliente_autenticado, laboratorio))
+
+    assert (datos[a.id]['x'], datos[a.id]['y']) == (333, 44)
+    assert (datos[b.id]['x'], datos[b.id]['y']) == (55, 222)
+
+
+def test_mapa_con_filtro_de_horario_tambien_usa_posiciones(cliente_autenticado, laboratorio, modulos):
+    from datetime import date, timedelta
+    a, _ = modulos
+    Modulo.objects.filter(id=a.id).update(posicion_x=210, posicion_y=90)
+    manana = (date.today() + timedelta(days=1)).isoformat()
+
+    response = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/mapa/',
+                                       {'fecha': manana, 'hora_inicio': '08:00', 'hora_fin': '10:00'})
+
+    assert response.context['filtro_valido'] is True
+    datos = _datos_por_id(response)
+    assert (datos[a.id]['x'], datos[a.id]['y']) == (210, 90)

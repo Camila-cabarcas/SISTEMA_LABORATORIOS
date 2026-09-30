@@ -7,7 +7,7 @@ from io import StringIO
 import pytest
 from django.core.management import call_command
 
-from laboratorio.management.commands.inicializar_posiciones_modulos import (
+from laboratorio.services.posiciones_mapa import (
     ALTO_MODULO,
     ANCHO_LIENZO,
     ANCHO_MODULO,

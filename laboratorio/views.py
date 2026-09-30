@@ -18,6 +18,9 @@ from users.models import Usuario
 from .models import Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab, Modulo
 from .forms import LaboratorioForm
 from .services.modulo_service import ModuloEstadoService
+from .services.posiciones_mapa import (
+    ALTO_MODULO, ANCHO_LIENZO, ANCHO_MODULO, MARGEN, calcular_posiciones, sin_posicion,
+)
 from inventario.models import Insumo, ItemInventario, MovimientoInventario
 from reservas.models import EstadoReserva, Reserva, ReservaInsumo
 from prestamos.models import EstadoPrestamo, Prestamo, PrestamoItem
@@ -474,7 +477,7 @@ def mapa_laboratorio(request, id):
 
         color_map = {'disponible': 'success', 'ocupado': 'danger', 'reservado': 'warning', 'inactivo': 'secondary'}
 
-        for modulo in laboratorio.modulos.all():
+        for modulo in laboratorio.modulos.order_by('id'):
             soles = modulo_solicitudes.get(modulo.id, [])
             estado = ModuloEstadoService.obtener_estado(modulo, soles, fecha)
             solicitud_info = None
@@ -553,7 +556,7 @@ def mapa_laboratorio(request, id):
                 'motivo':    motivo,
             })
     else:
-        for modulo in laboratorio.modulos.all():
+        for modulo in laboratorio.modulos.order_by('id'):
             estado = ModuloEstadoService.obtener_estado(modulo, fecha=fecha)
             modulos_data.append({
                 'modulo':    modulo,
@@ -570,7 +573,25 @@ def mapa_laboratorio(request, id):
         if not (h == 18 and m == 30)
     ]
 
+    # Modo "posiciones": si algún módulo tiene posición guardada (editor de
+    # mapa), se dibujan todos en coordenadas absolutas; los que siguen en
+    # (0, 0) toman su lugar del diseño por defecto, para no mezclar
+    # posiciones absolutas con el reparto por zonas. Si ninguno tiene, el
+    # mapa sigue con el reparto por zonas de siempre (JS de mapa.html).
+    usa_posiciones = any(not sin_posicion(item['modulo']) for item in modulos_data)
+    ancho_mapa = alto_mapa = 0
+    if usa_posiciones:
+        por_defecto = calcular_posiciones(len(modulos_data))
+        for item, defecto in zip(modulos_data, por_defecto):
+            modulo = item['modulo']
+            item['x'], item['y'] = defecto if sin_posicion(modulo) else (modulo.posicion_x, modulo.posicion_y)
+        ancho_mapa = max(ANCHO_LIENZO, max(i['x'] for i in modulos_data) + ANCHO_MODULO + MARGEN)
+        alto_mapa = max(i['y'] for i in modulos_data) + ALTO_MODULO + MARGEN
+
     return render(request, 'laboratorio/mapa.html', {
+        'usa_posiciones':     usa_posiciones,
+        'ancho_mapa':         ancho_mapa,
+        'alto_mapa':          alto_mapa,
         'laboratorio':        laboratorio,
         'modulos_data':       modulos_data,
         'fecha':              fecha.strftime('%Y-%m-%d'),
