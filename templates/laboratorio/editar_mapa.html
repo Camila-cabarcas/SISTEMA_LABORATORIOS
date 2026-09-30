@@ -1,4 +1,5 @@
 {% extends "base_general.html" %}
+{% load static %}
 
 {% block extra_head %}
 <style>
@@ -25,6 +26,12 @@
         font-weight: bold;
         text-align: center;
         user-select: none;
+        touch-action: none;  /* el arrastre táctil no hace scroll */
+    }
+    .modulo-item.arrastrando {
+        opacity: 0.7;
+        z-index: 10;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 </style>
 {% endblock %}
@@ -47,7 +54,10 @@
 </div>
 {% endif %}
 
-<div id="editor-canvas">
+<div id="editor-canvas"
+     data-guardar-url="{% url 'guardar_mapa' laboratorio.id %}"
+     data-mapa-url="{% url 'mapa_laboratorio' laboratorio.id %}"
+     data-csrf="{{ csrf_token }}">
     {% for modulo in modulos %}
     <div class="modulo-item"
          data-id="{{ modulo.id }}"
@@ -61,7 +71,14 @@
     {% endfor %}
 </div>
 
-<button id="btn-guardar" class="btn btn-success mt-3" disabled>
-    ✅ Guardar Cambios
-</button>
+<div class="d-flex align-items-center gap-3 mt-3">
+    <button id="btn-guardar" class="btn btn-success" disabled>
+        ✅ Guardar Cambios
+    </button>
+    <span id="estado-guardado" class="text-muted small" role="status"></span>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/editar_mapa.js' %}"></script>
 {% endblock %}

@@ -2,18 +2,20 @@
 views.py — laboratorio
 Vistas para gestionar laboratorios, eventos, mapa visual de módulos y APIs de estado en tiempo real.
 """
+import json
 from typing import Any
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from users.decorators import rol_requerido
 from users.helpers import es_administrador
 from users.models import Usuario
-from .models import Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab
+from .models import Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab, Modulo
 from .forms import LaboratorioForm
 from .services.modulo_service import ModuloEstadoService
 from inventario.models import Insumo, ItemInventario, MovimientoInventario
@@ -597,6 +599,47 @@ def editar_mapa_laboratorio(request, lab_id):
         'modulos':      modulos,
         'sin_posicion': modulos.filter(posicion_x=0, posicion_y=0).count(),
     })
+
+
+def _error_mapa(mensaje, status=400):
+    return JsonResponse({'status': 'error', 'error': mensaje}, status=status)
+
+
+@login_required
+@require_POST
+def guardar_mapa_laboratorio(request, lab_id):
+    """Guarda las posiciones del editor de mapa. Cuerpo JSON:
+    {"modulos": [{"id": 1, "x": 120, "y": 40}, ...]}. Solo Administrador.
+
+    Todo o nada: se valida el lote completo (JSON, enteros >= 0, módulos de
+    este laboratorio) antes de escribir, y se guarda con un único
+    bulk_update; un id ajeno o un valor inválido devuelve 400 sin tocar
+    nada."""
+    if not es_administrador(request.user):
+        raise PermissionDenied
+    laboratorio = get_object_or_404(Laboratorio, id=lab_id)
+
+    try:
+        entradas = json.loads(request.body)['modulos']
+        if not isinstance(entradas, list):
+            raise TypeError
+        posiciones = {int(m['id']): (int(m['x']), int(m['y'])) for m in entradas}
+    except (ValueError, KeyError, TypeError):
+        return _error_mapa('Datos inválidos: se esperaba {"modulos": [{"id", "x", "y"}, ...]}.')
+
+    if any(x < 0 or y < 0 for x, y in posiciones.values()):
+        return _error_mapa('Las posiciones no pueden ser negativas.')
+
+    modulos = list(laboratorio.modulos.filter(id__in=posiciones))
+    ajenos = sorted(set(posiciones) - {m.id for m in modulos})
+    if ajenos:
+        return _error_mapa(f'Módulos que no pertenecen a este laboratorio: {ajenos}.')
+
+    for modulo in modulos:
+        modulo.posicion_x, modulo.posicion_y = posiciones[modulo.id]
+    Modulo.objects.bulk_update(modulos, ['posicion_x', 'posicion_y'])
+
+    return JsonResponse({'status': 'ok', 'actualizados': len(modulos)})
 
 
 @rol_requerido('Administrador', 'Laboratorio')
