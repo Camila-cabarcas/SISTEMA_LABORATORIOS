@@ -21,7 +21,7 @@ from .services.modulo_service import ModuloEstadoService
 from .services.posiciones_mapa import (
     ALTO_MODULO, ANCHO_LIENZO, ANCHO_MODULO, MARGEN, calcular_posiciones, sin_posicion,
 )
-from inventario.models import Insumo, ItemInventario, MovimientoInventario
+from inventario.models import Insumo, ItemInventario, MovimientoInventario, TipoMovimiento
 from reservas.models import EstadoReserva, Reserva, ReservaInsumo
 from prestamos.models import EstadoPrestamo, Prestamo, PrestamoItem
 from solicitudes.models import SolicitudReserva
@@ -282,7 +282,7 @@ def modal_items_insumo(request, lab_id, insumo_id):
             {
                 'codigo': item.codigo,
                 'estado': item.estado.nombre,
-                'ultima_accion': item.ultima_accion or '',
+                'ultima_accion': TipoMovimiento.etiqueta_de(item.ultima_accion) if item.ultima_accion else '',
                 'ultima_fecha': item.ultima_fecha.isoformat() if item.ultima_fecha else None,
             }
             for item in items

@@ -371,7 +371,7 @@ def test_modal_items_incluye_ultima_accion(cliente_autenticado, usuario_admin, l
         f'/laboratorio/{laboratorio.id}/insumos/{inventario["multimetro"].id}/items/').json()
 
     por_codigo = {i['codigo']: i for i in data['items']}
-    assert por_codigo['MUL-3']['ultima_accion'] == 'Prestado'
+    assert por_codigo['MUL-3']['ultima_accion'] == 'Préstamo'  # TipoMovimiento 'Prestado'
     assert por_codigo['MUL-3']['ultima_fecha']
     assert por_codigo['MUL-1']['ultima_accion'] == ''
     assert por_codigo['MUL-1']['ultima_fecha'] is None

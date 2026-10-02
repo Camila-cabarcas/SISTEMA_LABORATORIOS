@@ -82,7 +82,7 @@
                 <th>Fecha</th>
                 <th>Tipo</th>
                 <th>Usuario</th>
-                <th>Observación</th>
+                <th>Detalles del cambio</th>
             </tr>
         </thead>
 
@@ -90,7 +90,7 @@
             {% for movimiento in movimientos %}
             <tr>
                 <td>{{ movimiento.fecha }}</td>
-                <td>{{ movimiento.tipo_movimiento.nombre }}</td>
+                <td>{{ movimiento.tipo_movimiento.etiqueta }}</td>
                 <td>{{ movimiento.usuario }}</td>
                 <td>{{ movimiento.observacion }}</td>
             </tr>

@@ -139,7 +139,16 @@ class MovimientoInventarioForm(forms.ModelForm):
             'observacion': forms.Textarea(
                 attrs={
                     'class': 'form-control',
-                    'placeholder': 'Observación'
+                    'placeholder': 'Detalles del cambio'
                 }
             )
         }
+
+        labels = {
+            'observacion': 'Detalles del cambio',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Mismos nombres visibles que la tabla (TipoMovimiento.etiqueta).
+        self.fields['tipo_movimiento'].label_from_instance = lambda tipo: tipo.etiqueta

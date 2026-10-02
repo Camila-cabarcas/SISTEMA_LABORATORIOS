@@ -91,7 +91,7 @@
                     <td>{{ item.laboratorio.nombre|default:"—" }}</td>
                     <td class="small">
                         {% if item.ultimo_movimiento %}
-                            {{ item.ultimo_movimiento.tipo_movimiento.nombre }}
+                            {{ item.ultimo_movimiento.tipo_movimiento.etiqueta }}
                             <span class="text-muted">({{ item.ultimo_movimiento.fecha|date:"d/m/Y H:i" }})</span>
                         {% else %}
                             <span class="text-muted">—</span>

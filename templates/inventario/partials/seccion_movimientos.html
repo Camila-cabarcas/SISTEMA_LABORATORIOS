@@ -78,7 +78,7 @@
                     <th>Usuario</th>
                     <th>Tipo</th>
                     <th>Fecha</th>
-                    <th>Observación</th>
+                    <th>Detalles del cambio</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,7 +91,7 @@
                     <td>{{ movimiento.item_inventario.insumo.nombre }}</td>
                     <td>{{ movimiento.item_inventario.laboratorio.nombre|default:"—" }}</td>
                     <td>{{ movimiento.usuario.get_full_name|default:movimiento.usuario.username }}</td>
-                    <td>{{ movimiento.tipo_movimiento.nombre }}</td>
+                    <td>{{ movimiento.tipo_movimiento.etiqueta }}</td>
                     <td>{{ movimiento.fecha|date:"d/m/Y H:i" }}</td>
                     <td>{{ movimiento.observacion }}</td>
                 </tr>

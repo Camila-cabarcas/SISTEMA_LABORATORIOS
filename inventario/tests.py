@@ -327,7 +327,7 @@ class VistasInventarioMejoradasTests(TestCase):
         contenido = response.content.decode()
         self.assertIn('MART-001', contenido)
         self.assertIn(self.laboratorio.nombre, contenido)
-        self.assertIn('Registro inicial', contenido)
+        self.assertIn('Creación', contenido)  # TipoMovimiento 'Registro inicial', ver TipoMovimiento.ETIQUETAS
 
     def test_lista_movimientos_con_filtros(self):
         response = self.client.get('/inventario/movimientos/', {
@@ -339,7 +339,7 @@ class VistasInventarioMejoradasTests(TestCase):
         self.assertEqual(response.status_code, 200)
         contenido = response.content.decode()
         self.assertIn('MART-001', contenido)
-        self.assertIn('Registro inicial', contenido)
+        self.assertIn('Creación', contenido)  # TipoMovimiento 'Registro inicial'
 
     def test_lista_movimientos_filtro_sin_resultados(self):
         # 'MART-001' igual aparece en la página (el <select> del formulario

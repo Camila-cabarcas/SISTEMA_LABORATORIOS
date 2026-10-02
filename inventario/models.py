@@ -12,6 +12,28 @@ class TipoMovimiento(models.Model):
     # lugares; una fila duplicada rompería esos .get().
     nombre = models.CharField(max_length=50, unique=True)
 
+    # Nombre visible para el usuario. Solo presentación: `nombre` NO se
+    # renombra en la BD porque el código lo busca literal (.get(nombre=...)
+    # en prestamos/services/mutacion_inventario_service.py, inventario/
+    # signals.py, crear_insumos_por_lab...). Tipos no listados se muestran
+    # con su nombre tal cual.
+    ETIQUETAS = {
+        'Registro inicial': 'Creación',
+        'Prestado':         'Préstamo',
+        'Devuelto':         'Devolución',
+        'Dañado':           'Reporte de daño',
+        'Mantenimiento':    'Envío a mantenimiento',
+        'Baja':             'Baja del inventario',
+    }
+
+    @classmethod
+    def etiqueta_de(cls, nombre):
+        return cls.ETIQUETAS.get(nombre, nombre)
+
+    @property
+    def etiqueta(self):
+        return self.etiqueta_de(self.nombre)
+
     def __str__(self):
         return self.nombre
 

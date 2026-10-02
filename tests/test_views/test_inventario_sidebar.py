@@ -277,3 +277,80 @@ def test_movimientos_lista_y_paginacion(cliente_autenticado, inventario, usuario
     assert len(pagina_1.context['movimientos']) == 15
     assert len(pagina_2.context['movimientos']) == 2
     assert 'id="form-registrar-movimiento"' in pagina_1.content.decode()
+
+
+# ── Nombres visibles de los tipos de movimiento ──────────────────────────────
+
+@pytest.mark.parametrize('nombre_bd, etiqueta', [
+    ('Registro inicial', 'Creación'),
+    ('Prestado', 'Préstamo'),
+    ('Devuelto', 'Devolución'),
+    ('Dañado', 'Reporte de daño'),
+    ('Mantenimiento', 'Envío a mantenimiento'),
+    ('Baja', 'Baja del inventario'),
+    ('Tipo nuevo', 'Tipo nuevo'),  # sin etiqueta: se muestra tal cual
+])
+def test_etiqueta_de_tipo_movimiento(nombre_bd, etiqueta):
+    assert TipoMovimiento.etiqueta_de(nombre_bd) == etiqueta
+    assert TipoMovimiento(nombre=nombre_bd).etiqueta == etiqueta
+
+
+def test_tabla_movimientos_muestra_etiquetas_y_detalles_del_cambio(cliente_autenticado, inventario, usuario_admin):
+    item = ItemInventario.objects.get(codigo='MUL-1')
+    MovimientoInventario.objects.create(
+        item_inventario=item, usuario=usuario_admin,
+        tipo_movimiento=TipoMovimiento.objects.get_or_create(nombre='Registro inicial')[0],
+        observacion='Alta inicial.',
+    )
+
+    contenido = cliente_autenticado.get(URL_MOVIMIENTOS).content.decode()
+    tabla = contenido.split('<table')[1]
+
+    assert '<th>Detalles del cambio</th>' in tabla
+    assert '<th>Observación</th>' not in tabla
+    assert '<td>Creación</td>' in tabla
+    assert '<td>Préstamo</td>' in tabla
+    assert '<td>Registro inicial</td>' not in tabla
+    assert '<td>Prestado</td>' not in tabla
+    assert 'Alta inicial.' in tabla  # los detalles se muestran igual
+
+
+def test_solo_cambia_la_presentacion_no_la_bd(cliente_autenticado, inventario):
+    antes = list(TipoMovimiento.objects.order_by('id').values_list('nombre', flat=True))
+
+    cliente_autenticado.get(URL_MOVIMIENTOS)
+    cliente_autenticado.get(URL_ITEMS)
+
+    assert list(TipoMovimiento.objects.order_by('id').values_list('nombre', flat=True)) == antes
+    # El código que busca por nombre sigue funcionando.
+    assert TipoMovimiento.objects.get(nombre='Prestado').etiqueta == 'Préstamo'
+
+
+def test_filtro_de_movimientos_sigue_funcionando(cliente_autenticado, inventario):
+    response = cliente_autenticado.get(URL_MOVIMIENTOS, {'insumo': inventario['multimetro'].id})
+
+    assert [m.tipo_movimiento.nombre for m in response.context['movimientos']] == ['Prestado']
+
+
+def test_items_ultima_accion_con_etiqueta(cliente_autenticado, inventario):
+    contenido = cliente_autenticado.get(URL_ITEMS).content.decode()
+
+    assert 'Préstamo' in contenido.split('<table')[1]
+
+
+def test_historial_item_usa_etiquetas(cliente_autenticado, inventario):
+    item = ItemInventario.objects.get(codigo='MUL-2')
+
+    contenido = cliente_autenticado.get(f'/inventario/items/{item.id}/historial/').content.decode()
+
+    assert '<th>Detalles del cambio</th>' in contenido
+    assert '<td>Préstamo</td>' in contenido
+
+
+def test_formulario_registrar_movimiento_usa_etiquetas(cliente_autenticado, inventario):
+    form = cliente_autenticado.get(URL_MOVIMIENTOS).context['form']
+
+    opciones = [label for _, label in form.fields['tipo_movimiento'].choices]
+    assert 'Préstamo' in opciones and 'Devolución' in opciones
+    assert 'Prestado' not in opciones
+    assert form.fields['observacion'].label == 'Detalles del cambio'
