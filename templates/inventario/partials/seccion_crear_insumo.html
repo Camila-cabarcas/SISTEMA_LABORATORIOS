@@ -1,0 +1,33 @@
+<div class="card p-4 shadow-sm" style="max-width: 720px;">
+    <h4 class="mb-3"><i class="fa-solid fa-plus text-brand me-2"></i>Crear insumo</h4>
+
+    <form method="POST" action="/inventario/?seccion=crear" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+
+        {% for field in form %}
+        <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">
+                {{ field.label }}{% if field.field.required %} *{% endif %}
+            </label>
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% for error in field.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">
+                <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+            </button>
+            <a href="/inventario/" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>

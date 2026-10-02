@@ -1,0 +1,106 @@
+<div class="card p-4 shadow-sm">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="fa-solid fa-arrow-right-arrow-left text-brand me-2"></i>Movimientos</h4>
+        <button class="btn btn-success btn-sm" type="button" data-bs-toggle="collapse"
+                data-bs-target="#form-registrar-movimiento" aria-expanded="{% if form.errors %}true{% else %}false{% endif %}"
+                aria-controls="form-registrar-movimiento">
+            <i class="fa-solid fa-plus me-1"></i>Registrar movimiento
+        </button>
+    </div>
+
+    <div class="collapse {% if form.errors %}show{% endif %} mb-3" id="form-registrar-movimiento">
+        <div class="border rounded p-3 bg-body-tertiary">
+            <form method="POST" action="/inventario/movimientos/" class="row g-2 align-items-end">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="{% if field.name == 'observacion' %}col-12{% else %}col-md-4{% endif %}">
+                    <label class="form-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <form method="GET" class="row g-2 mb-3">
+        <div class="col-sm-3">
+            <label class="form-label small">Insumo</label>
+            <select name="insumo" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                {% for insumo in insumos %}
+                <option value="{{ insumo.id }}" {% if insumo_id == insumo.id|stringformat:"s" %}selected{% endif %}>{{ insumo.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-2">
+            <label class="form-label small">Laboratorio</label>
+            <select name="lab" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                {% for lab in laboratorios %}
+                <option value="{{ lab.id }}" {% if lab_id == lab.id|stringformat:"s" %}selected{% endif %}>{{ lab.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-2">
+            <label class="form-label small">Usuario</label>
+            <select name="usuario" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                {% for u in usuarios %}
+                <option value="{{ u.id }}" {% if usuario_id == u.id|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-2">
+            <label class="form-label small">Desde</label>
+            <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-sm-2">
+            <label class="form-label small">Hasta</label>
+            <input type="date" name="fecha_fin" value="{{ fecha_fin }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-sm-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-secondary btn-sm w-100">Filtrar</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Item</th>
+                    <th>Insumo</th>
+                    <th>Laboratorio</th>
+                    <th>Usuario</th>
+                    <th>Tipo</th>
+                    <th>Fecha</th>
+                    <th>Observación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for movimiento in movimientos %}
+                <tr>
+                    <td>{{ movimiento.id }}</td>
+                    <td>
+                        <a href="/inventario/items/{{ movimiento.item_inventario_id }}/historial/">{{ movimiento.item_inventario.codigo }}</a>
+                    </td>
+                    <td>{{ movimiento.item_inventario.insumo.nombre }}</td>
+                    <td>{{ movimiento.item_inventario.laboratorio.nombre|default:"—" }}</td>
+                    <td>{{ movimiento.usuario.get_full_name|default:movimiento.usuario.username }}</td>
+                    <td>{{ movimiento.tipo_movimiento.nombre }}</td>
+                    <td>{{ movimiento.fecha|date:"d/m/Y H:i" }}</td>
+                    <td>{{ movimiento.observacion }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-3">No hay movimientos con esos filtros.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include 'laboratorio/partials/paginacion.html' with page=movimientos param='page' qs=qs %}
+</div>

@@ -1,0 +1,120 @@
+<div class="card p-4 shadow-sm">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="fa-solid fa-cubes text-brand me-2"></i>Items</h4>
+        <button class="btn btn-success btn-sm" type="button" data-bs-toggle="collapse"
+                data-bs-target="#form-registrar-item" aria-expanded="{% if form.errors %}true{% else %}false{% endif %}"
+                aria-controls="form-registrar-item">
+            <i class="fa-solid fa-plus me-1"></i>Registrar item
+        </button>
+    </div>
+
+    <div class="collapse {% if form.errors %}show{% endif %} mb-3" id="form-registrar-item">
+        <div class="border rounded p-3 bg-body-tertiary">
+            <form method="POST" action="/inventario/items/" class="row g-2 align-items-end">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="col-md-3">
+                    <label class="form-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <form method="GET" class="row g-2 align-items-end mb-3">
+        <div class="col-md-3">
+            <input type="text" name="busqueda" value="{{ busqueda }}" class="form-control form-control-sm"
+                   placeholder="Código o insumo...">
+        </div>
+        <div class="col-md-3">
+            <select name="insumo" class="form-select form-select-sm">
+                <option value="">Todos los insumos</option>
+                {% for insumo in insumos %}
+                <option value="{{ insumo.id }}" {% if insumo_id == insumo.id|stringformat:"s" %}selected{% endif %}>{{ insumo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="estado" class="form-select form-select-sm">
+                <option value="">Todos los estados</option>
+                {% for estado in estados %}
+                <option value="{{ estado.id }}" {% if estado_id == estado.id|stringformat:"s" %}selected{% endif %}>{{ estado.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="lab" class="form-select form-select-sm">
+                <option value="">Todos los labs</option>
+                {% for lab in laboratorios %}
+                <option value="{{ lab.id }}" {% if lab_id == lab.id|stringformat:"s" %}selected{% endif %}>{{ lab.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
+            {% if busqueda or insumo_id or estado_id or lab_id %}
+            <a href="/inventario/items/" class="btn btn-secondary btn-sm">Limpiar</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Código</th>
+                    <th>Insumo</th>
+                    <th>Estado</th>
+                    <th>Laboratorio</th>
+                    <th>Última acción</th>
+                    <th>Fecha Registro</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.id }}</td>
+                    <td>{{ item.codigo }}</td>
+                    <td>{{ item.insumo.nombre }}</td>
+                    <td>
+                        <span class="badge {% if item.estado.nombre == 'Disponible' %}bg-success{% elif item.estado.nombre == 'Prestado' %}bg-primary{% elif item.estado.nombre == 'Dañado' %}bg-warning text-dark{% elif item.estado.nombre == 'Perdido' %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {{ item.estado.nombre }}
+                        </span>
+                    </td>
+                    <td>{{ item.laboratorio.nombre|default:"—" }}</td>
+                    <td class="small">
+                        {% if item.ultimo_movimiento %}
+                            {{ item.ultimo_movimiento.tipo_movimiento.nombre }}
+                            <span class="text-muted">({{ item.ultimo_movimiento.fecha|date:"d/m/Y H:i" }})</span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.fecha_registro|date:"d/m/Y H:i" }}</td>
+                    <td class="text-nowrap">
+                        <a href="/inventario/items/{{ item.id }}/historial/" class="btn btn-info btn-sm">Ver historial</a>
+                        <a href="/inventario/items/{{ item.id }}/eliminar/" class="btn btn-danger btn-sm" title="Eliminar item">
+                            <i class="fa-solid fa-trash me-1"></i>Eliminar
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-3">
+                        {% if busqueda or insumo_id or estado_id or lab_id %}No hay items que coincidan con los filtros.{% else %}No hay items registrados.{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include 'laboratorio/partials/paginacion.html' with page=items param='page' qs=qs %}
+</div>
