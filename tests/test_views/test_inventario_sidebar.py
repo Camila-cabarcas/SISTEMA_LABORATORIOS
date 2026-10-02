@@ -295,7 +295,7 @@ def test_etiqueta_de_tipo_movimiento(nombre_bd, etiqueta):
     assert TipoMovimiento(nombre=nombre_bd).etiqueta == etiqueta
 
 
-def test_tabla_movimientos_muestra_etiquetas_y_detalles_del_cambio(cliente_autenticado, inventario, usuario_admin):
+def test_tabla_movimientos_muestra_etiquetas_e_informacion(cliente_autenticado, inventario, usuario_admin):
     item = ItemInventario.objects.get(codigo='MUL-1')
     MovimientoInventario.objects.create(
         item_inventario=item, usuario=usuario_admin,
@@ -306,7 +306,7 @@ def test_tabla_movimientos_muestra_etiquetas_y_detalles_del_cambio(cliente_auten
     contenido = cliente_autenticado.get(URL_MOVIMIENTOS).content.decode()
     tabla = contenido.split('<table')[1]
 
-    assert '<th>Detalles del cambio</th>' in tabla
+    assert '<th>Información</th>' in tabla
     assert '<th>Observación</th>' not in tabla
     assert '<td>Creación</td>' in tabla
     assert '<td>Préstamo</td>' in tabla
@@ -343,7 +343,8 @@ def test_historial_item_usa_etiquetas(cliente_autenticado, inventario):
 
     contenido = cliente_autenticado.get(f'/inventario/items/{item.id}/historial/').content.decode()
 
-    assert '<th>Detalles del cambio</th>' in contenido
+    assert '<th>Anotaciones</th>' in contenido
+    assert '<th>Información</th>' not in contenido  # "Información" es solo la de Movimientos
     assert '<td>Préstamo</td>' in contenido
 
 
@@ -353,4 +354,4 @@ def test_formulario_registrar_movimiento_usa_etiquetas(cliente_autenticado, inve
     opciones = [label for _, label in form.fields['tipo_movimiento'].choices]
     assert 'Préstamo' in opciones and 'Devolución' in opciones
     assert 'Prestado' not in opciones
-    assert form.fields['observacion'].label == 'Detalles del cambio'
+    assert form.fields['observacion'].label == 'Información'

@@ -139,13 +139,13 @@ class MovimientoInventarioForm(forms.ModelForm):
             'observacion': forms.Textarea(
                 attrs={
                     'class': 'form-control',
-                    'placeholder': 'Detalles del cambio'
+                    'placeholder': 'Información'
                 }
             )
         }
 
         labels = {
-            'observacion': 'Detalles del cambio',
+            'observacion': 'Información',
         }
 
     def __init__(self, *args, **kwargs):
