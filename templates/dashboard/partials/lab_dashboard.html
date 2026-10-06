@@ -1,0 +1,15 @@
+{% if stats %}
+<section class="dash-section mb-4">
+    <div class="dash-section-header">
+        <h2 class="dash-section-title">
+            <i class="fa-solid fa-flask me-2"></i>{% for lab in mis_labs %}{{ lab.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </h2>
+    </div>
+    {% include 'dashboard/partials/_tarjetas.html' with stats=stats mostrar_lab=varios_labs %}
+</section>
+{% else %}
+<div class="dash-empty">
+    <i class="fa-solid fa-circle-info me-2"></i>
+    No tienes ningún laboratorio asignado. Contacta a un administrador.
+</div>
+{% endif %}

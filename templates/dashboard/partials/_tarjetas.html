@@ -1,0 +1,93 @@
+{# Tarjetas de estadísticas. Espera: stats (dict de dashboard.views._estadisticas) y mostrar_lab (columna Laboratorio en stock bajo). #}
+<div class="dash-grid mb-3">
+    <div class="dash-card dash-card--info">
+        <span class="dash-card-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+        <div>
+            <div class="dash-card-value">{{ stats.total_insumos }}</div>
+            <div class="dash-card-label">Insumos</div>
+        </div>
+    </div>
+    <div class="dash-card dash-card--info">
+        <span class="dash-card-icon"><i class="fa-solid fa-cubes"></i></span>
+        <div>
+            <div class="dash-card-value">{{ stats.total_items }}</div>
+            <div class="dash-card-label">Ítems</div>
+        </div>
+    </div>
+    <div class="dash-card {% if stats.prestamos_retrasados %}dash-card--bad{% else %}dash-card--info{% endif %}">
+        <span class="dash-card-icon"><i class="fa-solid fa-clipboard-list"></i></span>
+        <div>
+            <div class="dash-card-value">{{ stats.prestamos_activos }}</div>
+            <div class="dash-card-label">Préstamos activos</div>
+            {% if stats.prestamos_retrasados %}
+            <div class="dash-card-note">+ {{ stats.prestamos_retrasados }} retrasado{{ stats.prestamos_retrasados|pluralize }}</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="dash-card {% if stats.reservas_pendientes %}dash-card--warn{% else %}dash-card--ok{% endif %}">
+        <span class="dash-card-icon"><i class="fa-solid fa-calendar-day"></i></span>
+        <div>
+            <div class="dash-card-value">{{ stats.reservas_pendientes }}</div>
+            <div class="dash-card-label">Reservas pendientes</div>
+        </div>
+    </div>
+    <div class="dash-card {% if stats.stock_bajo %}dash-card--bad{% else %}dash-card--ok{% endif %}">
+        <span class="dash-card-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+        <div>
+            <div class="dash-card-value">{{ stats.stock_bajo|length }}</div>
+            <div class="dash-card-label">Stock bajo</div>
+        </div>
+    </div>
+</div>
+
+<h3 class="dash-subtitle">Ítems por estado</h3>
+<div class="dash-grid dash-grid--estados mb-3">
+    {% for e in stats.estados %}
+    <div class="dash-card dash-card--{% if e.valor %}{{ e.color }}{% else %}muted{% endif %}">
+        <span class="dash-card-icon"><i class="fa-solid {{ e.icono }}"></i></span>
+        <div class="flex-grow-1">
+            <div class="dash-card-value">{{ e.valor }}</div>
+            <div class="dash-card-label">{{ e.etiqueta }}</div>
+            <div class="dash-bar" role="progressbar" aria-label="{{ e.etiqueta }}" aria-valuenow="{{ e.porcentaje }}" aria-valuemin="0" aria-valuemax="100">
+                <span style="width: {{ e.porcentaje }}%"></span>
+            </div>
+            <div class="dash-card-note">{{ e.porcentaje }}% del total</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="dash-panel {% if stats.stock_bajo %}dash-panel--bad{% else %}dash-panel--ok{% endif %}">
+    <div class="dash-panel-header">
+        <i class="fa-solid {% if stats.stock_bajo %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %} me-2"></i>
+        Insumos con stock bajo
+    </div>
+    {% if stats.stock_bajo %}
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th>Insumo</th>
+                    {% if mostrar_lab %}<th>Laboratorio</th>{% endif %}
+                    <th class="text-end">Disponible</th>
+                    <th class="text-end">Mínimo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for insumo in stats.stock_bajo %}
+                <tr>
+                    <td><strong>{{ insumo.nombre }}</strong></td>
+                    {% if mostrar_lab %}<td>{{ insumo.laboratorio.nombre|default:"—" }}</td>{% endif %}
+                    <td class="text-end">
+                        <span class="badge {% if insumo.cantidad_disponible_count == 0 %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ insumo.cantidad_disponible_count }}</span>
+                    </td>
+                    <td class="text-end">{{ insumo.stock_minimo }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="mb-0 px-3 py-3 text-muted">Todo en orden: ningún insumo está por debajo de su stock mínimo.</p>
+    {% endif %}
+</div>

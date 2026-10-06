@@ -1,0 +1,195 @@
+/* ── Dashboard ───────────────────────────────────────────────
+   Tarjetas blancas con acento de color según significado:
+   ok = verde (bien), warn = ámbar (atención), bad = rojo (mal),
+   info = azul de marca (neutro), muted = gris (en cero).        */
+
+.dash-section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid rgba(15, 40, 60, .08);
+}
+
+.dash-section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--sl-primary-dark);
+}
+
+.dash-section-sub {
+    font-size: .875rem;
+    color: #6c7a86;
+}
+
+.dash-subtitle {
+    font-size: .8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #6c7a86;
+    margin: 1.25rem 0 .75rem;
+}
+
+.dash-filtro {
+    display: flex;
+    gap: .5rem;
+    min-width: 240px;
+}
+
+/* Grid de tarjetas */
+.dash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 1rem;
+}
+
+.dash-grid--estados {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+
+.dash-card {
+    --dash-accent: var(--sl-primary);
+    --dash-tint: rgba(44, 110, 155, .10);
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: .9rem;
+    padding: 1.1rem 1.25rem;
+    background: #fff;
+    border-radius: var(--sl-radius);
+    box-shadow: var(--sl-shadow-sm);
+    border-left: 4px solid var(--dash-accent);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.dash-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sl-shadow-md);
+}
+
+.dash-card--ok    { --dash-accent: #2f9e6b; --dash-tint: rgba(47, 158, 107, .12); }
+.dash-card--warn  { --dash-accent: #e0a100; --dash-tint: rgba(224, 161, 0, .14); }
+.dash-card--bad   { --dash-accent: #d64545; --dash-tint: rgba(214, 69, 69, .12); }
+.dash-card--muted { --dash-accent: #b4bec7; --dash-tint: rgba(108, 122, 134, .10); }
+
+.dash-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    border-radius: .6rem;
+    font-size: 1.2rem;
+    color: var(--dash-accent);
+    background: var(--dash-tint);
+}
+
+.dash-card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #1d2b36;
+    font-variant-numeric: tabular-nums;
+}
+
+.dash-card-label {
+    font-size: .78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: #6c7a86;
+}
+
+.dash-card-note {
+    margin-top: .25rem;
+    font-size: .78rem;
+    color: var(--dash-accent);
+    font-weight: 600;
+}
+
+.dash-card--muted .dash-card-note { color: #8a96a1; }
+
+.dash-bar {
+    height: 6px;
+    margin-top: .5rem;
+    border-radius: 3px;
+    background: rgba(15, 40, 60, .07);
+    overflow: hidden;
+}
+
+.dash-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--dash-accent);
+}
+
+/* Panel de stock bajo */
+.dash-panel {
+    background: #fff;
+    border-radius: var(--sl-radius);
+    box-shadow: var(--sl-shadow-sm);
+    overflow: hidden;
+    border-top: 4px solid var(--dash-accent, #2f9e6b);
+}
+
+.dash-panel--ok  { --dash-accent: #2f9e6b; }
+.dash-panel--bad { --dash-accent: #d64545; }
+
+.dash-panel-header {
+    padding: .75rem 1rem;
+    font-weight: 600;
+    color: var(--dash-accent);
+    border-bottom: 1px solid rgba(15, 40, 60, .06);
+}
+
+.dash-panel .table th {
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: #6c7a86;
+    background: transparent;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.dash-panel .table td {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.dash-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: #6c7a86;
+    background: #fff;
+    border: 1px dashed rgba(15, 40, 60, .15);
+    border-radius: var(--sl-radius);
+}
+
+@media (max-width: 575.98px) {
+    .dash-grid,
+    .dash-grid--estados {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .75rem;
+    }
+
+    .dash-card {
+        flex-direction: column;
+        gap: .5rem;
+        padding: .9rem 1rem;
+    }
+
+    .dash-card-value { font-size: 1.5rem; }
+
+    .dash-filtro {
+        width: 100%;
+        min-width: 0;
+    }
+}

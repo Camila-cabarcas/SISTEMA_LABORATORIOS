@@ -1,0 +1,28 @@
+{% extends 'base_general.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link href="{% static 'css/dashboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block contenido %}
+
+<div class="mb-4">
+    <h1 class="mb-1"><i class="fa-solid fa-gauge-high text-brand me-2"></i>Dashboard</h1>
+    <p class="text-muted mb-0">
+        {% if rol == 'Administrador' %}Resumen general del sistema de laboratorios
+        {% elif rol == 'Laboratorio' %}Resumen de tu laboratorio
+        {% else %}Tus reservas recientes{% endif %}
+    </p>
+</div>
+
+{% if rol == 'Administrador' %}
+    {% include 'dashboard/partials/admin_general.html' %}
+    {% include 'dashboard/partials/admin_por_lab.html' %}
+{% elif rol == 'Laboratorio' %}
+    {% include 'dashboard/partials/lab_dashboard.html' %}
+{% elif rol == 'Docente' or rol == 'Estudiante' %}
+    {% include 'dashboard/partials/mis_reservas.html' %}
+{% endif %}
+
+{% endblock %}

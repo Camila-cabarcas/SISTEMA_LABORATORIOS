@@ -1,0 +1,27 @@
+<section class="dash-section mb-4" id="por-laboratorio">
+    <div class="dash-section-header">
+        <h2 class="dash-section-title"><i class="fa-solid fa-flask me-2"></i>Por laboratorio</h2>
+        <form method="get" action="#por-laboratorio" class="dash-filtro">
+            <label for="dash-lab" class="visually-hidden">Laboratorio</label>
+            <select id="dash-lab" name="lab" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">Selecciona un laboratorio…</option>
+                {% for lab in laboratorios %}
+                <option value="{{ lab.id }}" {% if lab_seleccionado and lab.id == lab_seleccionado.id %}selected{% endif %}>
+                    {{ lab.nombre }}{% if not lab.activo %} (inactivo){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+            <noscript><button type="submit" class="btn btn-sm btn-primary">Ver</button></noscript>
+        </form>
+    </div>
+
+    {% if por_lab %}
+        <p class="dash-section-sub mb-3">Mostrando solo <strong>{{ lab_seleccionado.nombre }}</strong></p>
+        {% include 'dashboard/partials/_tarjetas.html' with stats=por_lab mostrar_lab=False %}
+    {% else %}
+        <div class="dash-empty">
+            <i class="fa-solid fa-arrow-pointer me-2"></i>
+            Elige un laboratorio para ver sus cifras por separado.
+        </div>
+    {% endif %}
+</section>
