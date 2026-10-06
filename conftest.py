@@ -39,3 +39,15 @@ def _emails_sincronos(monkeypatch):
     # hay que parchear ambos módulos.
     monkeypatch.setattr(email_tasks, 'enviar_email_html', enviar_sincrono)
     monkeypatch.setattr(notificaciones_email, 'enviar_email_html', enviar_sincrono)
+
+
+@pytest.fixture(autouse=True)
+def _sin_vetos_automaticos(settings):
+    """Desactiva VetosAutomaticosMiddleware en toda la suite.
+
+    Con el middleware activo, la primera request de cada proceso crearía
+    vetos NO_CANCELO para cualquier reserva Aprobada vencida que un test
+    haya armado como dato, y la marca de "ya corrió" vive en la caché
+    locmem (compartida entre tests) — el resultado dependería del orden de
+    ejecución. Los tests del middleware lo reactivan explícitamente."""
+    settings.VETOS_AUTO_INTERVALO_MINUTOS = 0

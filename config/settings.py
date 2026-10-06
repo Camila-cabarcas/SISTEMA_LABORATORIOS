@@ -71,7 +71,13 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'vetos.middleware.VetosAutomaticosMiddleware',
 ]
+
+# Cada cuántos minutos, como máximo, VetosAutomaticosMiddleware revisa las
+# reservas vencidas sin retirar y crea sus vetos NO_CANCELO (0 = desactivado;
+# queda el comando generar_vetos_no_cancelo para correrlo por cron).
+VETOS_AUTO_INTERVALO_MINUTOS = 10
 
 ROOT_URLCONF = 'config.urls'
 

@@ -196,3 +196,117 @@ class RegistrarVetoService:
                 getattr(prestamo, 'id', None),
             )
         return creados
+
+
+class GenerarVetosNoCanceloService:
+    """Veto NO_CANCELO automático para las reservas a las que nadie se
+    presentó (las corre el comando generar_vetos_no_cancelo, por cron).
+
+    Cuándo se genera: la reserva sigue "Aprobada", no tiene Prestamo y ya
+    pasó su hora_limite_retiro (fecha_reserva + 30 min). A esa altura el
+    solicitante ya no puede cancelar (CancelarReservaService corta 2 h antes
+    de fecha_reserva) ni retirar (prestamos.views rechaza crear el préstamo
+    pasado el límite), así que la infracción es definitiva.
+
+    Cuándo NO: si canceló (estado "Cancelada"), si retiró a tiempo (tiene
+    Prestamo), o si la reserva ya tiene un veto NO_CANCELO (automático o
+    registrado a mano, aunque ya se haya levantado) — eso hace al proceso
+    idempotente: correrlo cada hora nunca duplica vetos.
+
+    Duración: la de registrar_no_cancelo — 1 día, 7 desde el 3er NO_CANCELO.
+
+    Solo mira reservas cuyo límite venció en las últimas `horas` horas, para
+    que la primera corrida no vete por no-shows históricos de antes de que
+    existiera este proceso."""
+
+    HORAS_VENTANA = 48
+
+    CACHE_KEY_ULTIMA_EJECUCION = 'vetos:no_cancelo:ultima_ejecucion'
+
+    @staticmethod
+    def ejecutar_si_corresponde():
+        """ejecutar(), pero como mucho una vez cada
+        settings.VETOS_AUTO_INTERVALO_MINUTOS (0/None = desactivado). Es lo
+        que llama VetosAutomaticosMiddleware en cada request, así que nunca
+        levanta excepción: un fallo acá no debe tumbar la página.
+
+        cache.add() solo escribe si la clave no existe — la primera request
+        tras vencer el intervalo "gana" la corrida y las demás la saltan."""
+        from django.conf import settings
+        from django.core.cache import cache
+
+        minutos = getattr(settings, 'VETOS_AUTO_INTERVALO_MINUTOS', 10)
+        if not minutos:
+            return None
+        if not cache.add(GenerarVetosNoCanceloService.CACHE_KEY_ULTIMA_EJECUCION, True, timeout=minutos * 60):
+            return None
+        try:
+            return GenerarVetosNoCanceloService.ejecutar()
+        except Exception:
+            logger.exception('GenerarVetosNoCanceloService.ejecutar_si_corresponde | error')
+            return None
+
+    @staticmethod
+    def candidatas(ahora=None, horas=HORAS_VENTANA):
+        from datetime import datetime, timedelta
+
+        from reservas.models import Reserva
+
+        # USE_TZ = False: hora local ingenua, igual que marcar_retrasados.
+        ahora = ahora or datetime.now()
+        return (
+            Reserva.objects.filter(
+                estado__nombre='Aprobada',
+                prestamo__isnull=True,
+                hora_limite_retiro__lt=ahora,
+                hora_limite_retiro__gte=ahora - timedelta(hours=horas),
+            )
+            .exclude(vetos__tipo=Veto.NO_CANCELO)
+            .distinct()
+            .order_by('hora_limite_retiro', 'id')
+        )
+
+    @staticmethod
+    def ejecutar(ahora=None, horas=HORAS_VENTANA, dry_run=False):
+        """Crea los vetos que falten. Devuelve un dict con las listas
+        `creados` (Veto, o Reserva si dry_run), `sin_identidad` y `errores`
+        (Reserva). Un fallo en una reserva no detiene las demás."""
+        from django.db import transaction
+
+        resumen = {'creados': [], 'sin_identidad': [], 'errores': []}
+
+        for reserva in GenerarVetosNoCanceloService.candidatas(ahora, horas):
+            cedula, usuario = identidad_de_reserva(reserva)
+            if not cedula and usuario is None:
+                logger.warning(
+                    'GenerarVetosNoCanceloService | reserva sin solicitante identificable | reserva_id=%s',
+                    reserva.id,
+                )
+                resumen['sin_identidad'].append(reserva)
+                continue
+
+            if dry_run:
+                resumen['creados'].append(reserva)
+                continue
+
+            try:
+                with transaction.atomic():
+                    dias = Veto.calcular_dias_no_cancelo(cedula=cedula, usuario=usuario)
+                    veto = RegistrarVetoService.registrar_no_cancelo(
+                        reserva=reserva, cedula=cedula, usuario=usuario,
+                        motivo=(
+                            f'Generado automáticamente: no canceló ni retiró la reserva '
+                            f'{reserva.codigo or reserva.id} antes del límite de retiro '
+                            f'({reserva.hora_limite_retiro:%d/%m/%Y %H:%M}) '
+                            f'— {dias} día(s) de bloqueo.'
+                        ),
+                    )
+                resumen['creados'].append(veto)
+            except Exception:
+                logger.exception(
+                    'GenerarVetosNoCanceloService | error creando veto | reserva_id=%s',
+                    reserva.id,
+                )
+                resumen['errores'].append(reserva)
+
+        return resumen
