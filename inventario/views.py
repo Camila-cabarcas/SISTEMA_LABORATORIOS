@@ -395,22 +395,57 @@ def eliminar_item_inventario(request, id):
 
 # ── Importar inventario desde archivo ─────────────────────────────────────────
 
+# Cuatro pasos, cada uno su propia URL: Importar (subir + preview) →
+# Mapear (columna → campo) → Validar (simulación) → Confirmar (guardar +
+# reporte). La tabla parseada viaja en la sesión entre pasos, nunca en la BD.
+#
+# services.importador se importa dentro de los métodos: carga pandas, y
+# este módulo lo importan otras apps (p. ej. el dashboard) que no deberían
+# pagar ese costo al arrancar.
+
+SESION_IMPORTACION = 'importacion_inventario'
+SESION_RESULTADO = 'importacion_inventario_resultado'
+URL_IMPORTAR = '/inventario/importar/'
+
+
+PASOS_IMPORTACION = [(1, 'Subir archivo'), (2, 'Mapear columnas'), (3, 'Validar'), (4, 'Guardar')]
+
+
+def _contexto_importar(request, paso):
+    contexto = _contexto_sidebar(request, 'importar')
+    contexto.update({'paso': paso, 'pasos_importacion': PASOS_IMPORTACION})
+    return contexto
+
+
+def _datos_importacion(request):
+    """(datos de sesión, Laboratorio) del archivo en curso, o (None, None)
+    si no hay importación en curso o su laboratorio ya no está activo."""
+    from laboratorio.models import Laboratorio
+
+    datos = request.session.get(SESION_IMPORTACION)
+    if not datos:
+        messages.warning(request, 'Primero sube un archivo para importar.')
+        return None, None
+    laboratorio = Laboratorio.objects.filter(id=datos.get('laboratorio_id'), activo=True).first()
+    if laboratorio is None:
+        request.session.pop(SESION_IMPORTACION, None)
+        messages.error(request, 'El laboratorio elegido ya no es válido. Vuelve a subir el archivo.')
+        return None, None
+    return datos, laboratorio
+
+
 @method_decorator(rol_requerido('Administrador'), name='dispatch')
 class ImportarInventarioView(View):
-    """Fase 1: sube un Excel/CSV/PDF + laboratorio destino y muestra la
-    vista previa (primeras filas + columnas detectadas). No guarda nada —
-    la confirmación e importación real es la fase 2."""
+    """Paso 1: sube un Excel/CSV/PDF + laboratorio destino y muestra la
+    vista previa (primeras filas + columnas detectadas). Guarda la tabla en
+    la sesión para los pasos siguientes; no escribe en la BD."""
 
     template_name = 'inventario/importar.html'
-
-    # services.importador se importa dentro de los métodos: carga pandas,
-    # y este módulo lo importan otras apps (p. ej. el dashboard) que no
-    # deberían pagar ese costo al arrancar.
 
     def _render(self, request, form, preview=None, error=None):
         from .services.importador import ETIQUETAS_CAMPO
 
-        contexto = _contexto_sidebar(request, 'importar')
+        contexto = _contexto_importar(request, 1)
         contexto.update({
             'form': form,
             'preview': preview,
@@ -443,5 +478,140 @@ class ImportarInventarioView(View):
                 error='No se pudo procesar el archivo. Verifica que sea un Excel, CSV o PDF válido.',
             )
 
-        preview['laboratorio'] = form.cleaned_data['laboratorio']
+        laboratorio = form.cleaned_data['laboratorio']
+        preview['laboratorio'] = laboratorio
+        request.session[SESION_IMPORTACION] = importador.datos_sesion(laboratorio.id)
+        request.session.pop(SESION_RESULTADO, None)
         return self._render(request, form, preview=preview)
+
+
+@method_decorator(rol_requerido('Administrador'), name='dispatch')
+class MapearView(View):
+    """Paso 2: un desplegable por columna para asignarle un campo del
+    sistema (o ignorarla). Parte del mapeo detectado automáticamente."""
+
+    template_name = 'inventario/mapear.html'
+
+    def _render(self, request, datos, laboratorio, mapeo, errores=()):
+        from .services.importador import CAMPOS_OBLIGATORIOS, ETIQUETAS_CAMPO, ImportadorInventario
+
+        n = ImportadorInventario.FILAS_PREVIEW
+        contexto = _contexto_importar(request, 2)
+        contexto.update({
+            'datos': datos,
+            'laboratorio': laboratorio,
+            'columnas': [
+                {'indice': i, 'nombre': col, 'campo': mapeo.get(col, '')}
+                for i, col in enumerate(datos['columnas'])
+            ],
+            'filas': list(zip(datos['numeros_fila'][:n], datos['filas'][:n])),
+            'total_filas': len(datos['filas']),
+            'campos_sistema': ETIQUETAS_CAMPO,
+            'obligatorios': [ETIQUETAS_CAMPO[c] for c in CAMPOS_OBLIGATORIOS],
+            'errores': errores,
+        })
+        return render(request, self.template_name, contexto)
+
+    def get(self, request):
+        datos, laboratorio = _datos_importacion(request)
+        if datos is None:
+            return redirect(URL_IMPORTAR)
+        return self._render(request, datos, laboratorio, datos.get('mapeo', {}))
+
+    def post(self, request):
+        from .services.importador import ImportadorInventario
+
+        datos, laboratorio = _datos_importacion(request)
+        if datos is None:
+            return redirect(URL_IMPORTAR)
+
+        mapeo = {}
+        for i, columna in enumerate(datos['columnas']):
+            campo = request.POST.get(f'col_{i}', '').strip()
+            if campo:
+                mapeo[columna] = campo
+
+        errores = ImportadorInventario.validar_mapeo(mapeo, datos['columnas'])
+        if errores:
+            return self._render(request, datos, laboratorio, mapeo, errores)
+
+        datos['mapeo'] = mapeo
+        datos['mapeo_confirmado'] = True
+        request.session[SESION_IMPORTACION] = datos
+        return redirect(f'{URL_IMPORTAR}validar/')
+
+
+@method_decorator(rol_requerido('Administrador'), name='dispatch')
+class ValidarView(View):
+    """Paso 3: simula la importación (sin escribir) y muestra qué se
+    creará, qué se salta por duplicado y los errores por fila."""
+
+    template_name = 'inventario/validar.html'
+
+    def get(self, request):
+        from .services.importador import ImportadorInventario
+
+        datos, laboratorio = _datos_importacion(request)
+        if datos is None:
+            return redirect(URL_IMPORTAR)
+        if not datos.get('mapeo_confirmado'):
+            return redirect(f'{URL_IMPORTAR}mapear/')
+
+        resultado = ImportadorInventario.desde_sesion(datos).validar(datos['mapeo'], laboratorio)
+        contexto = _contexto_importar(request, 3)
+        contexto.update({
+            'datos': datos,
+            'laboratorio': laboratorio,
+            'resumen': resultado.resumen(),
+        })
+        return render(request, self.template_name, contexto)
+
+
+@method_decorator(rol_requerido('Administrador'), name='dispatch')
+class ConfirmarView(View):
+    """Paso 4: POST guarda en la BD (revalidando) y redirige a GET, que
+    muestra el reporte final — así recargar la página no reimporta."""
+
+    template_name = 'inventario/confirmar.html'
+
+    def get(self, request):
+        resumen = request.session.get(SESION_RESULTADO)
+        if not resumen:
+            return redirect(URL_IMPORTAR)
+        contexto = _contexto_importar(request, 4)
+        contexto['resumen'] = resumen
+        return render(request, self.template_name, contexto)
+
+    def post(self, request):
+        from .services.importador import ImportadorInventario
+
+        datos, laboratorio = _datos_importacion(request)
+        if datos is None:
+            return redirect(URL_IMPORTAR)
+        if not datos.get('mapeo_confirmado'):
+            return redirect(f'{URL_IMPORTAR}mapear/')
+
+        importador = ImportadorInventario.desde_sesion(datos)
+        try:
+            resultado = importador.guardar(datos['mapeo'], laboratorio, request.user)
+        except Exception:
+            logger_importacion.exception(
+                'ConfirmarView | error guardando la importación de %s', importador.nombre,
+            )
+            messages.error(
+                request,
+                'No se pudo guardar la importación; no se guardó ningún registro. '
+                'Revisa la validación e inténtalo de nuevo.',
+            )
+            return redirect(f'{URL_IMPORTAR}validar/')
+
+        resumen = resultado.resumen()
+        resumen['laboratorio'] = laboratorio.nombre
+        request.session.pop(SESION_IMPORTACION, None)
+        request.session[SESION_RESULTADO] = resumen
+        logger_importacion.info(
+            'Importación de inventario | usuario=%s | archivo=%s | insumos_nuevos=%s | items=%s | filas_saltadas=%s',
+            request.user.username, importador.nombre, len(resumen['insumos_nuevos']),
+            len(resumen['items']), resumen['filas_saltadas'],
+        )
+        return redirect(f'{URL_IMPORTAR}confirmar/')

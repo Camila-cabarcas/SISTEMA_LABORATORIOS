@@ -1,13 +1,11 @@
 {% extends 'inventario/layout_sidebar.html' %}
 
 {% block seccion %}
-<div class="d-flex align-items-center gap-2 mb-3">
-    <h2 class="h4 mb-0"><i class="fa-solid fa-file-import text-brand me-2"></i>Importar inventario</h2>
-    <span class="badge bg-secondary">Paso 1 de 2 · Vista previa</span>
-</div>
+<h2 class="h4 mb-2"><i class="fa-solid fa-file-import text-brand me-2"></i>Importar inventario</h2>
+{% include 'inventario/partials/importar_pasos.html' %}
 <p class="text-muted">
-    Sube un archivo con el inventario de un laboratorio. Primero verás una vista previa con las columnas
-    detectadas; todavía no se guarda nada.
+    Sube un archivo con el inventario de un laboratorio: una fila por ítem físico, con al menos su
+    <strong>Nombre</strong> y <strong>Código</strong>. Nada se guarda hasta el último paso.
 </p>
 
 <div class="card shadow-sm mb-4">
@@ -32,7 +30,7 @@
                         {% endfor %}
                     </select>
                     {% for err in form.laboratorio.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
-                    <div class="form-text">&nbsp;</div>
+                    <div class="form-text">Se usa para las filas sin columna Laboratorio.</div>
                 </div>
                 <div class="col-lg-2">
                     <button type="submit" class="btn btn-primary w-100">
@@ -103,9 +101,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for fila in preview.filas %}
+                    {% for numero, fila in preview.filas_numeradas %}
                     <tr>
-                        <td class="text-muted">{{ forloop.counter }}</td>
+                        <td class="text-muted">{{ numero }}</td>
                         {% for celda in fila %}<td>{{ celda }}</td>{% endfor %}
                     </tr>
                     {% endfor %}
@@ -113,10 +111,11 @@
             </table>
         </div>
     </div>
-    <p class="text-muted small mt-2 mb-0">
-        <i class="fa-solid fa-circle-info me-1"></i>
-        La importación (paso 2) todavía no está disponible: por ahora solo se verifica que el archivo se lea bien.
-    </p>
+    <div class="d-flex justify-content-end mt-3">
+        <a href="/inventario/importar/mapear/" class="btn btn-primary" id="btn-siguiente-mapear">
+            Siguiente: Mapear columnas <i class="fa-solid fa-arrow-right ms-1"></i>
+        </a>
+    </div>
 </div>
 {% endif %}
 {% endblock %}

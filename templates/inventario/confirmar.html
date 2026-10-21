@@ -1,0 +1,29 @@
+{% extends 'inventario/layout_sidebar.html' %}
+
+{% block seccion %}
+<h2 class="h4 mb-2"><i class="fa-solid fa-file-import text-brand me-2"></i>Importar inventario</h2>
+{% include 'inventario/partials/importar_pasos.html' %}
+
+<div class="alert alert-success d-flex gap-2" id="reporte-importacion">
+    <i class="fa-solid fa-circle-check fs-5"></i>
+    <div>
+        <strong>
+            Importación completada: {{ resumen.insumos_nuevos|length }} insumo{{ resumen.insumos_nuevos|length|pluralize }}
+            nuevo{{ resumen.insumos_nuevos|length|pluralize }} y {{ resumen.items|length }} ítem{{ resumen.items|length|pluralize:"s" }} creados.
+            {{ resumen.filas_saltadas }} fila{{ resumen.filas_saltadas|pluralize }} saltada{{ resumen.filas_saltadas|pluralize }}.
+        </strong>
+        <div class="small">{{ resumen.archivo }} · {{ resumen.laboratorio }}</div>
+    </div>
+</div>
+
+{% include 'inventario/partials/importar_resumen.html' %}
+
+<div class="d-flex flex-wrap gap-2 justify-content-end">
+    <a href="/inventario/importar/" class="btn btn-outline-primary">
+        <i class="fa-solid fa-file-import me-1"></i>Importar otro archivo
+    </a>
+    <a href="/inventario/items/" class="btn btn-primary">
+        <i class="fa-solid fa-list me-1"></i>Ver ítems
+    </a>
+</div>
+{% endblock %}

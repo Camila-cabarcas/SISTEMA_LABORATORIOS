@@ -1,0 +1,98 @@
+{# Detalle de una importación (simulada o guardada). Espera: resumen (ResultadoImportacion.resumen()) y verbo ("se crearán" / "creados"). #}
+<div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3">
+        <div class="card shadow-sm h-100 border-start border-4 border-success">
+            <div class="card-body">
+                <div class="fs-3 fw-bold" id="total-insumos-nuevos">{{ resumen.insumos_nuevos|length }}</div>
+                <div class="text-muted small text-uppercase">Insumos nuevos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card shadow-sm h-100 border-start border-4 border-success">
+            <div class="card-body">
+                <div class="fs-3 fw-bold" id="total-items">{{ resumen.items|length }}</div>
+                <div class="text-muted small text-uppercase">Ítems</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card shadow-sm h-100 border-start border-4 {% if resumen.saltadas %}border-warning{% else %}border-light{% endif %}">
+            <div class="card-body">
+                <div class="fs-3 fw-bold">{{ resumen.saltadas|length }}</div>
+                <div class="text-muted small text-uppercase">Duplicados saltados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card shadow-sm h-100 border-start border-4 {% if resumen.errores %}border-danger{% else %}border-light{% endif %}">
+            <div class="card-body">
+                <div class="fs-3 fw-bold">{{ resumen.errores|length }}</div>
+                <div class="text-muted small text-uppercase">Errores</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if resumen.errores %}
+<div class="card shadow-sm mb-3 border-danger" id="lista-errores">
+    <div class="card-header text-danger"><i class="fa-solid fa-circle-xmark me-1"></i>Errores por fila (no se importan)</div>
+    <ul class="list-group list-group-flush small">
+        {% for e in resumen.errores %}<li class="list-group-item">{{ e.mensaje }}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if resumen.saltadas %}
+<div class="card shadow-sm mb-3 border-warning" id="lista-saltadas">
+    <div class="card-header text-warning-emphasis"><i class="fa-solid fa-copy me-1"></i>Duplicados detectados (se saltan)</div>
+    <ul class="list-group list-group-flush small">
+        {% for s in resumen.saltadas %}<li class="list-group-item">{{ s.mensaje }}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if resumen.insumos_nuevos or resumen.insumos_existentes %}
+<div class="card shadow-sm mb-3">
+    <div class="card-header">Insumos</div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+            <thead>
+                <tr><th>Nombre</th><th>Laboratorio</th><th>Marca</th><th class="text-end">Stock mín.</th><th class="text-end">Ítems</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for i in resumen.insumos_nuevos %}
+                <tr>
+                    <td><strong>{{ i.nombre }}</strong></td><td>{{ i.laboratorio }}</td><td>{{ i.marca|default:"—" }}</td>
+                    <td class="text-end">{{ i.stock_minimo }}</td><td class="text-end">{{ i.items }}</td>
+                    <td><span class="badge bg-success">Nuevo</span></td>
+                </tr>
+                {% endfor %}
+                {% for i in resumen.insumos_existentes %}
+                <tr>
+                    <td><strong>{{ i.nombre }}</strong></td><td>{{ i.laboratorio }}</td><td>{{ i.marca|default:"—" }}</td>
+                    <td class="text-end">{{ i.stock_minimo }}</td><td class="text-end">{{ i.items }}</td>
+                    <td><span class="badge bg-secondary" title="Ya existe en el laboratorio: solo se le agregan ítems">Existente</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if resumen.items %}
+<details class="card shadow-sm mb-3">
+    <summary class="card-header">Ítems ({{ resumen.items|length }})</summary>
+    <div class="table-responsive" style="max-height: 400px">
+        <table class="table table-sm table-striped mb-0 align-middle">
+            <thead><tr><th>Fila</th><th>Código</th><th>Insumo</th><th>Laboratorio</th><th>Estado</th></tr></thead>
+            <tbody>
+                {% for it in resumen.items %}
+                <tr><td class="text-muted">{{ it.fila }}</td><td><code>{{ it.codigo }}</code></td><td>{{ it.insumo }}</td><td>{{ it.laboratorio }}</td><td>{{ it.estado }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endif %}

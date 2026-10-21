@@ -12,6 +12,9 @@ from .views import (
     historial_item,
     eliminar_item_inventario,
     ImportarInventarioView,
+    MapearView,
+    ValidarView,
+    ConfirmarView,
 )
 
 urlpatterns = [
@@ -23,4 +26,7 @@ urlpatterns = [
     path('items/<int:id>/historial/', historial_item),
     path('items/<int:id>/eliminar/', eliminar_item_inventario),
     path('importar/', ImportarInventarioView.as_view(), name='importar_inventario'),
+    path('importar/mapear/', MapearView.as_view(), name='importar_mapear'),
+    path('importar/validar/', ValidarView.as_view(), name='importar_validar'),
+    path('importar/confirmar/', ConfirmarView.as_view(), name='importar_confirmar'),
 ]

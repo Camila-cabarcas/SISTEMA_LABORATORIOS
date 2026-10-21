@@ -283,3 +283,306 @@ class TestValidacion:
     def test_extension_en_mayusculas(self):
         p = _preview('INV.CSV', b'Nombre\nPipeta\n')
         assert p['filas'] == [['Pipeta']]
+
+
+# ══ Fase 2: mapeo, validación y guardado ══════════════════════════════════
+
+MAPEO = {'Código': 'codigo', 'Nombre': 'nombre', 'Marca': 'marca', 'Estado': 'estado', 'Stock mínimo': 'stock_minimo'}
+CABECERA = 'Código,Nombre,Marca,Estado,Stock mínimo\n'
+
+
+def _importador_csv(cuerpo, cabecera=CABECERA):
+    return ImportadorInventario(_subir('inv.csv', (cabecera + cuerpo).encode('utf-8')))
+
+
+def _validar(cuerpo, laboratorio, mapeo=MAPEO, cabecera=CABECERA):
+    return _importador_csv(cuerpo, cabecera).validar(mapeo, laboratorio).resumen()
+
+
+def _mensajes(lista):
+    return [x['mensaje'] for x in lista]
+
+
+class TestMapeo:
+
+    COLUMNAS = ['Código', 'Nombre', 'Marca']
+
+    def test_mapeo_valido(self):
+        assert ImportadorInventario.validar_mapeo({'Código': 'codigo', 'Nombre': 'nombre'}, self.COLUMNAS) == []
+
+    def test_faltan_obligatorios(self):
+        errores = ImportadorInventario.validar_mapeo({'Marca': 'marca'}, self.COLUMNAS)
+        assert any('Nombre' in e for e in errores)
+        assert any('Código' in e for e in errores)
+
+    def test_campo_en_dos_columnas(self):
+        errores = ImportadorInventario.validar_mapeo(
+            {'Código': 'codigo', 'Nombre': 'nombre', 'Marca': 'nombre'}, self.COLUMNAS,
+        )
+        assert errores == ['El campo Nombre está asignado a dos columnas: "Nombre" y "Marca".']
+
+    def test_campo_o_columna_desconocidos(self):
+        errores = ImportadorInventario.validar_mapeo(
+            {'Código': 'codigo', 'Nombre': 'nombre', 'Marca': 'precio', 'Fantasma': 'marca'}, self.COLUMNAS,
+        )
+        assert 'Campo desconocido para la columna "Marca".' in errores
+        assert 'La columna "Fantasma" no existe en el archivo.' in errores
+
+    def test_mapeo_manual_reasigna_columnas(self, catalogos, laboratorio):
+        # La columna "Serial" no se detecta como Código por nombre exacto en
+        # este archivo, pero el usuario puede asignarla a mano.
+        cabecera = 'Equipo,Serial\n'
+        resumen = _validar('Pipeta,X-1\n', laboratorio, mapeo={'Equipo': 'nombre', 'Serial': 'codigo'}, cabecera=cabecera)
+        assert resumen['items'][0]['codigo'] == 'X-1'
+        assert resumen['items'][0]['insumo'] == 'Pipeta'
+
+    def test_columnas_ignoradas_no_se_usan(self, catalogos, laboratorio):
+        mapeo = {'Código': 'codigo', 'Nombre': 'nombre'}  # Marca ignorada
+        resumen = _validar('A-1,Pipeta,Brand,,\n', laboratorio, mapeo=mapeo)
+        assert resumen['insumos_nuevos'][0]['marca'] == ''
+
+
+@pytest.mark.django_db
+class TestValidacion:
+
+    def test_simula_sin_guardar(self, catalogos, laboratorio):
+        from inventario.models import Insumo, ItemInventario
+
+        resumen = _validar('A-1,Pipeta,Brand,Disponible,2\nA-2,Pipeta,Brand,,\nB-1,Bureta,,Dañado,\n', laboratorio)
+
+        assert [i['nombre'] for i in resumen['insumos_nuevos']] == ['Pipeta', 'Bureta']
+        assert resumen['insumos_nuevos'][0]['items'] == 2
+        assert resumen['insumos_nuevos'][0]['stock_minimo'] == 2
+        assert [i['codigo'] for i in resumen['items']] == ['A-1', 'A-2', 'B-1']
+        assert [i['estado'] for i in resumen['items']] == ['Disponible', 'Disponible', 'Dañado']
+        assert resumen['errores'] == resumen['saltadas'] == []
+        assert resumen['filas_saltadas'] == 0
+        assert not Insumo.objects.exists()
+        assert not ItemInventario.objects.exists()
+
+    def test_numero_de_fila_es_el_del_archivo(self, catalogos, laboratorio):
+        # Encabezado en la línea 1, una línea en blanco: el error es de la línea 4.
+        resumen = _validar('A-1,Pipeta,,,\n\n,Bureta,,,\n', laboratorio)
+        assert _mensajes(resumen['errores']) == ['Fila 4: Código vacío']
+
+    # ── Campos requeridos ──
+    def test_nombre_vacio(self, catalogos, laboratorio):
+        resumen = _validar('A-1,Pipeta,,,\nA-2,,,,\n', laboratorio)
+        assert _mensajes(resumen['errores']) == ['Fila 3: Nombre vacío']
+        assert len(resumen['items']) == 1
+
+    def test_nombre_y_codigo_vacios_dan_dos_errores(self, catalogos, laboratorio):
+        resumen = _validar('A-1,Pipeta,,,\n,,Brand,,\n', laboratorio)
+        assert _mensajes(resumen['errores']) == ['Fila 3: Nombre vacío', 'Fila 3: Código vacío']
+        assert resumen['filas_saltadas'] == 1
+
+    def test_textos_demasiado_largos(self, catalogos, laboratorio):
+        resumen = _validar(f'{"C" * 51},{"N" * 101},{"M" * 101},,\n', laboratorio)
+        assert _mensajes(resumen['errores']) == [
+            'Fila 2: Nombre demasiado largo (máx. 100 caracteres)',
+            'Fila 2: Código demasiado largo (máx. 50 caracteres)',
+            'Fila 2: Marca demasiado larga (máx. 100 caracteres)',
+        ]
+
+    # ── Duplicados ──
+    def test_codigo_duplicado_en_el_archivo(self, catalogos, laboratorio):
+        resumen = _validar('A-1,Pipeta,,,\nA-2,Pipeta,,,\na-1,Bureta,,,\n', laboratorio)
+        assert _mensajes(resumen['saltadas']) == [
+            'Fila 4: Código duplicado "a-1" (ya existe en el archivo, fila 2)',
+        ]
+        assert [i['codigo'] for i in resumen['items']] == ['A-1', 'A-2']
+        # Bureta solo tenía la fila duplicada: no se crea.
+        assert [i['nombre'] for i in resumen['insumos_nuevos']] == ['Pipeta']
+        assert resumen['filas_saltadas'] == 1
+
+    def test_codigo_que_ya_existe_en_el_sistema(self, catalogos, laboratorio):
+        from inventario.models import EstadoItem, Insumo, ItemInventario
+
+        insumo = Insumo.objects.create(nombre='Viejo', descripcion='x', laboratorio=laboratorio)
+        item = ItemInventario.objects.create(codigo='A-1', insumo=insumo, estado=EstadoItem.objects.get(nombre='Disponible'))
+        item.soft_delete()  # aunque esté eliminado, el código sigue ocupado
+
+        resumen = _validar('A-1,Pipeta,,,\nA-2,Pipeta,,,\n', laboratorio)
+        assert _mensajes(resumen['saltadas']) == ['Fila 2: Código "A-1" ya existe en el sistema']
+        assert [i['codigo'] for i in resumen['items']] == ['A-2']
+
+    def test_insumo_existente_se_reutiliza(self, catalogos, laboratorio):
+        from inventario.models import Insumo
+
+        Insumo.objects.create(nombre='Pipeta', descripcion='x', laboratorio=laboratorio, marca='Original')
+        resumen = _validar('A-1,pipeta,Otra,,\n', laboratorio)
+        assert resumen['insumos_nuevos'] == []
+        assert resumen['insumos_existentes'][0]['nombre'] == 'Pipeta'
+        assert resumen['insumos_existentes'][0]['items'] == 1
+
+    def test_mismo_nombre_en_otro_laboratorio_es_otro_insumo(self, catalogos, laboratorio):
+        from inventario.models import Insumo
+        from laboratorio.models import Laboratorio
+
+        otro = Laboratorio.objects.create(nombre='Física', ubicacion='B1')
+        Insumo.objects.create(nombre='Pipeta', descripcion='x', laboratorio=otro)
+        resumen = _validar('A-1,Pipeta,,,\n', laboratorio)
+        assert [i['nombre'] for i in resumen['insumos_nuevos']] == ['Pipeta']
+
+    # ── Laboratorio ──
+    def test_columna_laboratorio(self, catalogos, laboratorio):
+        from laboratorio.models import Laboratorio
+
+        Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='B1')
+        mapeo = {'Código': 'codigo', 'Nombre': 'nombre', 'Lab': 'laboratorio'}
+        resumen = _validar(
+            'A-1,Pipeta,laboratorio de fisica\nA-2,Pipeta,\nA-3,Pipeta,Lab Fantasma\n',
+            laboratorio, mapeo=mapeo, cabecera='Código,Nombre,Lab\n',
+        )
+        assert [(i['codigo'], i['laboratorio']) for i in resumen['items']] == [
+            ('A-1', 'Laboratorio de Física'),
+            ('A-2', 'Laboratorio de Química'),  # vacía → el elegido al subir
+        ]
+        assert _mensajes(resumen['errores']) == ['Fila 4: Laboratorio no válido ("Lab Fantasma")']
+        # Mismo nombre, laboratorios distintos → dos insumos.
+        assert len(resumen['insumos_nuevos']) == 2
+
+    def test_laboratorio_inactivo_no_es_valido(self, catalogos, laboratorio):
+        from laboratorio.models import Laboratorio
+
+        Laboratorio.objects.create(nombre='Cerrado', ubicacion='B9', activo=False)
+        resumen = _validar('A-1,Pipeta,Cerrado\n', laboratorio,
+                           mapeo={'Código': 'codigo', 'Nombre': 'nombre', 'Lab': 'laboratorio'},
+                           cabecera='Código,Nombre,Lab\n')
+        assert _mensajes(resumen['errores']) == ['Fila 2: Laboratorio no válido ("Cerrado")']
+
+    # ── Estado ──
+    @pytest.mark.parametrize('texto, esperado', [
+        ('', 'Disponible'), ('disponible', 'Disponible'), ('Bueno', 'Disponible'),
+        ('DAÑADO', 'Dañado'), ('malo', 'Dañado'), ('Extraviado', 'Perdido'),
+    ])
+    def test_estados_reconocidos(self, catalogos, laboratorio, texto, esperado):
+        resumen = _validar(f'A-1,Pipeta,,{texto},\n', laboratorio)
+        assert resumen['items'][0]['estado'] == esperado
+
+    def test_estado_desconocido_es_error_y_no_se_crea(self, catalogos, laboratorio):
+        from inventario.models import EstadoItem
+
+        resumen = _validar('A-1,Pipeta,,Regular,\n', laboratorio)
+        assert resumen['errores'][0]['mensaje'].startswith('Fila 2: Estado no válido ("Regular"). Usa: ')
+        assert not EstadoItem.objects.filter(nombre='Regular').exists()
+
+    def test_estado_prestado_no_se_importa(self, catalogos, laboratorio):
+        resumen = _validar('A-1,Pipeta,,Prestado,\n', laboratorio)
+        assert 'Prestado' in resumen['errores'][0]['mensaje']
+        assert resumen['items'] == []
+
+    # ── Stock mínimo ──
+    @pytest.mark.parametrize('valor, esperado', [('', 0), ('0', 0), ('5', 5), ('5.0', 5)])
+    def test_stock_minimo_valido(self, catalogos, laboratorio, valor, esperado):
+        resumen = _validar(f'A-1,Pipeta,,,{valor}\n', laboratorio)
+        assert resumen['insumos_nuevos'][0]['stock_minimo'] == esperado
+
+    @pytest.mark.parametrize('valor', ['-1', 'tres', '2.5'])
+    def test_stock_minimo_invalido(self, catalogos, laboratorio, valor):
+        resumen = _validar(f'A-1,Pipeta,,,{valor}\n', laboratorio)
+        assert _mensajes(resumen['errores']) == [
+            f'Fila 2: Stock mínimo inválido ("{valor}"): debe ser un número entero mayor o igual a 0'
+        ]
+
+    # ── Cantidad ──
+    def test_cantidad_genera_codigos(self, catalogos, laboratorio):
+        resumen = _validar('MUL,Multímetro,3\n', laboratorio,
+                           mapeo={'Código': 'codigo', 'Nombre': 'nombre', 'Cant': 'cantidad'},
+                           cabecera='Código,Nombre,Cant\n')
+        assert [i['codigo'] for i in resumen['items']] == ['MUL-1', 'MUL-2', 'MUL-3']
+
+    def test_cantidad_invalida(self, catalogos, laboratorio):
+        resumen = _validar('MUL,Multímetro,0\n', laboratorio,
+                           mapeo={'Código': 'codigo', 'Nombre': 'nombre', 'Cant': 'cantidad'},
+                           cabecera='Código,Nombre,Cant\n')
+        assert 'Cantidad inválida' in resumen['errores'][0]['mensaje']
+
+
+@pytest.mark.django_db
+class TestGuardar:
+
+    CUERPO = 'A-1,Pipeta,Brand,,2\nA-2,Pipeta,Brand,Dañado,\nB-1,Bureta,,,\nA-1,Duplicada,,,\n,SinCodigo,,,\n'
+
+    def test_crea_insumos_items_y_movimientos(self, catalogos, laboratorio, usuario_admin):
+        from inventario.models import Insumo, ItemInventario, MovimientoInventario
+
+        resultado = _importador_csv(self.CUERPO).guardar(MAPEO, laboratorio, usuario_admin)
+
+        pipeta = Insumo.objects.get(nombre='Pipeta', laboratorio=laboratorio)
+        assert pipeta.marca == 'Brand'
+        assert pipeta.stock_minimo == 2
+        assert pipeta.descripcion == 'Importado desde inv.csv'
+        assert Insumo.objects.count() == 2
+
+        items = {i.codigo: i for i in ItemInventario.objects.select_related('estado', 'insumo')}
+        assert set(items) == {'A-1', 'A-2', 'B-1'}
+        assert items['A-2'].estado.nombre == 'Dañado'
+        assert items['A-1'].laboratorio == laboratorio
+        assert items['A-1'].updated_by == usuario_admin
+
+        movimientos = MovimientoInventario.objects.select_related('tipo_movimiento')
+        assert movimientos.count() == 3
+        assert {m.tipo_movimiento.nombre for m in movimientos} == {'Registro inicial'}
+        assert MovimientoInventario.objects.get(item_inventario=items['B-1']).observacion == \
+            'Importado desde inv.csv (fila 4).'
+
+        resumen = resultado.resumen()
+        assert resumen['filas_saltadas'] == 2
+        assert _mensajes(resumen['saltadas']) == ['Fila 5: Código duplicado "A-1" (ya existe en el archivo, fila 2)']
+        assert _mensajes(resumen['errores']) == ['Fila 6: Código vacío']
+
+    def test_agrega_items_a_insumo_existente_sin_modificarlo(self, catalogos, laboratorio, usuario_admin):
+        from inventario.models import Insumo
+
+        existente = Insumo.objects.create(nombre='Pipeta', descripcion='Original', laboratorio=laboratorio,
+                                          marca='Original', stock_minimo=7)
+        _importador_csv('A-1,Pipeta,Otra,,1\n').guardar(MAPEO, laboratorio, usuario_admin)
+
+        existente.refresh_from_db()
+        assert (existente.marca, existente.stock_minimo, existente.descripcion) == ('Original', 7, 'Original')
+        assert existente.items.count() == 1
+        assert Insumo.objects.count() == 1
+
+    def test_revalida_contra_la_bd_actual(self, catalogos, laboratorio, usuario_admin):
+        # Entre "validar" y "guardar" alguien creó A-1: se salta, no revienta.
+        from inventario.models import EstadoItem, Insumo, ItemInventario
+
+        importador = _importador_csv('A-1,Pipeta,,,\nA-2,Pipeta,,,\n')
+        assert len(importador.validar(MAPEO, laboratorio).plan_items) == 2
+
+        otro = Insumo.objects.create(nombre='Otro', descripcion='x', laboratorio=laboratorio)
+        ItemInventario.objects.create(codigo='A-1', insumo=otro, estado=EstadoItem.objects.get(nombre='Disponible'))
+
+        resultado = importador.guardar(MAPEO, laboratorio, usuario_admin)
+        assert [i['codigo'] for i in resultado.plan_items] == ['A-2']
+
+    def test_todo_o_nada(self, catalogos, laboratorio, usuario_admin, monkeypatch):
+        from inventario.models import Insumo, ItemInventario, MovimientoInventario
+
+        crear = MovimientoInventario.objects.create
+        llamadas = []
+
+        def falla_en_el_segundo(**kwargs):
+            llamadas.append(1)
+            if len(llamadas) == 2:
+                raise RuntimeError('boom')
+            return crear(**kwargs)
+
+        monkeypatch.setattr(MovimientoInventario.objects, 'create', falla_en_el_segundo)
+        with pytest.raises(RuntimeError):
+            _importador_csv('A-1,Pipeta,,,\nA-2,Pipeta,,,\n').guardar(MAPEO, laboratorio, usuario_admin)
+
+        assert not Insumo.objects.exists()
+        assert not ItemInventario.objects.exists()
+
+    def test_desde_sesion_reproduce_el_archivo(self, catalogos, laboratorio, usuario_admin):
+        import json
+
+        original = _importador_csv('A-1,Pipeta,Brand,Bueno,1\n\nB-1,Bureta,,,\n')
+        datos = json.loads(json.dumps(original.datos_sesion(laboratorio.id)))  # como la sesión
+        assert datos['mapeo'] == MAPEO
+        assert datos['numeros_fila'] == [2, 4]
+
+        resultado = ImportadorInventario.desde_sesion(datos).guardar(datos['mapeo'], laboratorio, usuario_admin)
+        assert [i['fila'] for i in resultado.plan_items] == [2, 4]

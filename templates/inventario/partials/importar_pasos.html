@@ -1,0 +1,9 @@
+{# Indicador de pasos de la importación. Espera: paso (1-4). #}
+<ol class="importar-pasos list-unstyled d-flex flex-wrap gap-2 mb-3" aria-label="Pasos de la importación">
+    {% for numero, nombre in pasos_importacion %}
+    <li class="badge rounded-pill {% if numero == paso %}bg-primary{% elif numero < paso %}bg-success{% else %}bg-light text-muted border{% endif %}"
+        {% if numero == paso %}aria-current="step"{% endif %}>
+        {% if numero < paso %}<i class="fa-solid fa-check me-1"></i>{% else %}{{ numero }}.{% endif %} {{ nombre }}
+    </li>
+    {% endfor %}
+</ol>

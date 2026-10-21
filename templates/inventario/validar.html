@@ -1,0 +1,36 @@
+{% extends 'inventario/layout_sidebar.html' %}
+
+{% block seccion %}
+<h2 class="h4 mb-2"><i class="fa-solid fa-file-import text-brand me-2"></i>Importar inventario</h2>
+{% include 'inventario/partials/importar_pasos.html' %}
+
+<div class="alert {% if resumen.items %}alert-info{% else %}alert-warning{% endif %} d-flex gap-2" id="resumen-validacion">
+    <i class="fa-solid fa-clipboard-check fs-5"></i>
+    <div>
+        <strong>
+            Se guardarán {{ resumen.insumos_nuevos|length }} insumo{{ resumen.insumos_nuevos|length|pluralize }} nuevo{{ resumen.insumos_nuevos|length|pluralize }}
+            y {{ resumen.items|length }} ítem{{ resumen.items|length|pluralize:"s" }}.
+            {{ resumen.filas_saltadas }} fila{{ resumen.filas_saltadas|pluralize }} saltada{{ resumen.filas_saltadas|pluralize }}.
+        </strong>
+        <div class="small">
+            {{ datos.archivo }} · {{ resumen.total_filas }} fila{{ resumen.total_filas|pluralize }} leída{{ resumen.total_filas|pluralize }}
+            · laboratorio por defecto: {{ laboratorio.nombre }}.
+            Esto es una simulación: todavía no se guardó nada.
+        </div>
+    </div>
+</div>
+
+{% include 'inventario/partials/importar_resumen.html' %}
+
+<div class="d-flex justify-content-between">
+    <a href="/inventario/importar/mapear/" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left me-1"></i>Volver
+    </a>
+    <form method="post" action="/inventario/importar/confirmar/" id="form-confirmar">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success" {% if not resumen.items %}disabled{% endif %}>
+            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+        </button>
+    </form>
+</div>
+{% endblock %}
