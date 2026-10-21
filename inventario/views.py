@@ -8,9 +8,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
+from django.utils.decorators import method_decorator
+from django.views import View
 from users.decorators import rol_requerido, requiere_contrasena_admin
 
 logger_acceso_admin = logging.getLogger('acceso_admin')
+logger_importacion = logging.getLogger(__name__)
 
 from .models import (
     Insumo,
@@ -19,6 +22,7 @@ from .models import (
 )
 
 from .forms import (
+    ImportarArchivoForm,
     InsumoForm,
     ItemInventarioForm,
     MovimientoInventarioForm
@@ -388,3 +392,56 @@ def eliminar_item_inventario(request, id):
 
     messages.success(request, f'Item "{codigo}" eliminado correctamente.')
     return redirect('/inventario/items/')
+
+# ── Importar inventario desde archivo ─────────────────────────────────────────
+
+@method_decorator(rol_requerido('Administrador'), name='dispatch')
+class ImportarInventarioView(View):
+    """Fase 1: sube un Excel/CSV/PDF + laboratorio destino y muestra la
+    vista previa (primeras filas + columnas detectadas). No guarda nada —
+    la confirmación e importación real es la fase 2."""
+
+    template_name = 'inventario/importar.html'
+
+    # services.importador se importa dentro de los métodos: carga pandas,
+    # y este módulo lo importan otras apps (p. ej. el dashboard) que no
+    # deberían pagar ese costo al arrancar.
+
+    def _render(self, request, form, preview=None, error=None):
+        from .services.importador import ETIQUETAS_CAMPO
+
+        contexto = _contexto_sidebar(request, 'importar')
+        contexto.update({
+            'form': form,
+            'preview': preview,
+            'error': error,
+            'campos_sistema': ETIQUETAS_CAMPO,
+        })
+        return render(request, self.template_name, contexto)
+
+    def get(self, request):
+        return self._render(request, ImportarArchivoForm())
+
+    def post(self, request):
+        from .services.importador import ImportacionError, ImportadorInventario
+
+        form = ImportarArchivoForm(request.POST, request.FILES)
+        if not form.is_valid():
+            return self._render(request, form)
+
+        importador = ImportadorInventario(form.cleaned_data['archivo'])
+        try:
+            preview = importador.preview()
+        except ImportacionError as e:
+            return self._render(request, form, error=str(e))
+        except Exception:
+            logger_importacion.exception(
+                'ImportarInventarioView | error inesperado leyendo %s', importador.nombre,
+            )
+            return self._render(
+                request, form,
+                error='No se pudo procesar el archivo. Verifica que sea un Excel, CSV o PDF válido.',
+            )
+
+        preview['laboratorio'] = form.cleaned_data['laboratorio']
+        return self._render(request, form, preview=preview)

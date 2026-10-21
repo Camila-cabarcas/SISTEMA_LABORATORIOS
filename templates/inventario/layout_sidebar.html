@@ -39,6 +39,11 @@ Layout común de Inventario: sidebar de secciones + alertas de stock bajo
                    {% if seccion_activa == 'crear' %}aria-current="page"{% endif %}>
                     ➕ Crear insumo
                 </a>
+                <a href="/inventario/importar/"
+                   class="list-group-item list-group-item-action {% if seccion_activa == 'importar' %}active{% endif %}"
+                   {% if seccion_activa == 'importar' %}aria-current="page"{% endif %}>
+                    📥 Importar
+                </a>
                 {% endif %}
                 <a href="/inventario/items/"
                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if seccion_activa == 'items' %}active{% endif %}"

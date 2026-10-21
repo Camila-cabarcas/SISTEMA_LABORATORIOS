@@ -1,0 +1,122 @@
+{% extends 'inventario/layout_sidebar.html' %}
+
+{% block seccion %}
+<div class="d-flex align-items-center gap-2 mb-3">
+    <h2 class="h4 mb-0"><i class="fa-solid fa-file-import text-brand me-2"></i>Importar inventario</h2>
+    <span class="badge bg-secondary">Paso 1 de 2 · Vista previa</span>
+</div>
+<p class="text-muted">
+    Sube un archivo con el inventario de un laboratorio. Primero verás una vista previa con las columnas
+    detectadas; todavía no se guarda nada.
+</p>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate id="form-importar">
+            {% csrf_token %}
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-6">
+                    <label for="{{ form.archivo.id_for_label }}" class="form-label">{{ form.archivo.label }}</label>
+                    <input type="file" name="{{ form.archivo.html_name }}" id="{{ form.archivo.id_for_label }}"
+                           class="form-control {% if form.archivo.errors %}is-invalid{% endif %}"
+                           accept=".xlsx,.xlsm,.csv,.pdf" required>
+                    {% for err in form.archivo.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+                    <div class="form-text">{{ form.archivo.help_text }}</div>
+                </div>
+                <div class="col-lg-4">
+                    <label for="{{ form.laboratorio.id_for_label }}" class="form-label">{{ form.laboratorio.label }}</label>
+                    <select name="{{ form.laboratorio.html_name }}" id="{{ form.laboratorio.id_for_label }}"
+                            class="form-select {% if form.laboratorio.errors %}is-invalid{% endif %}" required>
+                        {% for value, label in form.laboratorio.field.choices %}
+                        <option value="{{ value }}" {% if form.laboratorio.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% for err in form.laboratorio.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+                    <div class="form-text">&nbsp;</div>
+                </div>
+                <div class="col-lg-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fa-solid fa-eye me-1"></i>Previsualizar
+                    </button>
+                    <div class="form-text">&nbsp;</div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger d-flex gap-2" role="alert" id="error-importacion">
+    <i class="fa-solid fa-circle-xmark fs-5"></i>
+    <div><strong>No se pudo leer el archivo.</strong> {{ error }}</div>
+</div>
+{% endif %}
+
+{% if preview %}
+<div id="preview-importacion">
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+        <span><i class="fa-regular fa-file me-1"></i><strong>{{ preview.archivo }}</strong>
+            <span class="badge bg-light text-dark border ms-1">{{ preview.formato }}</span></span>
+        <span><i class="fa-solid fa-flask me-1"></i>{{ preview.laboratorio.nombre }}</span>
+        <span><i class="fa-solid fa-table-list me-1"></i>{{ preview.total_filas }} fila{{ preview.total_filas|pluralize }} de datos</span>
+    </div>
+
+    {% for aviso in preview.advertencias %}
+    <div class="alert alert-warning py-2 mb-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ aviso }}</div>
+    {% endfor %}
+
+    <h3 class="h6 text-uppercase text-muted mt-3">Campos detectados</h3>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for campo, etiqueta in campos_sistema.items %}
+            {% if campo in preview.mapeo.values %}
+            <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>{{ etiqueta }}</span>
+            {% else %}
+            <span class="badge bg-light text-muted border">{{ etiqueta }}</span>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between">
+            <span>Vista previa</span>
+            <span class="text-muted small">
+                {% if preview.total_filas > preview.filas|length %}Primeras {{ preview.filas|length }} de {{ preview.total_filas }} filas{% else %}{{ preview.total_filas }} fila{{ preview.total_filas|pluralize }}{% endif %}
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th class="text-muted">#</th>
+                        {% for col in preview.columnas %}
+                        <th>
+                            {{ col.nombre }}
+                            <div>
+                            {% if col.campo %}
+                                <span class="badge bg-success-subtle text-success-emphasis fw-normal">→ {{ col.etiqueta }}</span>
+                            {% else %}
+                                <span class="badge bg-light text-muted fw-normal">sin asignar</span>
+                            {% endif %}
+                            </div>
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in preview.filas %}
+                    <tr>
+                        <td class="text-muted">{{ forloop.counter }}</td>
+                        {% for celda in fila %}<td>{{ celda }}</td>{% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p class="text-muted small mt-2 mb-0">
+        <i class="fa-solid fa-circle-info me-1"></i>
+        La importación (paso 2) todavía no está disponible: por ahora solo se verifica que el archivo se lea bien.
+    </p>
+</div>
+{% endif %}
+{% endblock %}
