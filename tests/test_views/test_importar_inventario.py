@@ -297,91 +297,180 @@ class TestConfirmarView:
         assert 'importacion_inventario_resultado' not in subido.session
 
 
-# ══ Cancelar importación ═══════════════════════════════════════════════════
+# ══ Cancelar (retrocede un paso) ═══════════════════════════════════════════
 
 URL_CANCELAR = '/inventario/importar/cancelar/'
-CLAVES_SESION = ('importacion_inventario', 'importacion_inventario_resultado')
+SESION = 'importacion_inventario'
+MAPEO_DETECTADO = {'Código': 'codigo', 'Nombre': 'nombre', 'Marca': 'marca', 'Estado': 'estado'}
 
 
-def _sin_datos_de_importacion(client):
-    return not any(k in client.session for k in CLAVES_SESION)
+def _cancelar(client, paso, **kwargs):
+    return client.post(URL_CANCELAR, {'paso': paso}, **kwargs)
 
 
-class TestCancelar:
+class TestBotonCancelar:
 
-    def test_boton_en_paso_1_junto_a_siguiente(self, cliente_autenticado, laboratorio):
+    def test_en_importar_junto_a_siguiente(self, cliente_autenticado, laboratorio):
         html = _post(cliente_autenticado, laboratorio).content.decode()
-        assert 'btn-cancelar-importacion' in html
-        assert f'action="{URL_CANCELAR}"' in html
-        # Mismo contenedor que "Siguiente".
         bloque = html.split('btn-siguiente-mapear')[0].rsplit('<div', 1)[1]
         assert 'btn-cancelar-importacion' in bloque
+        assert 'name="paso" value="importar"' in html
 
-    def test_paso_1_sin_preview_no_muestra_cancelar(self, cliente_autenticado):
+    def test_importar_sin_archivo_no_muestra_cancelar(self, cliente_autenticado):
         assert b'btn-cancelar-importacion' not in cliente_autenticado.get(URL).content
 
-    def test_boton_en_mapear_y_validar(self, subido):
-        html_mapear = subido.get(URL_MAPEAR).content.decode()
-        assert 'btn-cancelar-importacion' in html_mapear
-        # El botón vive dentro del <form> de mapeo pero envía el de cancelar.
-        assert 'form="form-cancelar-importacion"' in html_mapear.split('id="form-mapear"')[1].split('</form>')[0]
+    def test_en_mapear_dentro_del_form_pero_envia_el_de_cancelar(self, subido):
+        html = subido.get(URL_MAPEAR).content.decode()
+        form_mapear = html.split('id="form-mapear"')[1].split('</form>')[0]
+        assert 'form="form-cancelar-importacion"' in form_mapear
+        assert 'name="paso" value="mapear"' in html
 
+    def test_en_validar_junto_a_guardar(self, subido):
         _mapear(subido)
-        html_validar = subido.get(URL_VALIDAR).content.decode()
-        assert 'btn-cancelar-importacion' in html_validar
-        assert html_validar.count('id="form-cancelar-importacion"') == 1
+        html = subido.get(URL_VALIDAR).content.decode()
+        assert 'btn-cancelar-importacion' in html
+        assert 'name="paso" value="validar"' in html
+        assert html.count('id="form-cancelar-importacion"') == 1
+
+
+class TestCancelarEnImportar:
+
+    def test_se_queda_en_importar_con_el_formulario_vacio(self, subido):
+        resp = _cancelar(subido, 'importar', follow=True)
+
+        assert resp.redirect_chain == [(URL, 302)]
+        assert resp.context['paso'] == 1
+        assert resp.context['preview'] is None
+        assert 'Archivo descartado' in resp.content.decode()
+        assert SESION not in subido.session
+
+    def test_puede_subir_otro_archivo(self, subido, laboratorio):
+        _cancelar(subido, 'importar')
+        resp = _post(subido, laboratorio, contenido='Código,Nombre\nZ-1,Probeta\n'.encode())
+        assert resp.context['preview']['filas'] == [['Z-1', 'Probeta']]
+        assert subido.session[SESION]['columnas'] == ['Código', 'Nombre']
+
+    def test_borra_tambien_un_reporte_anterior(self, subido, laboratorio):
+        _mapear(subido)
+        subido.post(URL_CONFIRMAR)
+        _post(subido, laboratorio, contenido=CSV_FASE2)
+        _cancelar(subido, 'importar')
+        assert 'importacion_inventario_resultado' not in subido.session
+
+    def test_sin_paso_equivale_a_importar(self, subido):
+        resp = subido.post(URL_CANCELAR)
+        assert resp.url == URL
+        assert SESION not in subido.session
+
+
+class TestCancelarEnMapear:
+
+    def test_vuelve_a_importar_con_el_archivo_cargado(self, subido):
+        resp = _cancelar(subido, 'mapear', follow=True)
+
+        assert resp.redirect_chain == [(URL, 302)]
+        assert resp.context['paso'] == 1
+        preview = resp.context['preview']
+        assert preview['total_filas'] == 5
+        assert 'Osciloscopio' in resp.content.decode()
+        # Desde ahí puede seguir con el mismo archivo.
+        assert b'btn-siguiente-mapear' in resp.content
+
+    def test_limpia_el_mapeo(self, subido):
+        _mapear(subido, col_0='nombre', col_1='codigo')  # mapeo hecho a mano
+        _cancelar(subido, 'mapear')
+
+        datos = subido.session[SESION]
+        assert datos['mapeo'] == MAPEO_DETECTADO  # vuelve al detectado
+        assert 'mapeo_confirmado' not in datos
+        assert subido.get(URL_VALIDAR).url == URL_MAPEAR
+
+    def test_conserva_laboratorio_elegido(self, subido, laboratorio):
+        resp = _cancelar(subido, 'mapear', follow=True)
+        assert resp.context['preview']['laboratorio'] == laboratorio
+        assert resp.context['form'].initial['laboratorio'] == laboratorio
+
+
+class TestCancelarEnValidar:
+
+    def test_vuelve_a_mapear(self, subido):
+        _mapear(subido)
+        resp = _cancelar(subido, 'validar', follow=True)
+
+        assert resp.redirect_chain == [(URL_MAPEAR, 302)]
+        assert resp.context['paso'] == 2
+
+    def test_limpia_la_validacion_pero_conserva_el_mapeo(self, subido):
+        _mapear(subido, col_0='codigo', col_1='nombre')  # Marca y Estado ignoradas
+        _cancelar(subido, 'validar')
+
+        datos = subido.session[SESION]
+        assert 'mapeo_confirmado' not in datos
+        assert datos['mapeo'] == {'Código': 'codigo', 'Nombre': 'nombre'}
+        # Hay que volver a pasar por Mapear para validar o guardar.
+        assert subido.get(URL_VALIDAR).url == URL_MAPEAR
+        assert subido.post(URL_CONFIRMAR).url == URL_MAPEAR
+
+    def test_mapear_muestra_el_mapeo_conservado(self, subido):
+        _mapear(subido, col_0='codigo', col_1='nombre')
+        resp = _cancelar(subido, 'validar', follow=True)
+        assert [c['campo'] for c in resp.context['columnas']] == ['codigo', 'nombre', '', '']
+
+
+class TestCancelarGeneral:
 
     @pytest.mark.parametrize('paso', ['importar', 'mapear', 'validar'])
-    def test_cancelar_en_cada_paso_limpia_sesion_y_vuelve_a_inventario(self, subido, paso):
+    def test_nunca_guarda_nada(self, subido, paso):
         from inventario.models import Insumo, ItemInventario
 
-        if paso in ('mapear', 'validar'):
-            subido.get(URL_MAPEAR)
-        if paso == 'validar':
-            _mapear(subido)
-            subido.get(URL_VALIDAR)
-
-        resp = subido.post(URL_CANCELAR, follow=True)
-
-        assert resp.redirect_chain == [('/inventario/', 302)]
-        assert _sin_datos_de_importacion(subido)
-        assert 'Importación cancelada' in resp.content.decode()
+        _mapear(subido)
+        _cancelar(subido, paso)
         assert not Insumo.objects.exists()
         assert not ItemInventario.objects.exists()
 
-    def test_despues_de_cancelar_los_pasos_piden_subir_de_nuevo(self, subido):
-        _mapear(subido)
-        subido.post(URL_CANCELAR)
-        for url in (URL_MAPEAR, URL_VALIDAR):
-            assert subido.get(url).url == URL
-        resp = subido.post(URL_CONFIRMAR)
+    @pytest.mark.parametrize('paso', ['mapear', 'validar'])
+    def test_sin_archivo_en_sesion_va_a_importar(self, cliente_autenticado, paso):
+        resp = _cancelar(cliente_autenticado, paso)
         assert resp.url == URL
 
-    def test_tambien_borra_un_reporte_anterior(self, subido, laboratorio):
-        _mapear(subido)
-        subido.post(URL_CONFIRMAR)  # deja el reporte en sesión
-        _post(subido, laboratorio, contenido=CSV_FASE2)
-        subido.post(URL_CANCELAR)
-        assert _sin_datos_de_importacion(subido)
+    def test_paso_desconocido(self, subido):
+        assert _cancelar(subido, 'otro').status_code == 400
+        assert SESION in subido.session
 
     def test_no_toca_el_resto_de_la_sesion(self, subido):
         session = subido.session
         session['otra_cosa'] = 'se queda'
         session.save()
-        subido.post(URL_CANCELAR)
+        _cancelar(subido, 'importar')
         assert subido.session['otra_cosa'] == 'se queda'
-
-    def test_sin_importacion_en_curso_no_falla(self, cliente_autenticado):
-        resp = cliente_autenticado.post(URL_CANCELAR, follow=True)
-        assert resp.redirect_chain == [('/inventario/', 302)]
-        assert 'Importación cancelada' not in resp.content.decode()
 
     def test_get_no_cancela(self, subido):
         assert subido.get(URL_CANCELAR).status_code == 405
-        assert 'importacion_inventario' in subido.session
+        assert SESION in subido.session
 
     def test_solo_admin(self, client, usuario_laboratorista):
         client.force_login(usuario_laboratorista)
-        resp = client.post(URL_CANCELAR)
+        resp = _cancelar(client, 'importar')
         assert resp.status_code == 302
-        assert resp.url != '/inventario/'
+        assert resp.url != URL
+
+
+class TestImportarConArchivoEnSesion:
+    """GET /inventario/importar/ muestra el archivo que ya está en la sesión."""
+
+    def test_muestra_la_vista_previa(self, subido):
+        resp = subido.get(URL)
+        assert resp.context['preview']['archivo'] == 'inv.csv'
+        assert resp.context['preview']['total_filas'] == 5
+
+    def test_conserva_los_avisos_del_archivo(self, cliente_autenticado, laboratorio):
+        _post(cliente_autenticado, laboratorio, contenido='Placa,Marca\nA-1,Fluke\n'.encode())
+        avisos = cliente_autenticado.get(URL).context['preview']['advertencias']
+        assert len([a for a in avisos if 'Nombre' in a]) == 1  # sin duplicar
+
+    def test_laboratorio_desactivado_descarta_el_archivo(self, subido, laboratorio):
+        laboratorio.activo = False
+        laboratorio.save()
+        resp = subido.get(URL)
+        assert resp.context['preview'] is None
+        assert SESION not in subido.session

@@ -22,12 +22,9 @@
 
 {% include 'inventario/partials/importar_resumen.html' %}
 
-<div class="d-flex justify-content-between">
-    <a href="/inventario/importar/mapear/" class="btn btn-outline-secondary">
-        <i class="fa-solid fa-arrow-left me-1"></i>Volver
-    </a>
+<div class="d-flex justify-content-end">
     <div class="d-flex gap-2">
-        <button type="submit" form="form-cancelar-importacion" class="btn btn-outline-danger btn-cancelar-importacion">
+        <button type="submit" form="form-cancelar-importacion" class="btn btn-outline-danger btn-cancelar-importacion" title="Descarta la validación y vuelve a mapear las columnas">
             <i class="fa-solid fa-xmark me-1"></i>Cancelar
         </button>
         <form method="post" action="/inventario/importar/confirmar/" id="form-confirmar">
@@ -38,5 +35,5 @@
         </form>
     </div>
 </div>
-{% include 'inventario/partials/importar_cancelar.html' %}
+{% include 'inventario/partials/importar_cancelar.html' with paso_cancelar='validar' %}
 {% endblock %}

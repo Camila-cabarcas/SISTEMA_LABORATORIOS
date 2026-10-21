@@ -112,7 +112,7 @@
         </div>
     </div>
     <div class="d-flex justify-content-end gap-2 mt-3">
-        <button type="submit" form="form-cancelar-importacion" class="btn btn-outline-danger btn-cancelar-importacion">
+        <button type="submit" form="form-cancelar-importacion" class="btn btn-outline-danger btn-cancelar-importacion" title="Descarta este archivo para subir otro">
             <i class="fa-solid fa-xmark me-1"></i>Cancelar
         </button>
         <a href="/inventario/importar/mapear/" class="btn btn-primary" id="btn-siguiente-mapear">
@@ -120,6 +120,6 @@
         </a>
     </div>
 </div>
-{% include 'inventario/partials/importar_cancelar.html' %}
+{% include 'inventario/partials/importar_cancelar.html' with paso_cancelar='importar' %}
 {% endif %}
 {% endblock %}

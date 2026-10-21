@@ -175,11 +175,11 @@ class ImportadorInventario:
             for col in tabla.columns
         ]
         faltantes = [ETIQUETAS_CAMPO[c] for c in ('nombre',) if c not in mapeo.values()]
-        if faltantes:
-            self.advertencias.append(
-                'No se encontró una columna para: ' + ', '.join(faltantes)
-                + '. Revisa que el archivo tenga encabezados.'
-            )
+        aviso = ('No se encontró una columna para: ' + ', '.join(faltantes)
+                 + '. Revisa que el archivo tenga encabezados.')
+        # desde_sesion() trae los avisos ya guardados: no repetirlo.
+        if faltantes and aviso not in self.advertencias:
+            self.advertencias.append(aviso)
         return {
             'archivo': self.nombre,
             'formato': self.extension.lstrip('.').upper(),
@@ -358,6 +358,7 @@ class ImportadorInventario:
             'filas': tabla.values.tolist(),
             'numeros_fila': self._numeros_fila,
             'mapeo': detectar_columnas(list(tabla.columns)),
+            'advertencias': list(self.advertencias),
         }
 
     @classmethod
@@ -366,7 +367,7 @@ class ImportadorInventario:
         importador.archivo = None
         importador.nombre = datos['archivo']
         importador.extension = '.' + datos.get('formato', '').lower()
-        importador.advertencias = []
+        importador.advertencias = list(datos.get('advertencias', []))
         importador._tabla = pd.DataFrame(datos['filas'], columns=datos['columnas'], dtype=object)
         importador._numeros_fila = list(datos['numeros_fila'])
         return importador

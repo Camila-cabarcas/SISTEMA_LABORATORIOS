@@ -455,7 +455,23 @@ class ImportarInventarioView(View):
         return render(request, self.template_name, contexto)
 
     def get(self, request):
-        return self._render(request, ImportarArchivoForm())
+        """Si ya hay un archivo en la sesión (p. ej. al volver desde Mapear)
+        muestra su vista previa, para seguir con él o descartarlo."""
+        from laboratorio.models import Laboratorio
+        from .services.importador import ImportadorInventario
+
+        datos = request.session.get(SESION_IMPORTACION)
+        laboratorio = None
+        if datos:
+            laboratorio = Laboratorio.objects.filter(id=datos.get('laboratorio_id'), activo=True).first()
+            if laboratorio is None:
+                request.session.pop(SESION_IMPORTACION, None)
+        if laboratorio is None:
+            return self._render(request, ImportarArchivoForm())
+
+        preview = ImportadorInventario.desde_sesion(datos).preview()
+        preview['laboratorio'] = laboratorio
+        return self._render(request, ImportarArchivoForm(initial={'laboratorio': laboratorio}), preview=preview)
 
     def post(self, request):
         from .services.importador import ImportacionError, ImportadorInventario
@@ -619,15 +635,40 @@ class ConfirmarView(View):
 
 @method_decorator(rol_requerido('Administrador'), name='dispatch')
 class CancelarImportacionView(View):
-    """Aborta la importación en curso desde cualquier paso: borra de la
-    sesión el archivo, el mapeo y cualquier reporte anterior, y vuelve a
-    Inventario. Solo POST — es una acción que descarta datos."""
+    """Cancela el paso actual y deja al usuario en el anterior. Solo POST
+    — descarta datos de la sesión. El campo `paso` dice desde dónde:
+
+    - importar: descarta el archivo (y cualquier reporte anterior) y
+      recarga Importar con el formulario vacío.
+    - mapear: descarta el mapeo (vuelve al detectado automáticamente) y
+      vuelve a Importar, que muestra el archivo cargado.
+    - validar: descarta la validación (el mapeo deja de estar confirmado,
+      pero se conserva para ajustarlo) y vuelve a Mapear."""
 
     http_method_names = ['post']
 
     def post(self, request):
-        habia = request.session.pop(SESION_IMPORTACION, None) is not None
-        request.session.pop(SESION_RESULTADO, None)
-        if habia:
-            messages.info(request, 'Importación cancelada. No se guardó nada.')
-        return redirect('/inventario/')
+        from django.http import HttpResponseBadRequest
+        from .services.importador import detectar_columnas
+
+        paso = request.POST.get('paso', 'importar')
+        if paso not in ('importar', 'mapear', 'validar'):
+            return HttpResponseBadRequest('Paso desconocido.')
+
+        datos = request.session.get(SESION_IMPORTACION)
+
+        if paso == 'importar' or not datos:
+            request.session.pop(SESION_IMPORTACION, None)
+            request.session.pop(SESION_RESULTADO, None)
+            if datos:
+                messages.info(request, 'Archivo descartado. Puedes subir otro.')
+            return redirect(URL_IMPORTAR)
+
+        datos.pop('mapeo_confirmado', None)
+        if paso == 'mapear':
+            datos['mapeo'] = detectar_columnas(datos['columnas'])
+            destino = URL_IMPORTAR
+        else:
+            destino = f'{URL_IMPORTAR}mapear/'
+        request.session[SESION_IMPORTACION] = datos
+        return redirect(destino)
