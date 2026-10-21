@@ -26,11 +26,17 @@
     <a href="/inventario/importar/mapear/" class="btn btn-outline-secondary">
         <i class="fa-solid fa-arrow-left me-1"></i>Volver
     </a>
-    <form method="post" action="/inventario/importar/confirmar/" id="form-confirmar">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-success" {% if not resumen.items %}disabled{% endif %}>
-            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+    <div class="d-flex gap-2">
+        <button type="submit" form="form-cancelar-importacion" class="btn btn-outline-danger btn-cancelar-importacion">
+            <i class="fa-solid fa-xmark me-1"></i>Cancelar
         </button>
-    </form>
+        <form method="post" action="/inventario/importar/confirmar/" id="form-confirmar">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success" {% if not resumen.items %}disabled{% endif %}>
+                <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+            </button>
+        </form>
+    </div>
 </div>
+{% include 'inventario/partials/importar_cancelar.html' %}
 {% endblock %}

@@ -615,3 +615,19 @@ class ConfirmarView(View):
             len(resumen['items']), resumen['filas_saltadas'],
         )
         return redirect(f'{URL_IMPORTAR}confirmar/')
+
+
+@method_decorator(rol_requerido('Administrador'), name='dispatch')
+class CancelarImportacionView(View):
+    """Aborta la importación en curso desde cualquier paso: borra de la
+    sesión el archivo, el mapeo y cualquier reporte anterior, y vuelve a
+    Inventario. Solo POST — es una acción que descarta datos."""
+
+    http_method_names = ['post']
+
+    def post(self, request):
+        habia = request.session.pop(SESION_IMPORTACION, None) is not None
+        request.session.pop(SESION_RESULTADO, None)
+        if habia:
+            messages.info(request, 'Importación cancelada. No se guardó nada.')
+        return redirect('/inventario/')

@@ -15,6 +15,7 @@ from .views import (
     MapearView,
     ValidarView,
     ConfirmarView,
+    CancelarImportacionView,
 )
 
 urlpatterns = [
@@ -29,4 +30,5 @@ urlpatterns = [
     path('importar/mapear/', MapearView.as_view(), name='importar_mapear'),
     path('importar/validar/', ValidarView.as_view(), name='importar_validar'),
     path('importar/confirmar/', ConfirmarView.as_view(), name='importar_confirmar'),
+    path('importar/cancelar/', CancelarImportacionView.as_view(), name='importar_cancelar'),
 ]

@@ -111,11 +111,15 @@
             </table>
         </div>
     </div>
-    <div class="d-flex justify-content-end mt-3">
+    <div class="d-flex justify-content-end gap-2 mt-3">
+        <button type="submit" form="form-cancelar-importacion" class="btn btn-outline-danger btn-cancelar-importacion">
+            <i class="fa-solid fa-xmark me-1"></i>Cancelar
+        </button>
         <a href="/inventario/importar/mapear/" class="btn btn-primary" id="btn-siguiente-mapear">
             Siguiente: Mapear columnas <i class="fa-solid fa-arrow-right ms-1"></i>
         </a>
     </div>
 </div>
+{% include 'inventario/partials/importar_cancelar.html' %}
 {% endif %}
 {% endblock %}

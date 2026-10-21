@@ -75,13 +75,19 @@
 
     <div class="d-flex justify-content-between">
         <a href="/inventario/importar/" class="btn btn-outline-secondary">
-            <i class="fa-solid fa-arrow-left me-1"></i>Subir otro archivo
+            <i class="fa-solid fa-arrow-left me-1"></i>Volver
         </a>
-        <button type="submit" class="btn btn-primary">
-            Siguiente: Validar <i class="fa-solid fa-arrow-right ms-1"></i>
-        </button>
+        <div class="d-flex gap-2">
+            <button type="submit" form="form-cancelar-importacion" class="btn btn-outline-danger btn-cancelar-importacion">
+                <i class="fa-solid fa-xmark me-1"></i>Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary">
+                Siguiente: Validar <i class="fa-solid fa-arrow-right ms-1"></i>
+            </button>
+        </div>
     </div>
 </form>
+{% include 'inventario/partials/importar_cancelar.html' %}
 
 <script>
 (function () {

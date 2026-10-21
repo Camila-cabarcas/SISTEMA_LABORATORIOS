@@ -295,3 +295,93 @@ class TestConfirmarView:
         subido.post(URL_CONFIRMAR)
         _post(subido, laboratorio)
         assert 'importacion_inventario_resultado' not in subido.session
+
+
+# ══ Cancelar importación ═══════════════════════════════════════════════════
+
+URL_CANCELAR = '/inventario/importar/cancelar/'
+CLAVES_SESION = ('importacion_inventario', 'importacion_inventario_resultado')
+
+
+def _sin_datos_de_importacion(client):
+    return not any(k in client.session for k in CLAVES_SESION)
+
+
+class TestCancelar:
+
+    def test_boton_en_paso_1_junto_a_siguiente(self, cliente_autenticado, laboratorio):
+        html = _post(cliente_autenticado, laboratorio).content.decode()
+        assert 'btn-cancelar-importacion' in html
+        assert f'action="{URL_CANCELAR}"' in html
+        # Mismo contenedor que "Siguiente".
+        bloque = html.split('btn-siguiente-mapear')[0].rsplit('<div', 1)[1]
+        assert 'btn-cancelar-importacion' in bloque
+
+    def test_paso_1_sin_preview_no_muestra_cancelar(self, cliente_autenticado):
+        assert b'btn-cancelar-importacion' not in cliente_autenticado.get(URL).content
+
+    def test_boton_en_mapear_y_validar(self, subido):
+        html_mapear = subido.get(URL_MAPEAR).content.decode()
+        assert 'btn-cancelar-importacion' in html_mapear
+        # El botón vive dentro del <form> de mapeo pero envía el de cancelar.
+        assert 'form="form-cancelar-importacion"' in html_mapear.split('id="form-mapear"')[1].split('</form>')[0]
+
+        _mapear(subido)
+        html_validar = subido.get(URL_VALIDAR).content.decode()
+        assert 'btn-cancelar-importacion' in html_validar
+        assert html_validar.count('id="form-cancelar-importacion"') == 1
+
+    @pytest.mark.parametrize('paso', ['importar', 'mapear', 'validar'])
+    def test_cancelar_en_cada_paso_limpia_sesion_y_vuelve_a_inventario(self, subido, paso):
+        from inventario.models import Insumo, ItemInventario
+
+        if paso in ('mapear', 'validar'):
+            subido.get(URL_MAPEAR)
+        if paso == 'validar':
+            _mapear(subido)
+            subido.get(URL_VALIDAR)
+
+        resp = subido.post(URL_CANCELAR, follow=True)
+
+        assert resp.redirect_chain == [('/inventario/', 302)]
+        assert _sin_datos_de_importacion(subido)
+        assert 'Importación cancelada' in resp.content.decode()
+        assert not Insumo.objects.exists()
+        assert not ItemInventario.objects.exists()
+
+    def test_despues_de_cancelar_los_pasos_piden_subir_de_nuevo(self, subido):
+        _mapear(subido)
+        subido.post(URL_CANCELAR)
+        for url in (URL_MAPEAR, URL_VALIDAR):
+            assert subido.get(url).url == URL
+        resp = subido.post(URL_CONFIRMAR)
+        assert resp.url == URL
+
+    def test_tambien_borra_un_reporte_anterior(self, subido, laboratorio):
+        _mapear(subido)
+        subido.post(URL_CONFIRMAR)  # deja el reporte en sesión
+        _post(subido, laboratorio, contenido=CSV_FASE2)
+        subido.post(URL_CANCELAR)
+        assert _sin_datos_de_importacion(subido)
+
+    def test_no_toca_el_resto_de_la_sesion(self, subido):
+        session = subido.session
+        session['otra_cosa'] = 'se queda'
+        session.save()
+        subido.post(URL_CANCELAR)
+        assert subido.session['otra_cosa'] == 'se queda'
+
+    def test_sin_importacion_en_curso_no_falla(self, cliente_autenticado):
+        resp = cliente_autenticado.post(URL_CANCELAR, follow=True)
+        assert resp.redirect_chain == [('/inventario/', 302)]
+        assert 'Importación cancelada' not in resp.content.decode()
+
+    def test_get_no_cancela(self, subido):
+        assert subido.get(URL_CANCELAR).status_code == 405
+        assert 'importacion_inventario' in subido.session
+
+    def test_solo_admin(self, client, usuario_laboratorista):
+        client.force_login(usuario_laboratorista)
+        resp = client.post(URL_CANCELAR)
+        assert resp.status_code == 302
+        assert resp.url != '/inventario/'

@@ -1,0 +1,4 @@
+{# Formulario (vacío) de "Cancelar importación". Va fuera de cualquier otro <form>: los botones Cancelar lo envían con form="form-cancelar-importacion", así pueden quedar junto a Siguiente/Guardar aunque estén dentro de otro formulario. #}
+<form method="post" action="/inventario/importar/cancelar/" id="form-cancelar-importacion" class="d-none">
+    {% csrf_token %}
+</form>
