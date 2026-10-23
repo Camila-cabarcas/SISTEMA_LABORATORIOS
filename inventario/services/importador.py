@@ -170,10 +170,14 @@ class ImportadorInventario:
     def preview(self, n=FILAS_PREVIEW):
         tabla = self.leer()
         mapeo = detectar_columnas(list(tabla.columns))
-        columnas = [
-            {'nombre': col, 'campo': mapeo.get(col), 'etiqueta': ETIQUETAS_CAMPO.get(mapeo.get(col))}
-            for col in tabla.columns
-        ]
+        columnas = []
+        for col in tabla.columns:
+            campo = mapeo.get(col)
+            columnas.append({
+                'nombre': col,
+                'campo': campo,
+                'etiqueta': ETIQUETAS_CAMPO[campo] if campo else None,
+            })
         faltantes = [ETIQUETAS_CAMPO[c] for c in ('nombre',) if c not in mapeo.values()]
         aviso = ('No se encontró una columna para: ' + ', '.join(faltantes)
                  + '. Revisa que el archivo tenga encabezados.')
@@ -575,29 +579,38 @@ class _Validacion:
         elif len(codigo) > 50:
             errores.append('Código demasiado largo (máx. 50 caracteres)')
 
+        # laboratorio / stock_minimo / cantidad nunca quedan en None: el valor
+        # leído va a una variable aparte y solo se asigna si es válido (si no,
+        # se registra el error y la fila sale abajo, en `if errores`).
         laboratorio = self.laboratorio
         if v.get('laboratorio'):
-            laboratorio = self.labs_por_nombre.get(normalizar(v['laboratorio']))
-            if laboratorio is None:
+            lab_fila = self.labs_por_nombre.get(normalizar(v['laboratorio']))
+            if lab_fila is None:
                 errores.append(f'Laboratorio no válido ("{v["laboratorio"]}")')
+            else:
+                laboratorio = lab_fila
 
         stock_minimo = 0
         if v.get('stock_minimo'):
-            stock_minimo = _entero(v['stock_minimo'])
-            if stock_minimo is None or stock_minimo < 0:
+            stock_leido = _entero(v['stock_minimo'])
+            if stock_leido is None or stock_leido < 0:
                 errores.append(
                     f'Stock mínimo inválido ("{v["stock_minimo"]}"): debe ser un número entero mayor o igual a 0'
                 )
+            else:
+                stock_minimo = stock_leido
 
         estado = self._estado(v.get('estado', ''), errores)
 
         cantidad = 1
         if v.get('cantidad'):
-            cantidad = _entero(v['cantidad'])
-            if cantidad is None or not 1 <= cantidad <= MAX_CANTIDAD_POR_FILA:
+            cantidad_leida = _entero(v['cantidad'])
+            if cantidad_leida is None or not 1 <= cantidad_leida <= MAX_CANTIDAD_POR_FILA:
                 errores.append(
                     f'Cantidad inválida ("{v["cantidad"]}"): debe ser un entero entre 1 y {MAX_CANTIDAD_POR_FILA}'
                 )
+            else:
+                cantidad = cantidad_leida
 
         marca = v.get('marca', '')
         if len(marca) > 100:
@@ -657,7 +670,7 @@ class _Validacion:
         return self.estados[nombre]
 
 
-def _entero(texto):
+def _entero(texto: str) -> int | None:
     """'5', '5.0', ' 5 ' → 5; cualquier otra cosa → None."""
     texto = texto.strip().replace(' ', '')
     if re.fullmatch(r'-?\d+(\.0+)?', texto):

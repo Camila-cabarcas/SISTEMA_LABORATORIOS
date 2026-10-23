@@ -530,7 +530,7 @@ class MapearView(View):
 
     def get(self, request):
         datos, laboratorio = _datos_importacion(request)
-        if datos is None:
+        if datos is None or laboratorio is None:
             return redirect(URL_IMPORTAR)
         return self._render(request, datos, laboratorio, datos.get('mapeo', {}))
 
@@ -538,7 +538,7 @@ class MapearView(View):
         from .services.importador import ImportadorInventario
 
         datos, laboratorio = _datos_importacion(request)
-        if datos is None:
+        if datos is None or laboratorio is None:
             return redirect(URL_IMPORTAR)
 
         mapeo = {}
@@ -568,7 +568,7 @@ class ValidarView(View):
         from .services.importador import ImportadorInventario
 
         datos, laboratorio = _datos_importacion(request)
-        if datos is None:
+        if datos is None or laboratorio is None:
             return redirect(URL_IMPORTAR)
         if not datos.get('mapeo_confirmado'):
             return redirect(f'{URL_IMPORTAR}mapear/')
@@ -602,7 +602,7 @@ class ConfirmarView(View):
         from .services.importador import ImportadorInventario
 
         datos, laboratorio = _datos_importacion(request)
-        if datos is None:
+        if datos is None or laboratorio is None:
             return redirect(URL_IMPORTAR)
         if not datos.get('mapeo_confirmado'):
             return redirect(f'{URL_IMPORTAR}mapear/')
