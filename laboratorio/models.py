@@ -134,9 +134,11 @@ class CategoriaModulo(models.Model):
     TRIANGULO = 'triangulo'
     COMPUTADOR = 'computador'
     MAQUINARIA = 'maquinaria'
+    MESA = 'mesa'
 
     FORMA_CHOICES = [
         (CUADRADO, 'Módulo (forma original)'),
+        (MESA, 'Mesa (tablero y patas)'),
         (COMPUTADOR, 'Computador'),
         (MAQUINARIA, 'Maquinaria'),
         (CIRCULO, 'Círculo'),

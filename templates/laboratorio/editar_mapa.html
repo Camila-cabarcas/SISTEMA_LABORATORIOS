@@ -54,8 +54,9 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
     .modulo-item.seleccionado { outline: 3px solid #212529; outline-offset: 2px; z-index: calc(var(--capa-modulo) + 1); }
-    /* Posición inválida (choca con otro módulo o corta una división): se
-       queda en la última posición válida y se marca en rojo. */
+    /* Posición inválida mientras se arrastra (encima de otro módulo o
+       cortando una división): en rojo y por encima de los demás
+       (.arrastrando). Al soltar así, vuelve a donde empezó el arrastre. */
     .modulo-item.invalido { outline: 3px solid #dc3545; outline-offset: 2px; }
     .modulo-item.invalido > .modulo-figura { box-shadow: 0 0 0 999px rgba(220, 53, 69, .25) inset; }
     #panel-modulo { position: sticky; top: 1rem; }
@@ -136,8 +137,8 @@
 
 <div class="alert alert-info">
     👆 Haz clic en un módulo para seleccionarlo y arrástralo (o escribe su posición en el panel).
-    Un módulo no puede quedar sobre otro, ni cortar el borde de una división: si choca se marca en rojo
-    y se queda en la última posición válida.
+    Puedes pasar por encima de otros módulos (se ve en rojo), pero no dejarlo encima de otro ni cortando
+    el borde de una división: si lo sueltas ahí, vuelve a donde estaba.
     Las <strong>divisiones</strong> (salones) son opcionales: arrástralas desde su nombre y cambia su tamaño
     desde la esquina inferior derecha. Al guardar, cada módulo queda en la división donde está su centro.
 </div>
@@ -209,8 +210,7 @@
          style="left: {{ modulo.posicion_x }}px; top: {{ modulo.posicion_y }}px;">
         <div class="modulo-figura forma-{{ modulo.forma_categoria }}" style="--cat-color: {{ modulo.color_categoria }};"
              title="{{ modulo.categoria.nombre|default:'Sin categoría' }}">
-            {% if modulo.forma_categoria == 'computador' %}<i class="fa-solid fa-desktop modulo-figura-icono" aria-hidden="true"></i>
-            {% elif modulo.forma_categoria == 'maquinaria' %}<i class="fa-solid fa-gears modulo-figura-icono" aria-hidden="true"></i>{% endif %}
+            {% include 'laboratorio/partials/icono_categoria.html' with forma=modulo.forma_categoria %}
             <span class="modulo-figura-nombre">{{ modulo.nombre }}</span>
             <span class="modulo-figura-detalle modulo-item-division">{{ modulo.division.nombre|default:'' }}</span>
         </div>
@@ -294,5 +294,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{% static 'js/modulo_figura.js' %}"></script>
+<script src="{% static 'js/editor_mapa_reglas.js' %}"></script>
 <script src="{% static 'js/editar_mapa.js' %}"></script>
 {% endblock %}

@@ -7,8 +7,8 @@
  *
  * - cuadrado / circulo / rombo / triangulo: figura rellena con el color de
  *   la categoría (cuadrado = el módulo rectangular de siempre).
- * - computador / maquinaria: la figura es un ícono grande en el color de la
- *   categoría, con el nombre debajo.
+ * - computador / maquinaria / mesa: la figura es un ícono grande en el color
+ *   de la categoría (monitor, engranajes, mesa SVG), con el nombre debajo.
  * - .modulo-estado: punto de color en la esquina con la disponibilidad
  *   (bg-success / bg-danger / bg-warning / bg-secondary).
  * Sin categoría: gris (#6c757d) y forma cuadrado.
@@ -44,7 +44,8 @@
 
 /* Figuras de ícono: sin relleno, el ícono lleva el color. */
 .modulo-figura.forma-computador,
-.modulo-figura.forma-maquinaria {
+.modulo-figura.forma-maquinaria,
+.modulo-figura.forma-mesa {
     background: #fff;
     border: 1px solid rgba(0, 0, 0, .08);
     border-radius: 8px;
@@ -53,6 +54,7 @@
 }
 .modulo-figura-icono {
     color: var(--cat-color);
+    fill: currentColor;
     font-size: 1.6rem;
     line-height: 1;
     margin-bottom: 2px;
@@ -91,7 +93,11 @@
 .leyenda-categoria { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; }
 .leyenda-categoria .modulo-figura { width: 22px; height: 18px; }
 .leyenda-categoria .modulo-figura.forma-computador,
-.leyenda-categoria .modulo-figura.forma-maquinaria { border: none; background: transparent; }
+.leyenda-categoria .modulo-figura.forma-maquinaria,
+.leyenda-categoria .modulo-figura.forma-mesa { border: none; background: transparent; }
 .leyenda-categoria .modulo-figura-icono { font-size: 1rem; margin: 0; }
 .leyenda-estado { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; }
 .leyenda-estado .punto { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+/* Ícono SVG de mesa: mismo tamaño visual que los íconos de Font Awesome. */
+.modulo-figura-icono.icono-mesa { width: 1.35em; height: 1em; display: inline-block; flex-shrink: 0; }

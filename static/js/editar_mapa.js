@@ -3,11 +3,12 @@
  * - Módulos: clic = seleccionar (panel lateral con nombre, categoría y
  *   posición X/Y). Arrastre con pointer events (mouse y táctil): el módulo
  *   conserva el punto por donde se agarró y no puede salir del lienzo.
- * - Sin solapamiento: si la posición nueva choca con otro módulo o corta el
- *   borde de una división (queda a medias dentro), el módulo se marca en rojo
- *   y se queda en la última posición válida. Mismas reglas que el servidor
- *   (laboratorio.services.posiciones_mapa / divisiones.guardar_mapa); los
- *   módulos en (0, 0) son "sin posición" y no cuentan para los choques.
+ * - Sin solapamiento: mientras se arrastra, el módulo puede pasar por encima
+ *   de otros (se marca en rojo y va por encima). Al soltar, si la posición
+ *   choca con otro módulo o corta el borde de una división (queda a medias
+ *   dentro), vuelve a donde empezó el arrastre. Las reglas están en
+ *   static/js/editor_mapa_reglas.js (mismas que el servidor); los módulos en
+ *   (0, 0) son "sin posición" y no cuentan para los choques.
  * - Divisiones (salones, opcionales, máx. data-max-divisiones): se agregan,
  *   se mueven desde su barra, se redimensionan desde la esquina, se renombran
  *   en la misma barra y se eliminan. Mover una división no mueve sus módulos.
@@ -72,42 +73,25 @@
     function modulos() { return Array.prototype.slice.call(canvas.querySelectorAll('.modulo-item')); }
     function divisiones() { return Array.prototype.slice.call(canvas.querySelectorAll('.division-item')); }
 
-    // ── Geometría (misma regla que posiciones_mapa.se_solapan) ─────────
-    function seSolapan(a, b) {
-        return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-    }
-    function contiene(exterior, interior) {
-        return interior.x >= exterior.x && interior.y >= exterior.y
-            && interior.x + interior.w <= exterior.x + exterior.w
-            && interior.y + interior.h <= exterior.y + exterior.h;
-    }
-    function rectModulo(x, y) { return { x: x, y: y, w: ANCHO_MODULO, h: ALTO_MODULO }; }
+    // ── Geometría: static/js/editor_mapa_reglas.js (mismas reglas que el servidor) ──
+    var reglas = window.EditorMapaReglas;
+    var TAM_MODULO = { w: ANCHO_MODULO, h: ALTO_MODULO };
+
     function rectDivision(d) {
         return { x: num(d, 'x'), y: num(d, 'y'), w: num(d, 'ancho'), h: num(d, 'alto') };
     }
-    function sinPosicion(x, y) { return x === 0 && y === 0; }
-
-    function dentroDelLienzo(x, y) {
-        return x >= 0 && y >= 0
-            && x + ANCHO_MODULO <= canvas.clientWidth && y + ALTO_MODULO <= canvas.clientHeight;
-    }
+    function sinPosicion(x, y) { return reglas.sinPosicion(x, y); }
 
     /** ¿Puede `modulo` quedar en (x, y)? Fuera del lienzo, sobre otro módulo
      *  ubicado o cortando el borde de una división: no. (0, 0) = sin posición. */
     function posicionValida(modulo, x, y) {
-        if (!dentroDelLienzo(x, y)) return false;
-        if (sinPosicion(x, y)) return true;
-        var propio = rectModulo(x, y);
-        var choca = modulos().some(function (otro) {
-            if (otro === modulo) return false;
-            var ox = num(otro, 'x'), oy = num(otro, 'y');
-            return !sinPosicion(ox, oy) && seSolapan(propio, rectModulo(ox, oy));
-        });
-        if (choca) return false;
-        return !divisiones().some(function (d) {
-            var r = rectDivision(d);
-            return seSolapan(propio, r) && !contiene(r, propio);  // a medias dentro
-        });
+        var otros = modulos()
+            .filter(function (otro) { return otro !== modulo; })
+            .map(function (otro) { return { x: num(otro, 'x'), y: num(otro, 'y') }; });
+        return reglas.posicionValida(
+            x, y, TAM_MODULO, { w: canvas.clientWidth, h: canvas.clientHeight },
+            otros, divisiones().map(rectDivision)
+        );
     }
 
     function moverModulo(modulo, x, y) {
@@ -245,8 +229,7 @@
     });
 
     // Cambiar la categoría redibuja la figura y el color al instante.
-    var ICONOS = { computador: 'fa-desktop', maquinaria: 'fa-gears' };
-    var COLOR_SIN_CATEGORIA = '#6c757d';
+    var COLOR_SIN_CATEGORIA = window.ModuloFigura.SIN_CATEGORIA.color;
     panel.categoria.addEventListener('change', function () {
         if (!seleccionado) return;
         var opcion = panel.categoria.selectedOptions[0];
@@ -259,14 +242,10 @@
         figura.className = 'modulo-figura forma-' + forma;
         figura.style.setProperty('--cat-color', color);
         figura.title = id ? opcion.textContent.trim() : 'Sin categoría';
-        var icono = figura.querySelector('.modulo-figura-icono');
-        if (icono) icono.remove();
-        if (ICONOS[forma]) {
-            icono = document.createElement('i');
-            icono.className = 'fa-solid ' + ICONOS[forma] + ' modulo-figura-icono';
-            icono.setAttribute('aria-hidden', 'true');
-            figura.insertBefore(icono, figura.firstChild);
-        }
+        var viejo = figura.querySelector('.modulo-figura-icono');
+        if (viejo) viejo.remove();
+        var icono = window.ModuloFigura.icono(forma);
+        if (icono) figura.insertBefore(icono, figura.firstChild);
         marcarCambios();
     });
 
@@ -280,9 +259,8 @@
     }
 
     /**
-     * Arrastre genérico. `aceptar(x, y)` decide si la posición es válida
-     * (si no, el elemento queda en la última válida); `alMover` corre tras
-     * cada movimiento aceptado.
+     * Arrastre genérico, siempre dentro del lienzo. `mover(x, y)` aplica cada
+     * posición; `alEmpezar`, `alMover` y `alSoltar` son ganchos opcionales.
      */
     function arrastrable(elemento, asa, opciones) {
         var offsetX = 0;
@@ -305,10 +283,6 @@
             var x = limitar(p.x - offsetX, 0, canvas.clientWidth - elemento.offsetWidth);
             var y = limitar(p.y - offsetY, 0, canvas.clientHeight - elemento.offsetHeight);
             if (x === num(elemento, 'x') && y === num(elemento, 'y')) return;
-            if (opciones.aceptar && !opciones.aceptar(x, y)) {
-                if (opciones.alRechazar) opciones.alRechazar();
-                return;
-            }
             opciones.mover(x, y);
             if (opciones.alMover) opciones.alMover();
             marcarCambios();
@@ -328,22 +302,37 @@
     }
 
     // ── Módulos ───────────────────────────────────────────────────────
+    // Durante el arrastre el módulo puede pasar por encima de otros: no se
+    // bloquea; si la posición actual no es válida se marca en rojo (y va por
+    // encima de los demás: .arrastrando). Al soltar, si la posición choca,
+    // vuelve a donde empezó el arrastre — nunca se acepta una con choque.
+    // Sigue sin poder salir del lienzo (arrastrable limita x/y al lienzo).
     modulos().forEach(function (modulo) {
+        var inicio = null;
         arrastrable(modulo, modulo, {
-            alEmpezar: function () { seleccionar(modulo); },
-            aceptar: function (x, y) { return posicionValida(modulo, x, y); },
-            alRechazar: function () { marcarInvalido(modulo, true); },
+            alEmpezar: function () {
+                seleccionar(modulo);
+                inicio = { x: num(modulo, 'x'), y: num(modulo, 'y') };
+            },
             mover: function (x, y) {
-                marcarInvalido(modulo, false);
                 moverModulo(modulo, x, y);
+                marcarInvalido(modulo, !posicionValida(modulo, x, y));
             },
             alMover: function () {
                 var destino = divisionBajo(modulo);
                 divisiones().forEach(function (d) { d.classList.toggle('destino', d === destino); });
             },
-            // Al soltar nunca queda en una posición inválida: ya está en la
-            // última válida; solo se quita la marca roja.
-            alSoltar: function () { marcarInvalido(modulo, false); },
+            alSoltar: function () {
+                if (!inicio) return;
+                var final = reglas.posicionAlSoltar(
+                    inicio, { x: num(modulo, 'x'), y: num(modulo, 'y') },
+                    function (x, y) { return posicionValida(modulo, x, y); }
+                );
+                moverModulo(modulo, final.x, final.y);
+                marcarInvalido(modulo, false);
+                modulo.dataset.ultimoSoltar = final === inicio ? 'revertido' : 'aceptado';
+                inicio = null;
+            },
         });
     });
 
