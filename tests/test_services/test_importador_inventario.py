@@ -343,7 +343,7 @@ class TestMapeo:
 
 
 @pytest.mark.django_db
-class TestValidacion:
+class TestValidacionFase2:
 
     def test_simula_sin_guardar(self, catalogos, laboratorio):
         from inventario.models import Insumo, ItemInventario
