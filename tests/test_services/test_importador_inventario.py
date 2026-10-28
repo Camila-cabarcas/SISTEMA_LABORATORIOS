@@ -26,7 +26,9 @@ def _subir(nombre, contenido):
 def _xlsx(filas_por_hoja):
     """{'Hoja': [[...], ...]} → bytes de un .xlsx."""
     wb = Workbook()
-    wb.remove(wb.active)
+    ws_inicial = wb.active
+    if ws_inicial is not None:
+        wb.remove(ws_inicial)
     for titulo, filas in filas_por_hoja.items():
         ws = wb.create_sheet(titulo)
         for fila in filas:
@@ -34,7 +36,6 @@ def _xlsx(filas_por_hoja):
     buffer = io.BytesIO()
     wb.save(buffer)
     return buffer.getvalue()
-
 
 def _pdf_con_tabla(filas, paginas=1):
     """PDF mínimo (sin librerías) con `filas` dibujadas como tabla con
@@ -62,7 +63,7 @@ def _pdf_con_tabla(filas, paginas=1):
         b'<< /Type /Catalog /Pages 2 0 R >>',
         None,  # Pages, se arma abajo
         b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-        b'<< /Length %d >>\nstream\n' % len(contenido) + contenido + b'\nendstream',
+        f'<< /Length {len(contenido)} >>\nstream\n'.encode('ascii') + contenido + b'\nendstream',
     ]
     kids = []
     for _ in range(paginas):
@@ -78,12 +79,12 @@ def _pdf_con_tabla(filas, paginas=1):
     offsets = []
     for n, obj in enumerate(objetos, start=1):
         offsets.append(salida.tell())
-        salida.write(b'%d 0 obj\n' % n + obj + b'\nendobj\n')
+        salida.write(f'{n} 0 obj\n'.encode('ascii') + obj + b'\nendobj\n')
     xref = salida.tell()
-    salida.write(b'xref\n0 %d\n0000000000 65535 f \n' % (len(objetos) + 1))
+    salida.write(f'xref\n0 {len(objetos) + 1}\n0000000000 65535 f \n'.encode('ascii'))
     for off in offsets:
         salida.write(b'%010d 00000 n \n' % off)
-    salida.write(b'trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n' % (len(objetos) + 1, xref))
+    salida.write(f'trailer\n<< /Size {len(objetos) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n'.encode('ascii'))
     return salida.getvalue()
 
 
