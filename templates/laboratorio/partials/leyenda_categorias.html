@@ -1,0 +1,16 @@
+{# Leyenda de categorías del laboratorio. Espera: categorias_lab (CategoriaModulo usadas por sus módulos), hay_sin_categoria. #}
+{% if categorias_lab or hay_sin_categoria %}
+<div class="leyenda-categorias" id="leyenda-categorias">
+    <span class="fw-semibold me-1">Categorías:</span>
+    {% for c in categorias_lab %}
+    <span class="leyenda-categoria" data-categoria-id="{{ c.id }}">
+        {% include 'laboratorio/partials/figura_categoria.html' with color=c.color forma=c.forma %}{{ c.nombre }}
+    </span>
+    {% endfor %}
+    {% if hay_sin_categoria %}
+    <span class="leyenda-categoria" data-categoria-id="">
+        {% include 'laboratorio/partials/figura_categoria.html' with color='#6c757d' forma='cuadrado' %}Sin categoría
+    </span>
+    {% endif %}
+</div>
+{% endif %}

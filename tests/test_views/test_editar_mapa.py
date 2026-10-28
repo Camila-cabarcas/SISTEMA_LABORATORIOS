@@ -150,7 +150,7 @@ def test_guardar_actualiza_posiciones_en_bd(cliente_autenticado, laboratorio, mo
     ]})
 
     assert response.status_code == 200
-    assert response.json() == {'status': 'ok', 'actualizados': 2}
+    assert response.json() == {'status': 'ok', 'actualizados': 2, 'divisiones': 0}
     a.refresh_from_db()
     b.refresh_from_db()
     assert (a.posicion_x, a.posicion_y) == (120, 40)
@@ -169,11 +169,12 @@ def test_guardar_parcial_no_toca_los_demas(cliente_autenticado, laboratorio, mod
 def test_guardar_acepta_ids_y_coordenadas_como_texto(cliente_autenticado, laboratorio, modulos):
     a, _ = modulos
 
-    response = _post(cliente_autenticado, laboratorio, {'modulos': [{'id': str(a.id), 'x': '15', 'y': '25'}]})
+    # Lejos de Mesa B (5, 5): sobre ella el guardado se rechaza por solapamiento.
+    response = _post(cliente_autenticado, laboratorio, {'modulos': [{'id': str(a.id), 'x': '315', 'y': '225'}]})
 
     assert response.status_code == 200
     a.refresh_from_db()
-    assert (a.posicion_x, a.posicion_y) == (15, 25)
+    assert (a.posicion_x, a.posicion_y) == (315, 225)
 
 
 def test_posiciones_guardadas_se_ven_en_el_editor(cliente_autenticado, laboratorio, modulos):
@@ -264,7 +265,7 @@ def test_csrf_token_del_editor_es_aceptado(usuario_admin, laboratorio, modulos):
     cliente = Client(enforce_csrf_checks=True)
     cliente.force_login(usuario_admin)
     a, _ = modulos
-    cuerpo = json.dumps({'modulos': [{'id': a.id, 'x': 30, 'y': 30}]})
+    cuerpo = json.dumps({'modulos': [{'id': a.id, 'x': 300, 'y': 300}]})  # libre (Mesa B está en 5, 5)
 
     sin_token = cliente.post(_url_guardar(laboratorio), cuerpo, content_type='application/json')
     token = cliente.get(_url(laboratorio)).context['csrf_token']

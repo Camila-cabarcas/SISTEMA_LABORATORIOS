@@ -3,6 +3,7 @@ urls.py — laboratorio
 Rutas de la app laboratorio: CRUD de laboratorios, mapa de módulos, eventos y APIs de disponibilidad.
 """
 from django.urls import path
+from . import views_categorias
 from .views import (
     lista_laboratorios,
     crear_laboratorio,
@@ -40,6 +41,11 @@ urlpatterns = [
     path('', lista_laboratorios, name='lista_laboratorios'),
     path('crear/', crear_laboratorio, name='crear_laboratorio'),
     path('laboratoristas/', lista_laboratoristas, name='lista_laboratoristas'),
+    path('categorias/', views_categorias.lista_categorias, name='lista_categorias_modulo'),
+    path('categorias/crear/', views_categorias.crear_categoria, name='crear_categoria_modulo'),
+    path('categorias/<int:id>/editar/', views_categorias.editar_categoria, name='editar_categoria_modulo'),
+    path('categorias/<int:id>/toggle/', views_categorias.toggle_categoria, name='toggle_categoria_modulo'),
+    path('categorias/<int:id>/eliminar/', views_categorias.eliminar_categoria, name='eliminar_categoria_modulo'),
     path('laboratoristas/crear/', crear_laboratorista, name='crear_laboratorista'),
     path('laboratoristas/<int:id>/', detalle_laboratorista, name='detalle_laboratorista'),
     path('laboratoristas/<int:id>/editar/', editar_laboratorista, name='editar_laboratorista'),

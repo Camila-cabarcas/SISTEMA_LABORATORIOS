@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="mb-0">Historial de no disponibilidad — {{ modulo.nombre }}</h2>
-        <small class="text-muted">{{ laboratorio.nombre }} — {{ laboratorio.ubicacion }}</small>
+        <small class="text-muted">{{ laboratorio.nombre }} — {{ laboratorio.ubicacion }}{% if modulo.division %} · División: {{ modulo.division.nombre }}{% endif %} · Categoría: {{ modulo.categoria.nombre|default:'Sin categoría' }}</small>
     </div>
     <a href="{% url 'mapa_laboratorio' laboratorio.id %}" class="btn btn-outline-secondary btn-sm">
         &larr; Volver al mapa

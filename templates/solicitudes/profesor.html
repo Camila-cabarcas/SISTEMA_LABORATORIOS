@@ -1,5 +1,6 @@
 {% extends 'base_publica.html' %}
 
+{% load static %}
 {% block contenido %}
 
 <h1 class="mb-1"><i class="fa-solid fa-chalkboard-user text-brand me-2"></i>Solicitud de Reserva — Profesor</h1>
@@ -299,12 +300,18 @@
 
             <input type="hidden" name="modulos_ids" id="modulos_ids_hidden_prof" value="">
 
-            <!-- Leyenda -->
-            <div class="d-flex flex-wrap gap-2 mb-2">
-                <span class="badge badge-pill-lg bg-success">Disponible</span>
-                <span class="badge badge-pill-lg bg-warning text-dark">Reservado</span>
-                <span class="badge badge-pill-lg bg-secondary">No disponible</span>
-                <span class="badge badge-pill-lg bg-primary">Seleccionado</span>
+            <!-- Leyenda: disponibilidad (punto en la esquina) y categorías (color + figura) -->
+            <div class="d-flex flex-wrap gap-3 align-items-center mb-1 small">
+                <span class="leyenda-estado"><span class="punto bg-success"></span>Disponible</span>
+                <span class="leyenda-estado"><span class="punto bg-warning"></span>Reservado</span>
+                <span class="leyenda-estado"><span class="punto bg-secondary"></span>No disponible</span>
+                <span class="leyenda-estado"><span class="punto" style="outline: 3px solid #0d6efd; outline-offset: 1px;"></span>Seleccionado</span>
+            </div>
+            <div id="leyenda-categorias-form-prof" class="leyenda-categorias mb-2 small d-none"></div>
+
+            <div id="filtro-division-wrap-prof" class="d-flex align-items-center gap-2 mb-2 d-none">
+                <label for="filtro-division-prof" class="form-label small fw-semibold mb-0">División</label>
+                <select id="filtro-division-prof" class="form-select form-select-sm" style="max-width: 220px;"></select>
             </div>
 
             <!-- Lab room layout -->
@@ -436,8 +443,12 @@
 }
 .modulo-form-seat.no-seleccionable { cursor: not-allowed; opacity: .5; }
 .modulo-cap-form { font-size: .65rem; opacity: .85; margin-top: 2px; }
+.modulo-division-form { font-size: .6rem; opacity: .85; margin-top: 1px; }
 </style>
 
+<link href="{% static 'css/modulo_figura.css' %}" rel="stylesheet">
+<script src="{% static 'js/modulo_figura.js' %}"></script>
+<script src="{% static 'js/filtro_division_modulos.js' %}"></script>
 <script>
 window.addEventListener('DOMContentLoaded', function() {
 try {
@@ -696,29 +707,28 @@ function cargarModulosProf() {
                     zonaEl.innerHTML = '';
                 });
 
+            FiltroDivisionModulos.poblar(
+                document.getElementById('filtro-division-prof'),
+                document.getElementById('filtro-division-wrap-prof'),
+                data.divisiones,
+            );
+            ModuloFigura.leyenda(document.getElementById('leyenda-categorias-form-prof'),
+                                 data.categorias, data.hay_sin_categoria);
+
             data.modulos.forEach(mod => {
                 console.log('🔲 cargarModulosProf: procesando módulo', mod);
-                const div = document.createElement('div');
-                div.className = 'modulo-form-seat ';
-
-                if (mod.estado === 'disponible') {
-                    div.classList.add('seleccionable', 'bg-success');
-                    div.style.color = 'white';
-                } else if (mod.estado === 'reservado') {
-                    div.classList.add('no-seleccionable', 'bg-warning');
-                    div.style.color = '#000';
-                } else {
-                    div.classList.add('no-seleccionable', 'bg-secondary');
-                    div.style.color = 'white';
-                }
-
-                div.innerHTML = `${mod.nombre}<div class="modulo-cap-form">Cap: ${mod.capacidad}</div>`;
+                // Color y figura = categoría; disponibilidad = punto en la esquina.
+                const div = ModuloFigura.crear({
+                    nombre: mod.nombre, categoria: mod.categoria, estadoColor: mod.color,
+                    detalles: [`Cap: ${mod.capacidad}`],
+                });
+                div.classList.add('modulo-form-seat', mod.estado === 'disponible' ? 'seleccionable' : 'no-seleccionable');
                 div.dataset.moduloId = mod.id;
+                FiltroDivisionModulos.etiquetar(div, mod);
 
                 if (mod.estado === 'disponible') {
                     div.addEventListener('click', function() {
-                        this.classList.toggle('bg-primary');
-                        this.classList.toggle('bg-success');
+                        this.classList.toggle('seleccionado');
                         guardarModulosSeleccionados();
                     });
                 }
@@ -730,13 +740,23 @@ function cargarModulosProf() {
                 console.log('✅ cargarModulosProf: módulo', mod.id, mod.nombre, 'insertado en', zonaTargetId);
             });
 
+            aplicarFiltroDivisionProf();
             console.log('🏁 cargarModulosProf: terminó de procesar', data.modulos.length, 'módulos');
         })
         .catch(e => console.error('❌ Error cargando módulos:', e, '— mensaje:', e.message));
 }
 
+function aplicarFiltroDivisionProf() {
+    FiltroDivisionModulos.aplicar(
+        document.getElementById('filtro-division-prof'),
+        document.querySelectorAll('#seccion-modulos-prof .modulo-form-seat'),
+    );
+}
+
+document.getElementById('filtro-division-prof').addEventListener('change', aplicarFiltroDivisionProf);
+
 function guardarModulosSeleccionados() {
-    const seleccionados = Array.from(document.querySelectorAll('.modulo-form-seat.bg-primary'))
+    const seleccionados = Array.from(document.querySelectorAll('.modulo-form-seat.seleccionado'))
         .map(el => el.dataset.moduloId);
     document.getElementById('modulos_ids_hidden_prof').value = seleccionados.join(',');
 }

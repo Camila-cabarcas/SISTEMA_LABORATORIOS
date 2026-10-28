@@ -94,3 +94,42 @@ def calcular_posiciones(total):
 def sin_posicion(modulo):
     """(0, 0) es el valor por defecto de los campos: "sin posición guardada"."""
     return modulo.posicion_x == 0 and modulo.posicion_y == 0
+
+
+# ── Lienzo del editor y solapamientos ─────────────────────────────────────
+# Tamaño FIJO del lienzo del editor de mapa, el mismo en el navegador
+# (templates/laboratorio/editar_mapa.html lo recibe por contexto) y en el
+# servidor, que rechaza lo que quede fuera. Distinto de ANCHO_LIENZO, que es
+# solo el ancho del diseño por defecto (calcular_posiciones).
+LIENZO_EDITOR_ANCHO = 1200
+LIENZO_EDITOR_ALTO = 800
+
+
+def se_solapan(a, b):
+    """True si dos rectángulos (x, y, ancho, alto) comparten área. Tocarse
+    por un borde no cuenta como solapamiento."""
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    return ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah
+
+
+def rect_modulo(x, y):
+    return (x, y, ANCHO_MODULO, ALTO_MODULO)
+
+
+def modulo_en_lienzo(x, y):
+    return 0 <= x and 0 <= y and x + ANCHO_MODULO <= LIENZO_EDITOR_ANCHO and y + ALTO_MODULO <= LIENZO_EDITOR_ALTO
+
+
+def pares_solapados(modulos):
+    """Pares de módulos que se solapan, de una lista de (modulo, x, y).
+
+    Los que están en (0, 0) no cuentan: es "sin posición guardada" y el
+    editor los muestra apilados en la esquina hasta que se ubican."""
+    ubicados = [(m, x, y) for m, x, y in modulos if not (x == 0 and y == 0)]
+    pares = []
+    for i, (a, ax, ay) in enumerate(ubicados):
+        for b, bx, by in ubicados[i + 1:]:
+            if se_solapan(rect_modulo(ax, ay), rect_modulo(bx, by)):
+                pares.append((a, b))
+    return pares

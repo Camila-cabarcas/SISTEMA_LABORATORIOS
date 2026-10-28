@@ -1,37 +1,127 @@
 {% extends "base_general.html" %}
 {% load static %}
 
+{% block main_class %}container-fluid{% endblock %}
+
 {% block extra_head %}
+<link href="{% static 'css/modulo_figura.css' %}" rel="stylesheet">
 <style>
+    /* Tamaño fijo, el mismo que valida el servidor
+       (posiciones_mapa.LIENZO_EDITOR_*). content-box: el borde queda por
+       fuera, así el área útil mide exactamente eso. */
+    .editor-lienzo-scroll { overflow: auto; max-width: 100%; }
+    /*
+     * Capas del lienzo. #editor-canvas es el ÚNICO contexto de apilamiento
+     * (isolation: isolate) y todo lo de adentro se ordena contra él:
+     *
+     *   fondo y borde de la división  .division-item  sin z-index (nivel "auto")
+     *   módulos                       .modulo-item    --capa-modulo (+1 seleccionado, +2 arrastrando)
+     *   barra y esquina de división   .division-barra / .division-redimensionar  --capa-barra
+     *
+     * Para que la barra pueda quedar encima de los módulos, .division-item NO
+     * debe crear su propio contexto: nada de z-index, opacity < 1, transform,
+     * filter ni isolation en él (si lo hiciera, su barra quedaría atrapada en
+     * el nivel de la división, por debajo de los módulos, sin importar su z-index).
+     */
     #editor-canvas {
+        --capa-modulo: 10;
+        --capa-barra: 30;
         position: relative;
-        width: 100%;
-        height: {{ alto_canvas }}px;
+        isolation: isolate;
+        box-sizing: content-box;
+        width: {{ lienzo_ancho }}px;
+        height: {{ lienzo_alto }}px;
         border: 2px solid #ccc;
         background-color: #f9f9f9;
         overflow: hidden;
     }
+    /* .modulo-item es solo el contenedor que se arrastra (posición); la
+       figura de la categoría va dentro (static/css/modulo_figura.css). */
     .modulo-item {
         position: absolute;
-        width: 120px;
-        height: 80px;
-        background-color: #0d6efd;
-        color: #fff;
-        border-radius: 5px;
-        padding: 10px;
+        z-index: var(--capa-modulo);  /* encima del fondo de las divisiones, debajo de sus barras */
+        /* posiciones_mapa.ANCHO_MODULO / ALTO_MODULO */
+        width: {{ ancho_modulo }}px;
+        height: {{ alto_modulo }}px;
         cursor: move;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        text-align: center;
         user-select: none;
         touch-action: none;  /* el arrastre táctil no hace scroll */
     }
+    .modulo-item > .modulo-figura { width: 100%; height: 100%; padding: 4px; pointer-events: none; }
     .modulo-item.arrastrando {
-        opacity: 0.7;
-        z-index: 10;
+        opacity: 0.85;
+        z-index: calc(var(--capa-modulo) + 2);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .modulo-item.seleccionado { outline: 3px solid #212529; outline-offset: 2px; z-index: calc(var(--capa-modulo) + 1); }
+    /* Posición inválida (choca con otro módulo o corta una división): se
+       queda en la última posición válida y se marca en rojo. */
+    .modulo-item.invalido { outline: 3px solid #dc3545; outline-offset: 2px; }
+    .modulo-item.invalido > .modulo-figura { box-shadow: 0 0 0 999px rgba(220, 53, 69, .25) inset; }
+    #panel-modulo { position: sticky; top: 1rem; }
+
+    /* Divisiones (salones) */
+    .division-item {
+        position: absolute;
+        /* Sin z-index ni opacity: no crea contexto propio (ver "Capas" arriba). */
+        border: 2px dashed rgba(13, 110, 253, .45);
+        border-radius: 10px;
+        background: rgba(13, 110, 253, .06);
+        /* El fondo no captura clics: los módulos de abajo se siguen pudiendo
+           agarrar. Solo la barra y la esquina (pointer-events: auto). */
+        pointer-events: none;
+    }
+    .division-item.destino { background: rgba(13, 110, 253, .16); border-style: solid; }
+    /* Sin opacity (crearía un contexto y hundiría la barra bajo los módulos). */
+    .division-item.arrastrando { box-shadow: 0 4px 12px rgba(0, 0, 0, .15); }
+    .division-item.seleccionada { border: 2px solid #0a58ca; }
+    /* Seleccionada: barra más marcada, el texto sigue oscuro (con o sin foco). */
+    .division-item.seleccionada .division-barra { background: #b6d0fb; box-shadow: inset 0 -2px 0 #0a58ca; }
+    .division-barra,
+    .division-redimensionar {
+        z-index: var(--capa-barra);
+        pointer-events: auto;
+        touch-action: none;  /* el arrastre táctil no hace scroll */
+    }
+    .division-barra {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 4px 3px 8px;
+        cursor: move;
+        /* Opaca: el nombre se lee aunque haya un módulo debajo. */
+        background: #dbe7fd;
+        border-radius: 8px 8px 0 0;
+    }
+    .division-nombre {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        font-size: .8rem;
+        font-weight: 600;
+        color: #0a58ca;
+        padding: 0;
+    }
+    .division-nombre:focus { outline: 1px solid rgba(13, 110, 253, .5); background: #fff; }
+    .division-eliminar {
+        border: none;
+        background: transparent;
+        color: #dc3545;
+        line-height: 1;
+        padding: 0 4px;
+        font-size: 1rem;
+    }
+    .division-redimensionar {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 16px;
+        height: 16px;
+        cursor: nwse-resize;
+        background: linear-gradient(135deg, transparent 50%, rgba(13, 110, 253, .55) 50%);
+        border-bottom-right-radius: 8px;
     }
 </style>
 {% endblock %}
@@ -45,8 +135,14 @@
 </div>
 
 <div class="alert alert-info">
-    👆 Arrastra los módulos para reorganizar el laboratorio.
+    👆 Haz clic en un módulo para seleccionarlo y arrástralo (o escribe su posición en el panel).
+    Un módulo no puede quedar sobre otro, ni cortar el borde de una división: si choca se marca en rojo
+    y se queda en la última posición válida.
+    Las <strong>divisiones</strong> (salones) son opcionales: arrástralas desde su nombre y cambia su tamaño
+    desde la esquina inferior derecha. Al guardar, cada módulo queda en la división donde está su centro.
 </div>
+
+<div class="mb-3">{% include 'laboratorio/partials/leyenda_categorias.html' %}</div>
 
 {% if sin_posicion > 1 %}
 <div class="alert alert-warning">
@@ -54,22 +150,140 @@
 </div>
 {% endif %}
 
+{% if fuera_de_lienzo %}
+<div class="alert alert-warning" id="aviso-fuera-de-lienzo">
+    {{ fuera_de_lienzo|length }} módulo{{ fuera_de_lienzo|length|pluralize }} quedó fuera del lienzo
+    ({{ lienzo_ancho }}×{{ lienzo_alto }} px) y no se ve. Selecciónalo y escribe una posición X/Y en el panel:
+    {% for m in fuera_de_lienzo %}
+    <button type="button" class="btn btn-sm btn-outline-dark ms-1" data-seleccionar-modulo="{{ m.id }}">
+        {{ m.nombre }} ({{ m.posicion_x }}, {{ m.posicion_y }})
+    </button>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="d-flex align-items-center gap-2 mb-2">
+    <button type="button" id="btn-agregar-division" class="btn btn-outline-primary btn-sm"
+            {% if divisiones|length >= max_divisiones %}disabled{% endif %}>
+        ➕ Agregar división
+    </button>
+    <span class="text-muted small">
+        <span id="contador-divisiones">{{ divisiones|length }}</span> / {{ max_divisiones }} divisiones
+    </span>
+</div>
+
+<div class="row g-3">
+<div class="col-xl-9">
+<div class="editor-lienzo-scroll">
 <div id="editor-canvas"
      data-guardar-url="{% url 'guardar_mapa' laboratorio.id %}"
      data-mapa-url="{% url 'mapa_laboratorio' laboratorio.id %}"
-     data-csrf="{{ csrf_token }}">
+     data-csrf="{{ csrf_token }}"
+     data-max-divisiones="{{ max_divisiones }}"
+     data-ancho-modulo="{{ ancho_modulo }}"
+     data-alto-modulo="{{ alto_modulo }}"
+     data-division-ancho-min="{{ division_ancho_min }}"
+     data-division-alto-min="{{ division_alto_min }}">
+    {% for division in divisiones %}
+    <div class="division-item"
+         data-id="{{ division.id }}"
+         data-x="{{ division.x }}" data-y="{{ division.y }}"
+         data-ancho="{{ division.ancho }}" data-alto="{{ division.alto }}"
+         style="left: {{ division.x }}px; top: {{ division.y }}px; width: {{ division.ancho }}px; height: {{ division.alto }}px;">
+        <div class="division-barra">
+            <input type="text" class="division-nombre" value="{{ division.nombre }}" maxlength="60"
+                   aria-label="Nombre de la división">
+            <button type="button" class="division-eliminar" title="Eliminar división (los módulos no se borran)"
+                    aria-label="Eliminar división">✕</button>
+        </div>
+        <div class="division-redimensionar" title="Cambiar tamaño"></div>
+    </div>
+    {% endfor %}
     {% for modulo in modulos %}
     <div class="modulo-item"
          data-id="{{ modulo.id }}"
          data-x="{{ modulo.posicion_x }}"
          data-y="{{ modulo.posicion_y }}"
+         data-nombre="{{ modulo.nombre }}"
+         data-categoria-id="{{ modulo.categoria_id|default:'' }}"
          style="left: {{ modulo.posicion_x }}px; top: {{ modulo.posicion_y }}px;">
-        {{ modulo.nombre }}
+        <div class="modulo-figura forma-{{ modulo.forma_categoria }}" style="--cat-color: {{ modulo.color_categoria }};"
+             title="{{ modulo.categoria.nombre|default:'Sin categoría' }}">
+            {% if modulo.forma_categoria == 'computador' %}<i class="fa-solid fa-desktop modulo-figura-icono" aria-hidden="true"></i>
+            {% elif modulo.forma_categoria == 'maquinaria' %}<i class="fa-solid fa-gears modulo-figura-icono" aria-hidden="true"></i>{% endif %}
+            <span class="modulo-figura-nombre">{{ modulo.nombre }}</span>
+            <span class="modulo-figura-detalle modulo-item-division">{{ modulo.division.nombre|default:'' }}</span>
+        </div>
     </div>
     {% empty %}
     <p class="text-muted p-3 mb-0">Este laboratorio no tiene módulos.</p>
     {% endfor %}
 </div>
+</div>
+</div>
+
+<div class="col-xl-3">
+    <aside id="panel-modulo" class="card shadow-sm" aria-label="Elemento seleccionado">
+        <div class="card-header fw-semibold" id="panel-titulo">Selección</div>
+        <div class="card-body">
+            <p id="panel-vacio" class="text-muted small mb-0">Haz clic en un módulo o en la barra de una división para seleccionarlo.</p>
+            <div id="panel-division" class="d-none">
+                <div class="small text-muted">División</div>
+                <div id="panel-division-nombre" class="fw-semibold mb-2"></div>
+                <dl class="row small mb-0">
+                    <dt class="col-5 text-muted fw-normal">Posición</dt><dd class="col-7 mb-1" id="panel-division-posicion"></dd>
+                    <dt class="col-5 text-muted fw-normal">Tamaño</dt><dd class="col-7 mb-0" id="panel-division-tamano"></dd>
+                </dl>
+                <p class="text-muted small mt-2 mb-0">Arrástrala desde su barra; cambia el tamaño desde la esquina; renómbrala escribiendo en la barra.</p>
+            </div>
+            <div id="panel-detalle" class="d-none">
+                <div class="mb-2">
+                    <div class="small text-muted">Nombre</div>
+                    <div id="panel-nombre" class="fw-semibold"></div>
+                </div>
+                <div class="mb-2">
+                    <label for="panel-categoria" class="form-label small text-muted mb-1">Categoría</label>
+                    <select id="panel-categoria" class="form-select form-select-sm">
+                        <option value="">Sin categoría</option>
+                        {% for c in categorias_editor %}
+                        <option value="{{ c.id }}" data-color="{{ c.color }}" data-forma="{{ c.forma }}">
+                            {{ c.nombre }}{% if not c.activo %} (inactiva){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label for="panel-x" class="form-label small text-muted mb-1">Posición X</label>
+                        <input type="number" id="panel-x" class="form-control form-control-sm"
+                               min="0" step="1">
+                    </div>
+                    <div class="col-6">
+                        <label for="panel-y" class="form-label small text-muted mb-1">Posición Y</label>
+                        <input type="number" id="panel-y" class="form-control form-control-sm"
+                               min="0" step="1">
+                    </div>
+                </div>
+                <div id="panel-aviso" class="text-danger small d-none" role="alert">
+                    Esa posición choca con otro módulo, corta una división o sale del lienzo.
+                </div>
+            </div>
+        </div>
+    </aside>
+</div>
+</div>
+
+{# Plantilla de una división nueva (la clona editar_mapa.js). #}
+<template id="plantilla-division">
+    <div class="division-item">
+        <div class="division-barra">
+            <input type="text" class="division-nombre" maxlength="60" aria-label="Nombre de la división">
+            <button type="button" class="division-eliminar" title="Eliminar división (los módulos no se borran)"
+                    aria-label="Eliminar división">✕</button>
+        </div>
+        <div class="division-redimensionar" title="Cambiar tamaño"></div>
+    </div>
+</template>
 
 <div class="d-flex align-items-center gap-3 mt-3">
     <button id="btn-guardar" class="btn btn-success" disabled>

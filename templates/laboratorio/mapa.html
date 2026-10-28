@@ -1,4 +1,9 @@
 {% extends "base_general.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link href="{% static 'css/modulo_figura.css' %}" rel="stylesheet">
+{% endblock %}
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -45,6 +50,34 @@
           {% endfor %}
         </select>
       </div>
+      {% if categorias_lab %}
+      <div class="col-auto">
+        <label class="form-label mb-0 fw-semibold" for="filtro-categoria">Categoría</label>
+        <select id="filtro-categoria" name="categoria" class="form-select form-select-sm" style="width:170px;"
+                onchange="this.form.submit()">
+          <option value="">Todas</option>
+          {% for c in categorias_lab %}
+          <option value="{{ c.id }}" {% if categoria_filtro == c.id|stringformat:"s" %}selected{% endif %}>{{ c.nombre }}</option>
+          {% endfor %}
+          {% if hay_sin_categoria %}
+          <option value="sin" {% if categoria_filtro == 'sin' %}selected{% endif %}>Sin categoría</option>
+          {% endif %}
+        </select>
+      </div>
+      {% endif %}
+      {% if divisiones %}
+      <div class="col-auto">
+        <label class="form-label mb-0 fw-semibold" for="filtro-division">División</label>
+        <select id="filtro-division" name="division" class="form-select form-select-sm" style="width:170px;"
+                onchange="this.form.submit()">
+          <option value="">Todas</option>
+          {% for d in divisiones %}
+          <option value="{{ d.id }}" {% if division_filtro == d.id|stringformat:"s" %}selected{% endif %}>{{ d.nombre }}</option>
+          {% endfor %}
+          <option value="sin" {% if division_filtro == 'sin' %}selected{% endif %}>Sin división</option>
+        </select>
+      </div>
+      {% endif %}
       <div class="col-auto">
         <button type="submit" class="btn btn-primary btn-sm">Ver disponibilidad</button>
       </div>
@@ -71,21 +104,25 @@
 </div>
 {% endif %}
 
-{% if filtro_valido %}
 <div class="card shadow-sm mb-3">
-  <div class="card-body py-2">
-    <div class="d-flex flex-wrap gap-3 align-items-center">
-      <span class="fw-semibold me-1">Leyenda:</span>
-      <span class="badge bg-success px-3 py-2">Disponible</span>
-      <span class="badge bg-danger px-3 py-2">Ocupado</span>
-      <span class="badge bg-warning text-dark px-3 py-2">Reservado</span>
-      <span class="badge bg-secondary px-3 py-2">No disponible</span>
+  <div class="card-body py-2 d-flex flex-column gap-2">
+    {% if filtro_valido %}
+    <div class="d-flex flex-wrap gap-3 align-items-center" id="leyenda-estados">
+      <span class="fw-semibold me-1">Disponibilidad (punto en la esquina):</span>
+      <span class="leyenda-estado"><span class="punto bg-success"></span>Disponible</span>
+      <span class="leyenda-estado"><span class="punto bg-danger"></span>Ocupado</span>
+      <span class="leyenda-estado"><span class="punto bg-warning"></span>Reservado</span>
+      <span class="leyenda-estado"><span class="punto bg-secondary"></span>No disponible</span>
     </div>
+    {% endif %}
+    {% include 'laboratorio/partials/leyenda_categorias.html' %}
   </div>
 </div>
-{% endif %}
 
-{% if modulos_data %}
+{% if laboratorio.modulos.exists %}
+{% if not modulos_data %}
+<div class="alert alert-info mb-3" id="filtro-division-vacio">No hay módulos que coincidan con el filtro.</div>
+{% endif %}
 <div id="modulos-source" style="display:none;">
   {% for item in modulos_data %}
   <div class="modulo-seat-data"
@@ -96,6 +133,12 @@
        data-estado="{{ item.estado }}"
        data-disponible="{{ item.modulo.disponible|yesno:'true,false' }}"
        data-motivo="{{ item.motivo }}"
+       data-division="{{ item.modulo.division.nombre|default:'' }}"
+       {% if item.modulo.categoria %}
+       data-categoria-nombre="{{ item.modulo.categoria.nombre }}"
+       data-categoria-color="{{ item.modulo.categoria.color }}"
+       data-categoria-forma="{{ item.modulo.categoria.forma }}"
+       {% endif %}
        {% if usa_posiciones %}
        data-x="{{ item.x }}"
        data-y="{{ item.y }}"
@@ -126,7 +169,15 @@
     {% if usa_posiciones %}
     {# Posiciones guardadas con el editor de mapa (mismas coordenadas). #}
     <div class="mapa-posiciones-scroll">
-      <div id="mapa-posiciones" style="width: {{ ancho_mapa }}px; height: {{ alto_mapa }}px;"></div>
+      <div id="mapa-posiciones" style="width: {{ ancho_mapa }}px; height: {{ alto_mapa }}px;">
+        {% for d in divisiones %}
+        <div class="division-zona division-color-{{ forloop.counter0 }}{% if division_filtro and division_filtro != d.id|stringformat:'s' %} division-atenuada{% endif %}"
+             data-division-id="{{ d.id }}"
+             style="left: {{ d.x }}px; top: {{ d.y }}px; width: {{ d.ancho }}px; height: {{ d.alto }}px;">
+          <span class="division-zona-nombre">{{ d.nombre }}</span>
+        </div>
+        {% endfor %}
+      </div>
     </div>
     {% else %}
     <div class="lab-body">
@@ -159,6 +210,8 @@
           <tbody>
             <tr><th class="text-muted" style="width:40%">Nombre</th><td id="modal-nombre">—</td></tr>
             <tr><th class="text-muted">Capacidad</th><td id="modal-capacidad">—</td></tr>
+            <tr><th class="text-muted">Categoría</th><td id="modal-categoria">—</td></tr>
+            {% if divisiones %}<tr><th class="text-muted">División</th><td id="modal-division">—</td></tr>{% endif %}
             <tr><th class="text-muted">Estado</th><td id="modal-estado">—</td></tr>
           </tbody>
         </table>
@@ -291,9 +344,26 @@
 /* Modo posiciones: mismas coordenadas y tamaño (120×80) que el editor. */
 .mapa-posiciones-scroll { overflow-x: auto; }
 #mapa-posiciones { position: relative; margin: 0 auto; }
-#mapa-posiciones .modulo-seat { position: absolute; width: 120px; min-height: 80px; }
+/* Tamaño del módulo: laboratorio.services.posiciones_mapa (ANCHO/ALTO_MODULO). */
+#mapa-posiciones .modulo-seat { position: absolute; width: {{ ancho_modulo }}px; min-height: {{ alto_modulo }}px; z-index: 1; }
+/* Divisiones (salones): zonas con borde suave, por debajo de los módulos. */
+.division-zona {
+  position: absolute; border: 2px dashed; border-radius: 10px; z-index: 0;
+  transition: opacity .15s;
+}
+.division-zona-nombre {
+  position: absolute; top: 4px; left: 8px; font-size: .75rem; font-weight: 600;
+  letter-spacing: .3px; opacity: .85;
+}
+.division-zona.division-atenuada { opacity: .35; }
+.division-color-0 { background: rgba(13,110,253,.06);  border-color: rgba(13,110,253,.35);  color: #0a58ca; }
+.division-color-1 { background: rgba(25,135,84,.06);   border-color: rgba(25,135,84,.35);   color: #146c43; }
+.division-color-2 { background: rgba(111,66,193,.06);  border-color: rgba(111,66,193,.35);  color: #59359a; }
+.division-color-3 { background: rgba(253,126,20,.07);  border-color: rgba(253,126,20,.40);  color: #b35a00; }
+.modulo-division { font-size: .6rem; opacity: .85; margin-top: 2px; text-align: center; }
 </style>
 
+<script src="{% static 'js/modulo_figura.js' %}"></script>
 <script>
 const LAB_ID = "{{ laboratorio.id }}";
 const CSRF   = "{{ csrf_token }}";
@@ -341,9 +411,21 @@ if (lienzoPosiciones) {
 
 function crearSeat(data) {
   const d   = data.dataset;
-  const div = document.createElement('div');
-  const isWarning = d.color === 'warning';
-  div.className = `modulo-seat bg-${d.color} ${isWarning ? 'text-dark' : 'text-white'}`;
+  const categoria = d.categoriaNombre
+    ? { nombre: d.categoriaNombre, color: d.categoriaColor, forma: d.categoriaForma }
+    : null;
+  let horario = '';
+  if (d.solInicio && d.solFin && (d.estado === 'reservado' || d.estado === 'ocupado')) {
+    horario = `${d.solInicio}–${d.solFin}`;
+  }
+  // Color y figura = categoría; disponibilidad = punto en la esquina.
+  const div = ModuloFigura.crear({
+    nombre: d.nombre,
+    categoria: categoria,
+    estadoColor: d.color,
+    detalles: [`Cap. ${d.capacidad}`, horario, d.division || ''],
+  });
+  div.classList.add('modulo-seat');
   div.setAttribute('role', 'button');
   div.setAttribute('tabindex', '0');
   div.setAttribute('data-bs-toggle', 'modal');
@@ -352,6 +434,8 @@ function crearSeat(data) {
     id: d.id, nombre: d.nombre, capacidad: d.capacidad,
     color: d.color, estado: d.estado,
     disponible: d.disponible, motivo: d.motivo || '',
+    division: d.division || '',
+    categoria: categoria ? categoria.nombre : '',
   });
   if (d.solNombre) {
     Object.assign(div.dataset, {
@@ -362,17 +446,6 @@ function crearSeat(data) {
     });
   }
   if (d.prestamoId) div.dataset.prestamoId = d.prestamoId;
-
-  let horarioHtml = '';
-  if (d.solInicio && d.solFin && (d.estado === 'reservado' || d.estado === 'ocupado')) {
-    horarioHtml = `<span class="modulo-horario">${d.solInicio}–${d.solFin}</span>`;
-  }
-
-  div.innerHTML = `
-    <span class="modulo-nombre">${d.nombre}</span>
-    <span class="modulo-capacidad">Cap. ${d.capacidad}</span>
-    ${horarioHtml}
-  `;
   return div;
 }
 
@@ -394,6 +467,9 @@ document.getElementById('modalModulo').addEventListener('show.bs.modal', functio
   document.getElementById('modalModuloLabel').textContent = d.nombre;
   document.getElementById('modal-nombre').textContent     = d.nombre;
   document.getElementById('modal-capacidad').textContent  = d.capacidad + ' persona(s)';
+  document.getElementById('modal-categoria').textContent  = d.categoria || 'Sin categoría';
+  const celdaDivision = document.getElementById('modal-division');
+  if (celdaDivision) celdaDivision.textContent = d.division || 'Sin división';
 
   const color = COLORS[d.estado] || 'secondary';
   document.getElementById('modal-estado').innerHTML =
@@ -528,12 +604,7 @@ function actualizarEstados() {
         const nuevoColor = estados[id].color;
         const viejoColor = seat.dataset.color;
         if (nuevoColor !== viejoColor) {
-          ['bg-success','bg-danger','bg-warning','bg-secondary'].forEach(c =>
-            seat.classList.remove(c)
-          );
-          seat.classList.remove('text-dark', 'text-white');
-          seat.classList.add(`bg-${nuevoColor}`);
-          seat.classList.add(nuevoColor === 'warning' ? 'text-dark' : 'text-white');
+          ModuloFigura.cambiarEstado(seat, nuevoColor);
           seat.dataset.color  = nuevoColor;
           seat.dataset.estado = estados[id].estado;
         }

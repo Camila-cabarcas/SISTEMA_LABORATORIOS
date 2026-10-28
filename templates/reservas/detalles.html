@@ -33,7 +33,7 @@
             <th class="pe-4">Módulos</th>
             <td>
                 {% if solicitud.modulos_asignados.all %}
-                    {% for modulo in solicitud.modulos_asignados.all %}{{ modulo.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% for modulo in solicitud.modulos_asignados.all %}{{ modulo.descripcion_completa }}{% if not forloop.last %}, {% endif %}{% endfor %}
                 {% else %}
                     <span class="text-muted">No aplica</span>
                 {% endif %}

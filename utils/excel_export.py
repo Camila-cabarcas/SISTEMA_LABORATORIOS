@@ -80,7 +80,7 @@ def export_reservas_excel(reservas):
         solicitud, solicitante = _nombre_solicitante(reserva)
         if solicitud:
             laboratorio = solicitud.laboratorio.nombre if solicitud.laboratorio else '—'
-            modulos = ', '.join(m.nombre for m in solicitud.modulos_asignados.all()) or '—'
+            modulos = ', '.join(m.descripcion_completa for m in solicitud.modulos_asignados.all()) or '—'
         else:
             laboratorio = '—'
             modulos = '—'

@@ -496,7 +496,7 @@ def exportar_reservas_excel(request):
     from utils.excel_export import export_reservas_excel
 
     reservas = Reserva.objects.select_related('estado').prefetch_related(
-        'solicitud', 'solicitud__laboratorio', 'solicitud__modulos_asignados'
+        'solicitud', 'solicitud__laboratorio', 'solicitud__modulos_asignados__division', 'solicitud__modulos_asignados__categoria'
     ).order_by('-fecha_reserva')
 
     estado_filtro = request.POST.get('estado', '')

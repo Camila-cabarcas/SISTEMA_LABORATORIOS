@@ -3,7 +3,7 @@ forms.py — laboratorio
 Formulario LaboratorioForm para crear y editar laboratorios.
 """
 from django import forms
-from .models import Laboratorio
+from .models import CategoriaModulo, Laboratorio
 from users.models import ProgramaAcademico
 
 
@@ -49,3 +49,17 @@ class LaboratorioForm(forms.ModelForm):
         self.fields['programa'].widget.attrs.update({
             'class': 'form-select'
         })
+
+class CategoriaModuloForm(forms.ModelForm):
+    """Crear/editar una categoría de módulo (solo Administrador)."""
+
+    class Meta:
+        model = CategoriaModulo
+        fields = ['nombre', 'color', 'forma', 'activo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 60}),
+            'color': forms.TextInput(attrs={'type': 'color', 'class': 'form-control form-control-color'}),
+            'forma': forms.Select(attrs={'class': 'form-select'}),
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {'activo': 'Activa (se puede asignar a módulos)'}

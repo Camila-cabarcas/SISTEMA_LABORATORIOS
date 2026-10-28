@@ -1,0 +1,97 @@
+/*
+ * modulo_figura.css — cómo se dibuja un módulo según su categoría
+ * (laboratorio.models.CategoriaModulo). Lo usan el mapa, el editor de mapa
+ * y los selectores de módulos de los formularios de reserva.
+ *
+ *   <div class="modulo-figura forma-<forma>" style="--cat-color: #0d6efd">
+ *
+ * - cuadrado / circulo / rombo / triangulo: figura rellena con el color de
+ *   la categoría (cuadrado = el módulo rectangular de siempre).
+ * - computador / maquinaria: la figura es un ícono grande en el color de la
+ *   categoría, con el nombre debajo.
+ * - .modulo-estado: punto de color en la esquina con la disponibilidad
+ *   (bg-success / bg-danger / bg-warning / bg-secondary).
+ * Sin categoría: gris (#6c757d) y forma cuadrado.
+ */
+.modulo-figura {
+    --cat-color: #6c757d;
+    position: relative;
+    isolation: isolate;          /* el ::before de rombo/triángulo queda detrás del texto */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.15;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .45);   /* legible sobre colores claros */
+}
+
+.modulo-figura.forma-cuadrado { background: var(--cat-color); border-radius: 8px; }
+.modulo-figura.forma-circulo  { background: var(--cat-color); border-radius: 50%; }
+
+.modulo-figura.forma-rombo::before,
+.modulo-figura.forma-triangulo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--cat-color);
+}
+.modulo-figura.forma-rombo::before    { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.modulo-figura.forma-triangulo::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.modulo-figura.forma-triangulo { padding-top: 22%; }
+
+/* Figuras de ícono: sin relleno, el ícono lleva el color. */
+.modulo-figura.forma-computador,
+.modulo-figura.forma-maquinaria {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 8px;
+    color: #212529;
+    text-shadow: none;
+}
+.modulo-figura-icono {
+    color: var(--cat-color);
+    font-size: 1.6rem;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.modulo-figura-nombre { font-weight: 600; font-size: .8rem; }
+.modulo-figura-detalle { font-size: .64rem; opacity: .9; margin-top: 1px; }
+
+/* Disponibilidad: punto en la esquina superior derecha. */
+.modulo-estado {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .25);
+}
+
+/* Selectores de los formularios de reserva. */
+.modulo-figura.seleccionado { outline: 3px solid #0d6efd; outline-offset: 2px; }
+.modulo-figura.seleccionado::after {
+    content: '\2713';
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    font-size: .75rem;
+    font-weight: 700;
+    color: #0d6efd;
+    text-shadow: 0 0 2px #fff, 0 0 2px #fff;
+}
+
+/* Leyendas: figura en miniatura. */
+.leyenda-categorias { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.leyenda-categoria { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; }
+.leyenda-categoria .modulo-figura { width: 22px; height: 18px; }
+.leyenda-categoria .modulo-figura.forma-computador,
+.leyenda-categoria .modulo-figura.forma-maquinaria { border: none; background: transparent; }
+.leyenda-categoria .modulo-figura-icono { font-size: 1rem; margin: 0; }
+.leyenda-estado { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; }
+.leyenda-estado .punto { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }

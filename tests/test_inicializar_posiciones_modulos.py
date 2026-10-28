@@ -136,20 +136,56 @@ def test_sin_modulos_no_falla(db):
     assert 'Total: 0 módulos inicializados.' in _correr()
 
 
-# ── Editor: el lienzo crece con los módulos ──────────────────────────────────
+# ── Editor: lienzo de tamaño fijo ────────────────────────────────────────────
+# Antes el lienzo crecía con los módulos; ahora mide siempre
+# posiciones_mapa.LIENZO_EDITOR_* (lo mismo que valida el guardado).
 
-def test_editor_lienzo_minimo_600(cliente_autenticado, laboratorio):
+def test_editor_lienzo_tiene_tamano_fijo(cliente_autenticado, laboratorio):
+    from laboratorio.services.posiciones_mapa import LIENZO_EDITOR_ALTO, LIENZO_EDITOR_ANCHO
     _modulos(laboratorio, 3)
 
     response = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/editar-mapa/')
 
-    assert response.context['alto_canvas'] == 600
-    assert 'height: 600px;' in response.content.decode()
+    assert (response.context['lienzo_ancho'], response.context['lienzo_alto']) == (LIENZO_EDITOR_ANCHO, LIENZO_EDITOR_ALTO)
+    assert f'height: {LIENZO_EDITOR_ALTO}px;' in response.content.decode()
+    assert 'aviso-fuera-de-lienzo' not in response.content.decode()
 
 
-def test_editor_lienzo_crece_si_hay_modulos_mas_abajo(cliente_autenticado, laboratorio):
-    Modulo.objects.create(nombre='Abajo', capacidad=2, laboratorio=laboratorio, posicion_x=10, posicion_y=900)
+def test_editor_avisa_modulos_guardados_fuera_del_lienzo(cliente_autenticado, laboratorio):
+    # Posición guardada cuando el lienzo crecía: ya no cabe en el lienzo fijo.
+    abajo = Modulo.objects.create(nombre='Abajo', capacidad=2, laboratorio=laboratorio, posicion_x=10, posicion_y=900)
 
     response = cliente_autenticado.get(f'/laboratorio/{laboratorio.id}/editar-mapa/')
 
-    assert response.context['alto_canvas'] == 900 + ALTO_MODULO + 20
+    assert response.context['fuera_de_lienzo'] == [abajo]
+    html = response.content.decode()
+    assert 'id="aviso-fuera-de-lienzo"' in html
+    assert f'data-seleccionar-modulo="{abajo.id}"' in html
+    assert 'Abajo (10, 900)' in html
+
+
+def test_modulo_fuera_del_lienzo_sin_mover_no_bloquea_el_guardado(cliente_autenticado, laboratorio):
+    import json
+
+    abajo = Modulo.objects.create(nombre='Abajo', capacidad=2, laboratorio=laboratorio, posicion_x=10, posicion_y=900)
+    otro = Modulo.objects.create(nombre='Otro', capacidad=2, laboratorio=laboratorio, posicion_x=10, posicion_y=10)
+
+    # El editor envía todos los módulos, incluido el que quedó afuera sin mover.
+    response = cliente_autenticado.post(
+        f'/laboratorio/{laboratorio.id}/guardar-mapa/',
+        data=json.dumps({'modulos': [{'id': abajo.id, 'x': 10, 'y': 900}, {'id': otro.id, 'x': 300, 'y': 300}]}),
+        content_type='application/json',
+    )
+
+    assert response.status_code == 200
+    otro.refresh_from_db()
+    assert (otro.posicion_x, otro.posicion_y) == (300, 300)
+
+    # Traerlo adentro funciona; volver a sacarlo, no.
+    def mover(y):
+        return cliente_autenticado.post(
+            f'/laboratorio/{laboratorio.id}/guardar-mapa/',
+            data=json.dumps({'modulos': [{'id': abajo.id, 'x': 10, 'y': y}]}), content_type='application/json',
+        )
+    assert mover(500).status_code == 200
+    assert mover(950).status_code == 400

@@ -1,5 +1,6 @@
 {% extends 'base_general.html' %}
 
+{% load static %}
 {% block contenido %}
 
 <h1 class="mb-4">Nueva Reserva</h1>
@@ -258,12 +259,18 @@
 
             <input type="hidden" name="modulos_ids" id="modulos_ids_hidden" value="">
 
-            <!-- Leyenda -->
-            <div class="d-flex flex-wrap gap-2 mb-2">
-                <span class="badge bg-success px-2 py-1">Disponible</span>
-                <span class="badge bg-warning text-dark px-2 py-1">Reservado</span>
-                <span class="badge bg-secondary px-2 py-1">No disponible</span>
-                <span class="badge bg-primary px-2 py-1">Seleccionado</span>
+            <!-- Leyenda: disponibilidad (punto en la esquina) y categorías (color + figura) -->
+            <div class="d-flex flex-wrap gap-3 align-items-center mb-1 small">
+                <span class="leyenda-estado"><span class="punto bg-success"></span>Disponible</span>
+                <span class="leyenda-estado"><span class="punto bg-warning"></span>Reservado</span>
+                <span class="leyenda-estado"><span class="punto bg-secondary"></span>No disponible</span>
+                <span class="leyenda-estado"><span class="punto" style="outline: 3px solid #0d6efd; outline-offset: 1px;"></span>Seleccionado</span>
+            </div>
+            <div id="leyenda-categorias-form" class="leyenda-categorias mb-2 small d-none"></div>
+
+            <div id="filtro-division-wrap" class="d-flex align-items-center gap-2 mb-2 d-none">
+                <label for="filtro-division" class="form-label small fw-semibold mb-0">División</label>
+                <select id="filtro-division" class="form-select form-select-sm" style="max-width: 220px;"></select>
             </div>
 
             <!-- Lab room layout -->
@@ -360,8 +367,12 @@
 }
 .modulo-form-seat.no-seleccionable { cursor: not-allowed; opacity: .5; }
 .modulo-cap-form { font-size: .65rem; opacity: .85; margin-top: 2px; }
+.modulo-division-form { font-size: .6rem; opacity: .85; margin-top: 1px; }
 </style>
 
+<link href="{% static 'css/modulo_figura.css' %}" rel="stylesheet">
+<script src="{% static 'js/modulo_figura.js' %}"></script>
+<script src="{% static 'js/filtro_division_modulos.js' %}"></script>
 <script>
 let tipoActual = document.querySelector('input[name="tipo_solicitante"]:checked').value;
 let maxHoras   = tipoActual === 'profesor' ? 8 : 4;
@@ -724,6 +735,13 @@ function cargarModulos() {
         .then(r => r.json())
         .then(data => {
             modulosData = data.modulos;
+            FiltroDivisionModulos.poblar(
+                document.getElementById('filtro-division'),
+                document.getElementById('filtro-division-wrap'),
+                data.divisiones,
+            );
+            ModuloFigura.leyenda(document.getElementById('leyenda-categorias-form'),
+                                 data.categorias, data.hay_sin_categoria);
             document.getElementById('modulos-placeholder').style.display = 'none';
             renderModulosLab();
         });
@@ -767,24 +785,30 @@ function renderModulosLab() {
     const cm = document.getElementById('form-zona-centro-mid');
     while (idx < total) { cm.appendChild(crearModuloSeat(modulosData[idx])); idx++; }
 
+    aplicarFiltroDivision();
     actualizarHidden();
 }
+
+function aplicarFiltroDivision() {
+    FiltroDivisionModulos.aplicar(
+        document.getElementById('filtro-division'),
+        document.querySelectorAll('#seccion-modulos .modulo-form-seat'),
+    );
+}
+
+document.getElementById('filtro-division').addEventListener('change', aplicarFiltroDivision);
 
 function crearModuloSeat(m) {
     const seleccionado  = modulosSeleccionados.has(m.id);
     const seleccionable = m.seleccionable;
-    const div = document.createElement('div');
-
-    div.className = `modulo-form-seat ${seleccionable ? 'seleccionable' : 'no-seleccionable'}`;
-    div.style.background = seleccionado ? '#0d6efd' :
-                           m.color === 'success' ? '#198754' :
-                           m.color === 'warning'  ? '#ffc107' : '#6c757d';
-    div.style.color = (m.color === 'warning' && !seleccionado) ? '#333' : 'white';
-    if (seleccionado) div.style.outline = '3px solid #0a58ca';
-    div.innerHTML = `
-        <span>${m.nombre}</span>
-        <span class="modulo-cap-form">Cap. ${m.capacidad}</span>
-    `;
+    // Color y figura = categoría del módulo; disponibilidad = punto en la esquina.
+    const div = ModuloFigura.crear({
+        nombre: m.nombre, categoria: m.categoria, estadoColor: m.color,
+        detalles: [`Cap. ${m.capacidad}`],
+    });
+    div.classList.add('modulo-form-seat', seleccionable ? 'seleccionable' : 'no-seleccionable');
+    if (seleccionado) div.classList.add('seleccionado');
+    FiltroDivisionModulos.etiquetar(div, m);
 
     if (seleccionable) {
         div.addEventListener('click', function() {

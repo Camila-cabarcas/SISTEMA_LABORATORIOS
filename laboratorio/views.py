@@ -11,15 +11,16 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db.models import Count, Max, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from users.decorators import rol_requerido
 from users.helpers import es_administrador
 from users.models import Usuario
-from .models import Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab, Modulo
+from .models import CategoriaModulo, Division, Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab, Modulo
 from .forms import LaboratorioForm
 from .services.modulo_service import ModuloEstadoService
 from .services.posiciones_mapa import (
-    ALTO_MODULO, ANCHO_LIENZO, ANCHO_MODULO, MARGEN, calcular_posiciones, sin_posicion,
+    ALTO_MODULO, ANCHO_LIENZO, ANCHO_MODULO, LIENZO_EDITOR_ALTO, LIENZO_EDITOR_ANCHO, MARGEN,
+    calcular_posiciones, modulo_en_lienzo, sin_posicion,
 )
 from inventario.models import Insumo, ItemInventario, MovimientoInventario, TipoMovimiento
 from reservas.models import EstadoReserva, Reserva, ReservaInsumo
@@ -421,6 +422,18 @@ def eliminar_evento(request, id):
     return JsonResponse({'status': 'error'}, status=400)
 
 
+def _categorias_de(modulos):
+    """(categorías usadas por `modulos` ordenadas por nombre, ¿alguno sin
+    categoría?) — para las leyendas del mapa y del editor."""
+    categorias, sin_categoria = {}, False
+    for modulo in modulos:
+        if modulo.categoria_id:
+            categorias[modulo.categoria_id] = modulo.categoria
+        else:
+            sin_categoria = True
+    return sorted(categorias.values(), key=lambda c: c.nombre.casefold()), sin_categoria
+
+
 @rol_requerido('Administrador', 'Laboratorio')
 def mapa_laboratorio(request, id):
     from datetime import date, datetime, time, timedelta
@@ -477,7 +490,7 @@ def mapa_laboratorio(request, id):
 
         color_map = {'disponible': 'success', 'ocupado': 'danger', 'reservado': 'warning', 'inactivo': 'secondary'}
 
-        for modulo in laboratorio.modulos.order_by('id'):
+        for modulo in laboratorio.modulos.select_related('division', 'categoria').order_by('id'):
             soles = modulo_solicitudes.get(modulo.id, [])
             estado = ModuloEstadoService.obtener_estado(modulo, soles, fecha)
             solicitud_info = None
@@ -556,7 +569,7 @@ def mapa_laboratorio(request, id):
                 'motivo':    motivo,
             })
     else:
-        for modulo in laboratorio.modulos.order_by('id'):
+        for modulo in laboratorio.modulos.select_related('division', 'categoria').order_by('id'):
             estado = ModuloEstadoService.obtener_estado(modulo, fecha=fecha)
             modulos_data.append({
                 'modulo':    modulo,
@@ -578,17 +591,53 @@ def mapa_laboratorio(request, id):
     # (0, 0) toman su lugar del diseño por defecto, para no mezclar
     # posiciones absolutas con el reparto por zonas. Si ninguno tiene, el
     # mapa sigue con el reparto por zonas de siempre (JS de mapa.html).
-    usa_posiciones = any(not sin_posicion(item['modulo']) for item in modulos_data)
+    #
+    # Las divisiones solo existen en coordenadas, así que un laboratorio con
+    # divisiones siempre se dibuja en modo posiciones. Con 0 divisiones, todo
+    # sigue igual que antes.
+    divisiones = list(laboratorio.divisiones.all())
+    usa_posiciones = bool(divisiones) or any(not sin_posicion(item['modulo']) for item in modulos_data)
     ancho_mapa = alto_mapa = 0
     if usa_posiciones:
         por_defecto = calcular_posiciones(len(modulos_data))
         for item, defecto in zip(modulos_data, por_defecto):
             modulo = item['modulo']
             item['x'], item['y'] = defecto if sin_posicion(modulo) else (modulo.posicion_x, modulo.posicion_y)
-        ancho_mapa = max(ANCHO_LIENZO, max(i['x'] for i in modulos_data) + ANCHO_MODULO + MARGEN)
-        alto_mapa = max(i['y'] for i in modulos_data) + ALTO_MODULO + MARGEN
+        derechas = [i['x'] + ANCHO_MODULO for i in modulos_data] + [d.x + d.ancho for d in divisiones]
+        fondos = [i['y'] + ALTO_MODULO for i in modulos_data] + [d.y + d.alto for d in divisiones]
+        ancho_mapa = max(ANCHO_LIENZO, max(derechas) + MARGEN)
+        alto_mapa = max(fondos) + MARGEN
+
+    # Filtro por división (?division=<id> | sin). Se aplica después de
+    # calcular las posiciones por defecto, que dependen del orden de TODOS
+    # los módulos: filtrar no mueve a nadie de lugar.
+    division_filtro = request.GET.get('division', '')
+    if division_filtro == 'sin':
+        modulos_data = [i for i in modulos_data if i['modulo'].division_id is None]
+    elif division_filtro.isdigit() and any(d.id == int(division_filtro) for d in divisiones):
+        modulos_data = [i for i in modulos_data if i['modulo'].division_id == int(division_filtro)]
+    else:
+        division_filtro = ''
+
+    # Leyenda (de todos los módulos, antes de filtrar) y filtro por categoría
+    # (?categoria=<id> | sin), igual que el de división.
+    categorias_lab, hay_sin_categoria = _categorias_de(laboratorio.modulos.select_related('categoria'))
+    categoria_filtro = request.GET.get('categoria', '')
+    if categoria_filtro == 'sin':
+        modulos_data = [i for i in modulos_data if i['modulo'].categoria_id is None]
+    elif categoria_filtro.isdigit() and any(c.id == int(categoria_filtro) for c in categorias_lab):
+        modulos_data = [i for i in modulos_data if i['modulo'].categoria_id == int(categoria_filtro)]
+    else:
+        categoria_filtro = ''
 
     return render(request, 'laboratorio/mapa.html', {
+        'ancho_modulo':       ANCHO_MODULO,
+        'alto_modulo':        ALTO_MODULO,
+        'divisiones':         divisiones,
+        'division_filtro':    division_filtro,
+        'categorias_lab':     categorias_lab,
+        'hay_sin_categoria':  hay_sin_categoria,
+        'categoria_filtro':   categoria_filtro,
         'usa_posiciones':     usa_posiciones,
         'ancho_mapa':         ancho_mapa,
         'alto_mapa':          alto_mapa,
@@ -616,15 +665,36 @@ def editar_mapa_laboratorio(request, lab_id):
     if not es_administrador(request.user):
         raise PermissionDenied
     laboratorio = get_object_or_404(Laboratorio, id=lab_id)
-    modulos = laboratorio.modulos.order_by('nombre', 'id')
+    modulos = laboratorio.modulos.select_related('division', 'categoria').order_by('nombre', 'id')
+    divisiones = list(laboratorio.divisiones.all())
+    categorias_lab, hay_sin_categoria = _categorias_de(modulos)
 
+    # Selector del panel: las activas + las que ya usan sus módulos (aunque
+    # se hayan desactivado, para no perderlas al guardar).
+    en_uso = {m.categoria_id for m in modulos if m.categoria_id}
+    categorias_editor = CategoriaModulo.objects.filter(Q(activo=True) | Q(id__in=en_uso)).order_by('nombre')
+
+    # Tamaños compartidos con el servidor (posiciones_mapa): el lienzo es
+    # fijo y el guardado rechaza lo que salga de él o se solape.
     return render(request, 'laboratorio/editar_mapa.html', {
         'laboratorio':  laboratorio,
         'modulos':      modulos,
+        'divisiones':   divisiones,
+        'max_divisiones': Division.MAX_POR_LABORATORIO,
+        'categorias_lab': categorias_lab,
+        'hay_sin_categoria': hay_sin_categoria,
+        'categorias_editor': categorias_editor,
         'sin_posicion': modulos.filter(posicion_x=0, posicion_y=0).count(),
-        # El lienzo crece si algún módulo queda por debajo de los 600 px
-        # (80 = alto de .modulo-item, + margen).
-        'alto_canvas':  max(600, (modulos.aggregate(m=Max('posicion_y'))['m'] or 0) + 80 + 20),
+        # Guardados antes de que el lienzo fuera fijo: no se ven en el lienzo,
+        # se traen adentro desde el panel (X/Y).
+        'fuera_de_lienzo': [m for m in modulos
+                            if not sin_posicion(m) and not modulo_en_lienzo(m.posicion_x, m.posicion_y)],
+        'ancho_modulo': ANCHO_MODULO,
+        'alto_modulo':  ALTO_MODULO,
+        'lienzo_ancho': LIENZO_EDITOR_ANCHO,
+        'lienzo_alto':  LIENZO_EDITOR_ALTO,
+        'division_ancho_min': Division.ANCHO_MINIMO,
+        'division_alto_min':  Division.ALTO_MINIMO,
     })
 
 
@@ -635,38 +705,31 @@ def _error_mapa(mensaje, status=400):
 @login_required
 @require_POST
 def guardar_mapa_laboratorio(request, lab_id):
-    """Guarda las posiciones del editor de mapa. Cuerpo JSON:
-    {"modulos": [{"id": 1, "x": 120, "y": 40}, ...]}. Solo Administrador.
+    """Guarda el editor de mapa. Cuerpo JSON:
+    {"modulos": [{"id": 1, "x": 120, "y": 40}, ...],
+     "divisiones": [{"id": 3 | null, "nombre", "x", "y", "ancho", "alto"}, ...]}
+    ("divisiones" opcional). Solo Administrador.
 
-    Todo o nada: se valida el lote completo (JSON, enteros >= 0, módulos de
-    este laboratorio) antes de escribir, y se guarda con un único
-    bulk_update; un id ajeno o un valor inválido devuelve 400 sin tocar
-    nada."""
+    Todo o nada (ver laboratorio.services.divisiones.guardar_mapa): se valida
+    el lote completo antes de escribir; un id ajeno o un valor inválido
+    devuelve 400 sin tocar nada."""
+    from .services.divisiones import MapaInvalido, guardar_mapa
+
     if not es_administrador(request.user):
         raise PermissionDenied
     laboratorio = get_object_or_404(Laboratorio, id=lab_id)
 
     try:
-        entradas = json.loads(request.body)['modulos']
-        if not isinstance(entradas, list):
-            raise TypeError
-        posiciones = {int(m['id']): (int(m['x']), int(m['y'])) for m in entradas}
-    except (ValueError, KeyError, TypeError):
+        datos = json.loads(request.body)
+    except ValueError:
         return _error_mapa('Datos inválidos: se esperaba {"modulos": [{"id", "x", "y"}, ...]}.')
 
-    if any(x < 0 or y < 0 for x, y in posiciones.values()):
-        return _error_mapa('Las posiciones no pueden ser negativas.')
+    try:
+        modulos, divisiones = guardar_mapa(laboratorio, datos)
+    except MapaInvalido as e:
+        return _error_mapa(str(e))
 
-    modulos = list(laboratorio.modulos.filter(id__in=posiciones))
-    ajenos = sorted(set(posiciones) - {m.id for m in modulos})
-    if ajenos:
-        return _error_mapa(f'Módulos que no pertenecen a este laboratorio: {ajenos}.')
-
-    for modulo in modulos:
-        modulo.posicion_x, modulo.posicion_y = posiciones[modulo.id]
-    Modulo.objects.bulk_update(modulos, ['posicion_x', 'posicion_y'])
-
-    return JsonResponse({'status': 'ok', 'actualizados': len(modulos)})
+    return JsonResponse({'status': 'ok', 'actualizados': len(modulos), 'divisiones': len(divisiones)})
 
 
 @rol_requerido('Administrador', 'Laboratorio')
@@ -774,7 +837,7 @@ def _serializar_modulos_disponibles(laboratorio, fecha, incluir_zona=False):
     color_map = {'disponible': 'success', 'reservado': 'warning', 'inactivo': 'secondary'}
 
     modulos = []
-    for modulo in laboratorio.modulos.all():
+    for modulo in laboratorio.modulos.select_related('division', 'categoria'):
         soles = modulo_solicitudes.get(modulo.id, [])
         estado = ModuloEstadoService.obtener_estado(modulo, soles, fecha, evaluar_ahora=False)
         data = {
@@ -784,12 +847,33 @@ def _serializar_modulos_disponibles(laboratorio, fecha, incluir_zona=False):
             'estado':        estado,
             'color':         color_map.get(estado, 'secondary'),
             'seleccionable': estado == 'disponible',
+            # None si el módulo no está en ninguna división (o el lab no tiene).
+            'division':      {'id': modulo.division.id, 'nombre': modulo.division.nombre} if modulo.division else None,
+            # None = sin categoría (se dibuja gris, forma original).
+            'categoria':     _serializar_categoria(modulo.categoria) if modulo.categoria else None,
         }
         if incluir_zona:
             data['zona'] = modulo.zona
         modulos.append(data)
 
     return modulos
+
+
+def _serializar_categoria(categoria):
+    return {'id': categoria.id, 'nombre': categoria.nombre, 'color': categoria.color, 'forma': categoria.forma}
+
+
+def _serializar_categorias(laboratorio):
+    """Categorías usadas por los módulos del laboratorio (para la leyenda de
+    los selectores de módulos) y si hay alguno sin categoría."""
+    categorias, sin_categoria = _categorias_de(laboratorio.modulos.select_related('categoria'))
+    return [_serializar_categoria(c) for c in categorias], sin_categoria
+
+
+def _serializar_divisiones(laboratorio):
+    """[{id, nombre}] de las divisiones del laboratorio (para el filtro de
+    los selectores de módulos). Lista vacía si no tiene."""
+    return [{'id': d.id, 'nombre': d.nombre} for d in laboratorio.divisiones.all()]
 
 
 @rol_requerido('Administrador', 'Laboratorio')
@@ -805,7 +889,13 @@ def modulos_disponibles_api(request, id):
     except (ValueError, TypeError):
         fecha = date.today()
 
-    return JsonResponse({'modulos': _serializar_modulos_disponibles(laboratorio, fecha)})
+    categorias, hay_sin_categoria = _serializar_categorias(laboratorio)
+    return JsonResponse({
+        'modulos':    _serializar_modulos_disponibles(laboratorio, fecha),
+        'divisiones': _serializar_divisiones(laboratorio),
+        'categorias': categorias,
+        'hay_sin_categoria': hay_sin_categoria,
+    })
 
 
 def modulos_disponibles_publica_api(request, id):
@@ -822,7 +912,13 @@ def modulos_disponibles_publica_api(request, id):
         fecha = date.today()
 
     modulos = _serializar_modulos_disponibles(laboratorio, fecha, incluir_zona=True)
-    return JsonResponse({'modulos': modulos})
+    categorias, hay_sin_categoria = _serializar_categorias(laboratorio)
+    return JsonResponse({
+        'modulos': modulos,
+        'divisiones': _serializar_divisiones(laboratorio),
+        'categorias': categorias,
+        'hay_sin_categoria': hay_sin_categoria,
+    })
 
 
 @rol_requerido('Administrador', 'Laboratorio')
