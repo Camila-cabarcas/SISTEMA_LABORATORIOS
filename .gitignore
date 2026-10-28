@@ -10,3 +10,10 @@ htmlcov/
 logs/app.log
 *.log
 CREDENCIALES_LAB.txt
+
+# Temporales, logs y reportes locales
+logs/*
+!logs/.gitkeep
+tmp*
+pip-*
+htmlcov/
