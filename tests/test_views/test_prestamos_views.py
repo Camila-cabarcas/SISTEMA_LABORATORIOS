@@ -7,7 +7,7 @@ import pytest
 from django.utils import timezone
 
 from inventario.models import EstadoItem, ItemInventario
-from prestamos.models import EstadoPrestamo, InspeccionItem, Prestamo
+from prestamos.models import EstadoPrestamo, InspeccionItem, Prestamo, PrestamoItem
 from reservas.models import EstadoReserva, Reserva, ReservaInsumo
 from solicitudes.models import SolicitudReserva
 
@@ -295,3 +295,43 @@ def test_admin_puede_ver_prestamo_de_cualquier_laboratorio(cliente_autenticado, 
     response = cliente_autenticado.get(f'/prestamos/{prestamo.id}/')
 
     assert response.status_code == 200
+
+
+# ── Confirmar devolución incompleta (antes: error 500) ───────────────────────
+
+def test_marcar_devuelto_sin_inspeccion_no_lanza_y_vuelve_a_inspeccion(cliente_autenticado, reserva_con_prestamo):
+    # Préstamo Activo al que nunca se le inició la inspección: su ítem no
+    # tiene InspeccionItem.
+    prestamo = reserva_con_prestamo.prestamo
+
+    response = cliente_autenticado.post(f'/prestamos/{prestamo.id}/marcar-devuelto/', follow=True)
+
+    assert response.status_code == 200
+    assert response.redirect_chain == [(f'/prestamos/{prestamo.id}/inspeccionar/', 302)]
+    assert 'Faltan 1 ítem(s) por inspeccionar antes de finalizar.' in response.content.decode()
+    # No cambió nada: el servicio valida antes de escribir.
+    prestamo.refresh_from_db()
+    assert prestamo.estado.nombre == 'Activo'
+    assert prestamo.fecha_devolucion is None
+    reserva_con_prestamo.item.refresh_from_db()
+    assert reserva_con_prestamo.item.estado.nombre == 'Prestado'
+
+
+def test_marcar_devuelto_cuenta_los_items_que_faltan(cliente_autenticado, reserva_con_prestamo, insumo, laboratorio):
+    prestamo = reserva_con_prestamo.prestamo
+    InspeccionItem.objects.create(
+        prestamo=prestamo, prestamo_item=reserva_con_prestamo.prestamo_item, estado_inspeccion='bien',
+    )
+    # Dos ítems más en el préstamo, sin inspeccionar.
+    for codigo in ('ITEM-EXTRA-1', 'ITEM-EXTRA-2'):
+        item = ItemInventario.objects.create(
+            codigo=codigo, insumo=insumo, laboratorio=laboratorio,
+            estado=EstadoItem.objects.get(nombre='Disponible'),
+        )
+        PrestamoItem.objects.create(prestamo=prestamo, item_inventario=item)
+
+    response = cliente_autenticado.post(f'/prestamos/{prestamo.id}/marcar-devuelto/', follow=True)
+
+    assert 'Faltan 2 ítem(s) por inspeccionar antes de finalizar.' in response.content.decode()
+    prestamo.refresh_from_db()
+    assert prestamo.estado.nombre == 'Activo'

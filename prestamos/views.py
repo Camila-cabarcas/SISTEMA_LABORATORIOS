@@ -461,6 +461,13 @@ def marcar_devuelto(request, id):
 
         try:
             FinalizarInspeccionService().finalizar(prestamo_id=prestamo.id)
+        except ValidationError as e:
+            # Devolución incompleta (p. ej. ítems sin inspeccionar): se avisa
+            # y se vuelve a la inspección, sin cambiar nada (el servicio
+            # valida antes de escribir).
+            logger.warning(f"marcar_devuelto | no se pudo finalizar | {e.messages} | prestamo_id={prestamo.id} | usuario={request.user.email}")
+            messages.error(request, ' '.join(e.messages))
+            return redirect('inspeccionar_prestamo', id=prestamo.pk)
         except Exception as e:
             logger.error(f"Error en marcar_devuelto | {str(e)} | prestamo_id={prestamo.id} | usuario={request.user.email}")
             raise

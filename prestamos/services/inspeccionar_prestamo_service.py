@@ -68,7 +68,13 @@ class FinalizarInspeccionService:
             )
             items_inspeccionados_ids = {insp.prestamo_item_id for insp in inspecciones}
 
+            faltantes = items_prestamo_ids - items_inspeccionados_ids
+            if faltantes:
+                raise ValidationError(
+                    f'Faltan {len(faltantes)} ítem(s) por inspeccionar antes de finalizar.'
+                )
             if items_inspeccionados_ids != items_prestamo_ids:
+                # Inspecciones de ítems que no son de este préstamo.
                 raise ValidationError(
                     'Todos los ítems del préstamo deben estar inspeccionados antes de finalizar.'
                 )

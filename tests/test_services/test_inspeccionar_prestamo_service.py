@@ -121,3 +121,13 @@ def test_finalizar_marca_devuelto(reserva_con_prestamo, usuario_admin):
     resultado = FinalizarInspeccionService().finalizar(prestamo_id=reserva_con_prestamo.prestamo.id)
 
     assert resultado['prestamo'].estado.nombre == 'Devuelto'
+
+
+def test_finalizar_incompleto_indica_cuantos_items_faltan(reserva_con_prestamo):
+    # Sin iniciar la inspección: el único ítem del préstamo no está inspeccionado.
+    with pytest.raises(ValidationError) as e:
+        FinalizarInspeccionService().finalizar(prestamo_id=reserva_con_prestamo.prestamo.id)
+
+    assert e.value.messages == ['Faltan 1 ítem(s) por inspeccionar antes de finalizar.']
+    reserva_con_prestamo.prestamo.refresh_from_db()
+    assert reserva_con_prestamo.prestamo.estado.nombre == 'Activo'
