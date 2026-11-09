@@ -5,6 +5,9 @@ Define los modelos Rol y Usuario (extiende AbstractUser con los campos codigo, p
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import AbstractUser
+from django.utils.translation import gettext_lazy as _
+
+from users.validators import validar_correo_udea
 
 
 class Rol(models.Model):
@@ -28,6 +31,10 @@ class ProgramaAcademico(models.Model):
 
 
 class Usuario(AbstractUser):
+    # Mismo campo que AbstractUser.email + solo correos @udea.edu.co, para que
+    # el admin de Django y los ModelForm de usuario lo apliquen. Vacío se
+    # sigue permitiendo (blank=True: p. ej. un superusuario sin correo).
+    email = models.EmailField(_('email address'), blank=True, validators=[validar_correo_udea])
     codigo = models.CharField(max_length=50, unique=True, blank=True)
     programa = models.CharField(max_length=100, blank=True)
 

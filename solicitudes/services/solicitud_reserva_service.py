@@ -19,6 +19,7 @@ from laboratorio.models import Laboratorio, Modulo
 from reservas.models import EstadoReserva
 from solicitudes.models import SolicitudInsumo, SolicitudReserva
 from users.models import Usuario
+from users.validators import validar_correo_institucional
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,11 @@ class ValidarSolicitudReservaService:
             errores.append('La cédula es requerida y debe contener solo números.')
         if not email:
             errores.append('El email institucional es requerido.')
-        elif not email.lower().endswith('@udea.edu.co'):
-            errores.append('El email debe ser institucional (@udea.edu.co).')
+        else:
+            try:
+                validar_correo_institucional(email)
+            except ValidationError as e:
+                errores.extend(e.messages)
         if not nombre_grupo:
             errores.append('El nombre del grupo o actividad es requerido.')
         if not cantidad_asistentes_str or not cantidad_asistentes_str.isdigit() or int(cantidad_asistentes_str) < 1:

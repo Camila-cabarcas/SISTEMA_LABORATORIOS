@@ -86,7 +86,7 @@ class ValidarSolicitudReservaServiceTests(TestCase):
     def test_email_no_institucional(self):
         with self.assertRaises(ValidationError) as ctx:
             ValidarSolicitudReservaService.validar(**self._datos_validos(email='carlos@gmail.com'))
-        self.assertIn('El email debe ser institucional (@udea.edu.co).', ctx.exception.messages)
+        self.assertIn('Usa tu correo institucional de la UdeA (@udea.edu.co).', ctx.exception.messages)
 
     def test_cantidad_asistentes_invalida(self):
         with self.assertRaises(ValidationError) as ctx:
@@ -205,7 +205,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         })
 
         self.assertFalse(form.is_valid())
-        self.assertIn('El email debe ser institucional (@udea.edu.co).', form.errors['email'])
+        self.assertIn('Usa tu correo institucional de la UdeA (@udea.edu.co).', form.errors['email'])
 
     def test_estudiante_email_udea_mayusculas_es_valido(self):
         # El dominio se compara sin distinguir mayúsculas/minúsculas.
@@ -785,7 +785,7 @@ class CrearSolicitudRegistroProfesorServiceTests(TestCase):
     def _datos_validos(self, **overrides):
         datos = dict(
             nombre='Pedro', apellido='Suárez', cedula='123123123',
-            correo='pedro@example.com', programa='Ingeniería',
+            correo='pedro@udea.edu.co', programa='Ingeniería',
             nombres_curso=['Cálculo I'], codigos_curso=['CAL101'], cantidades_curso=['30'],
         )
         datos.update(overrides)
@@ -1050,7 +1050,7 @@ class SolicitudesViewsHttpTests(TestCase):
             'nombre': 'Pedro',
             'apellido': 'Suárez',
             'cedula': '321321321',
-            'correo': 'pedro@example.com',
+            'correo': 'pedro@udea.edu.co',
             'programa': 'Ingeniería',
             'curso_nombre': ['Cálculo I'],
             'curso_codigo': ['CAL-HTTP'],

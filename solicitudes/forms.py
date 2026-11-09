@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from .models import SolicitudReserva, Curso, SolicitudInsumo
 from inventario.models import Insumo
 from laboratorio.models import Laboratorio
+from users.fields import CorreoUdeaField
 
 CARRERAS_INGENIERIA = [
     ('', '--- Selecciona una carrera ---'),
@@ -30,7 +31,7 @@ class EstudianteSolicitudForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
-    email = forms.EmailField(
+    email = CorreoUdeaField(
         label='Email Institucional',
         required=True,
         help_text='Debe ser @udea.edu.co',
@@ -118,12 +119,6 @@ class EstudianteSolicitudForm(forms.ModelForm):
             if campo in self.fields:
                 self.fields[campo].required = True
 
-    def clean_email(self):
-        email = self.cleaned_data.get('email', '')
-        if email and not email.lower().endswith('@udea.edu.co'):
-            raise ValidationError('El email debe ser institucional (@udea.edu.co).')
-        return email
-
     def clean(self):
         cleaned_data = super().clean() or {}
 
@@ -180,7 +175,7 @@ class ProfesorSolicitudForm(forms.ModelForm):
     # curso registrado queda vinculado a su cuenta Usuario y "Mis Reservas"
     # ya lo encuentra por usuario.email — pero si lo escribe acá, se guarda
     # en SolicitudReserva.email igual que en los demás flujos.
-    email = forms.EmailField(
+    email = CorreoUdeaField(
         label='Email Institucional',
         required=False,
         help_text='Debe ser @udea.edu.co',
@@ -261,12 +256,6 @@ class ProfesorSolicitudForm(forms.ModelForm):
         for campo in campos_requeridos:
             if campo in self.fields:
                 self.fields[campo].required = True
-
-    def clean_email(self):
-        email = self.cleaned_data.get('email', '')
-        if email and not email.lower().endswith('@udea.edu.co'):
-            raise ValidationError('El email debe ser institucional (@udea.edu.co).')
-        return email
 
     def clean(self):
         cleaned_data = super().clean() or {}

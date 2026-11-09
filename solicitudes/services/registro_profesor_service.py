@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 
 from solicitudes.models import Curso, SolicitudRegistroCurso, SolicitudRegistroProfesor
 from users.models import Rol, Usuario
+from users.validators import validar_correo_institucional
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,10 @@ class CrearSolicitudRegistroProfesorService:
             errores.append('El nombre es requerido.')
         if not apellido:
             errores.append('El apellido es requerido.')
+        try:
+            validar_correo_institucional(correo)  # opcional: vacío no es error
+        except ValidationError as e:
+            errores.extend(e.messages)
         if not cedula:
             errores.append('La cédula es requerida.')
         elif not cedula.isdigit():

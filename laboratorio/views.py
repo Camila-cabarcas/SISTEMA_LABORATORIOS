@@ -9,12 +9,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from users.decorators import rol_requerido
 from users.helpers import es_administrador
 from users.models import Usuario
+from users.validators import validar_correo_institucional
 from .models import CategoriaModulo, Division, Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab, Modulo
 from .forms import LaboratorioForm
 from .services.modulo_service import ModuloEstadoService
@@ -1067,6 +1068,10 @@ def crear_laboratorista(request):
             errores.append('El nombre es requerido.')
         if not apellido:
             errores.append('El apellido es requerido.')
+        try:
+            validar_correo_institucional(correo)  # opcional: vacío no es error
+        except ValidationError as e:
+            errores.extend(e.messages)
         if not cedula:
             errores.append('La cédula es requerida.')
         elif Laboratorista.objects.filter(cedula=cedula).exists():
@@ -1137,6 +1142,10 @@ def editar_laboratorista(request, id):
             errores.append('El nombre es requerido.')
         if not apellido:
             errores.append('El apellido es requerido.')
+        try:
+            validar_correo_institucional(correo)  # opcional: vacío no es error
+        except ValidationError as e:
+            errores.extend(e.messages)
         if not cedula:
             errores.append('La cédula es requerida.')
         elif Laboratorista.objects.filter(cedula=cedula).exclude(id=id).exists():

@@ -17,6 +17,7 @@ from .services.cancelar_reserva_service import CancelarReservaService
 from .services.estado_prestamo_service import ObtenerEstadoPrestamoService
 from solicitudes.services.mis_reservas_service import MisReservasService
 from users.helpers import laboratorio_de_reserva, laboratorios_visibles, verificar_acceso_laboratorio
+from users.validators import validar_correo_institucional
 from laboratorio.models import HorarioLaboratorio
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -166,6 +167,10 @@ def crear_reserva(request):
         if not fecha_str: errors.append('Selecciona una fecha.')
         if not hora_ini:  errors.append('Selecciona la hora de inicio.')
         if not hora_fin:  errors.append('Selecciona la hora de fin.')
+        try:
+            validar_correo_institucional(email)  # opcional: vacío no es error
+        except ValidationError as e:
+            errors.extend(e.messages)
 
         fecha_obj = hora_inicio_obj = hora_fin_obj = None
 
