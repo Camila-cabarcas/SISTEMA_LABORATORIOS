@@ -51,6 +51,14 @@ def mensaje_bloqueo(veto):
     return f"Estás bloqueado hasta {hasta}. Razón: {motivo}"
 
 
+def _debe_reponerse(inspeccion):
+    """True si el insumo del ítem inspeccionado exige reposición cuando se
+    pierde (herramientas, por defecto). ItemInventario.insumo es un FK
+    obligatorio, así que no hace falta contemplar insumo=None."""
+    insumo = inspeccion.prestamo_item.item_inventario.insumo
+    return insumo.reposicion_obligatoria
+
+
 class RegistrarVetoService:
     """Crea vetos aplicando el castigo que corresponde a cada tipo de
     infracción. Todos los métodos devuelven el Veto creado (o None si no
@@ -184,8 +192,12 @@ class RegistrarVetoService:
                     detalle='Detectado en la inspección de devolución.',
                 ))
 
-            # D) Falta de insumo (no entregado)
-            if any(i.estado_inspeccion == 'no_entregado' for i in inspecciones):
+            # D) Falta de insumo (no entregado). Solo cuenta si el insumo
+            # exige reposición: un consumible no obligatorio que se extravía
+            # queda "Perdido" (lo hace FinalizarInspeccionService) pero no
+            # bloquea al usuario.
+            if any(i.estado_inspeccion == 'no_entregado' and _debe_reponerse(i)
+                   for i in inspecciones):
                 creados.append(RegistrarVetoService.registrar_dano(
                     prestamo=prestamo, tipo=Veto.FALTA_INSUMO,
                     detalle='Ítem(s) no entregado(s) en la devolución.',

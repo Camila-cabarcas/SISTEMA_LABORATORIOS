@@ -80,6 +80,13 @@ class Insumo(models.Model):
 
     stock_minimo = models.IntegerField(default=0)
 
+    TIPO_CHOICES = [('herramienta', 'Herramienta'), ('consumible', 'Consumible')]
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='herramienta')
+    reposicion_obligatoria = models.BooleanField(
+        default=True,
+        help_text='Si se pierde, el usuario debe reponerlo (genera veto).',
+    )
+
     estado = models.ForeignKey(
         EstadoInsumo,
         on_delete=models.SET_NULL,
