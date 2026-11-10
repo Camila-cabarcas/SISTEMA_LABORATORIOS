@@ -101,13 +101,58 @@ class EliminarItemInventarioTests(TestCase):
         self.assertTrue(self.item.is_deleted())
         self.assertIsNotNone(self.item.deleted_at)
 
+    def _asignar_item_a_lab_del_laboratorista(self):
+        from laboratorio.models import Laboratorio
+        lab_propio = Laboratorio.objects.create(nombre='Lab Propio', ubicacion='Bloque 1')
+        lab_propio.encargados.add(self.laboratorista)
+        self.item.laboratorio = lab_propio
+        self.item.save()
+
     def test_laboratorio_contrasena_correcta_soft_delete(self):
         """Confirma de punta a punta que Laboratorio también puede completar
-        la acción, no solo ver el formulario."""
+        la acción, no solo ver el formulario, sobre un ítem de SU laboratorio."""
+        self._asignar_item_a_lab_del_laboratorista()
         self.client.login(username='lab_test', password='pass123')
         self.client.post(
             f'/inventario/items/{self.item.id}/eliminar/',
             {'admin_password': 'LabPass!123'},
+            follow=True,
+        )
+        self.item.refresh_from_db()
+        self.assertTrue(self.item.is_deleted())
+
+    def test_laboratorio_de_otro_laboratorio_no_puede_eliminar(self):
+        """Un laboratorista con la contraseña correcta NO puede borrar un ítem
+        de un laboratorio del que no es encargado: mensaje + redirect, sin borrar."""
+        from laboratorio.models import Laboratorio
+        self._asignar_item_a_lab_del_laboratorista()
+        lab_ajeno = Laboratorio.objects.create(nombre='Lab Ajeno', ubicacion='Bloque 2')
+        item_ajeno = ItemInventario.objects.create(
+            codigo='TEST-AJENO', insumo=self.insumo, estado=self.estado_disponible,
+            laboratorio=lab_ajeno,
+        )
+
+        self.client.login(username='lab_test', password='pass123')
+        response = self.client.post(
+            f'/inventario/items/{item_ajeno.id}/eliminar/',
+            {'admin_password': 'LabPass!123'},
+        )
+        self.assertRedirects(response, '/inventario/items/', fetch_redirect_response=False)
+        mensajes = [str(m) for m in response.wsgi_request._messages]
+        self.assertTrue(any('no pertenece a un laboratorio a tu cargo' in m for m in mensajes))
+        item_ajeno.refresh_from_db()
+        self.assertFalse(item_ajeno.is_deleted())
+
+    def test_admin_puede_eliminar_item_de_cualquier_laboratorio(self):
+        from laboratorio.models import Laboratorio
+        lab = Laboratorio.objects.create(nombre='Lab Cualquiera', ubicacion='Bloque 3')
+        self.item.laboratorio = lab
+        self.item.save()
+
+        self.client.login(username='admin_test', password='pass123')
+        self.client.post(
+            f'/inventario/items/{self.item.id}/eliminar/',
+            {'admin_password': 'AdminPass!123'},
             follow=True,
         )
         self.item.refresh_from_db()

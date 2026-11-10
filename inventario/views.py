@@ -6,11 +6,13 @@ import logging
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.utils.decorators import method_decorator
 from django.views import View
 from users.decorators import rol_requerido, requiere_contrasena_admin
+from users.helpers import verificar_acceso_laboratorio
 
 logger_acceso_admin = logging.getLogger('acceso_admin')
 logger_importacion = logging.getLogger(__name__)
@@ -376,6 +378,17 @@ def eliminar_item_inventario(request, id):
     su historial sigue accesible en historial_item.
     """
     item = get_object_or_404(ItemInventario, id=id)
+
+    # Administrador pasa siempre; rol Laboratorio solo si es encargado del
+    # laboratorio del ítem (un ítem sin laboratorio se deniega).
+    try:
+        verificar_acceso_laboratorio(request.user, item.laboratorio)
+    except PermissionDenied:
+        messages.error(
+            request,
+            f'No puedes eliminar el item "{item.codigo}": no pertenece a un laboratorio a tu cargo.',
+        )
+        return redirect('/inventario/items/')
 
     if item.is_deleted():
         messages.info(request, f'Item "{item.codigo}" ya estaba eliminado.')

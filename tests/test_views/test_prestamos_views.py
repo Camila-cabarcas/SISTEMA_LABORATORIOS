@@ -335,3 +335,10 @@ def test_marcar_devuelto_cuenta_los_items_que_faltan(cliente_autenticado, reserv
     assert 'Faltan 2 ítem(s) por inspeccionar antes de finalizar.' in response.content.decode()
     prestamo.refresh_from_db()
     assert prestamo.estado.nombre == 'Activo'
+
+
+def test_crear_prestamo_sin_reserva_id_no_da_500(cliente_autenticado):
+    """/prestamos/crear/ sin reserva_id ya no existe: 404, no un 500 por
+    llamar a crear_prestamo sin su argumento obligatorio."""
+    response = cliente_autenticado.get('/prestamos/crear/')
+    assert response.status_code == 404
