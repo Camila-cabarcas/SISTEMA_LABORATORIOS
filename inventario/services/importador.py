@@ -15,7 +15,10 @@ Flujo (ver las vistas Importar/Mapear/Validar/Confirmar en inventario.views):
 Reglas de importación: cada fila es un ítem físico (ItemInventario) — el
 Código es su código único y el Nombre el del Insumo al que pertenece. Filas
 con el mismo nombre (y laboratorio) comparten Insumo; si el Insumo ya existe
-en ese laboratorio se reutiliza tal cual (no se modifican sus datos).
+en ese laboratorio se reutiliza tal cual (no se modifican sus datos, ni su
+tipo). La columna Tipo es opcional: herramienta (por defecto) o consumible.
+La columna Reposición también es opcional (sí/no); si falta o está vacía, un
+consumible queda sin reposición obligatoria y una herramienta con ella.
 
 Formatos:
 - .xlsx / .xlsm → pandas + openpyxl (primera hoja con datos).
@@ -55,6 +58,8 @@ CAMPOS = [
     ('cantidad', 'Cantidad', ['cantidad', 'cant', 'unidades', 'existencias', 'stock']),
     ('estado', 'Estado', ['estado', 'condicion', 'estado fisico']),
     ('laboratorio', 'Laboratorio', ['laboratorio', 'lab', 'sede']),
+    ('tipo', 'Tipo', ['tipo', 'tipo insumo', 'tipo de insumo', 'clase']),
+    ('reposicion', 'Reposición', ['requiere reposicion', 'reposicion obligatoria', 'repone', 'reposicion']),
 ]
 ETIQUETAS_CAMPO = {campo: etiqueta for campo, etiqueta, _ in CAMPOS}
 CAMPOS_OBLIGATORIOS = ('nombre', 'codigo')
@@ -431,6 +436,8 @@ class ImportadorInventario:
                     descripcion=plan['descripcion'] or f'Importado desde {self.nombre}',
                     marca=plan['marca'],
                     stock_minimo=plan['stock_minimo'],
+                    tipo=plan['tipo'],
+                    reposicion_obligatoria=plan['reposicion'],
                     estado=estado_insumo,
                 )
                 insumo.full_clean()
@@ -471,6 +478,21 @@ SINONIMOS_ESTADO = {
     'perdido': 'Perdido', 'extraviado': 'Perdido',
 }
 ESTADO_POR_DEFECTO = 'Disponible'
+
+# Texto normalizado (sin tildes ni mayúsculas) → Insumo.tipo.
+SINONIMOS_TIPO = {
+    'herramienta': 'herramienta', 'herramientas': 'herramienta',
+    'consumible': 'consumible', 'consumibles': 'consumible',
+}
+TIPO_POR_DEFECTO = 'herramienta'
+
+# Texto normalizado → Insumo.reposicion_obligatoria. Sin valor, depende del
+# tipo: un consumible no exige reposición; una herramienta sí.
+SINONIMOS_REPOSICION = {
+    'si': True, 'true': True, '1': True,
+    'no': False, 'false': False, '0': False,
+}
+REPOSICION_POR_DEFECTO = {'consumible': False, 'herramienta': True}
 MAX_CANTIDAD_POR_FILA = 200
 
 
@@ -512,6 +534,8 @@ class ResultadoImportacion:
                 'laboratorio': plan['laboratorio'].nombre,
                 'marca': plan['marca'],
                 'stock_minimo': plan['stock_minimo'],
+                'tipo': plan['tipo'],
+                'reposicion': plan['reposicion'],
                 'items': items_por_insumo.get(clave, 0),
             }
             (insumos_existentes if plan['existente'] is not None else insumos_nuevos).append(fila)
@@ -521,6 +545,12 @@ class ResultadoImportacion:
             'total_filas': self.total_filas,
             'insumos_nuevos': insumos_nuevos,
             'insumos_existentes': insumos_existentes,
+            # Para avisar antes de guardar: se crean como consumibles.
+            'insumos_consumibles': [i['nombre'] for i in insumos_nuevos if i['tipo'] == 'consumible'],
+            # Consumibles nuevos cuya pérdida no generará veto.
+            'insumos_no_reponen': [
+                i['nombre'] for i in insumos_nuevos if i['tipo'] == 'consumible' and not i['reposicion']
+            ],
             'items': [
                 {'fila': i['fila'], 'codigo': i['codigo'], 'insumo': self.plan_insumos[i['insumo']]['nombre'],
                  'laboratorio': i['laboratorio'].nombre, 'estado': i['estado'].nombre}
@@ -602,6 +632,22 @@ class _Validacion:
 
         estado = self._estado(v.get('estado', ''), errores)
 
+        tipo = TIPO_POR_DEFECTO
+        if v.get('tipo'):
+            tipo_leido = SINONIMOS_TIPO.get(normalizar(v['tipo']))
+            if tipo_leido is None:
+                errores.append(f'Tipo no válido ("{v["tipo"]}"). Usa: herramienta o consumible.')
+            else:
+                tipo = tipo_leido
+
+        reposicion = None  # None = sin valor en el archivo: se decide por el tipo
+        if v.get('reposicion'):
+            reposicion = SINONIMOS_REPOSICION.get(normalizar(v['reposicion']))
+            if reposicion is None:
+                errores.append(f'Reposición no válida ("{v["reposicion"]}"). Usa: sí o no.')
+        if reposicion is None:
+            reposicion = REPOSICION_POR_DEFECTO[tipo]
+
         cantidad = 1
         if v.get('cantidad'):
             cantidad_leida = _entero(v['cantidad'])
@@ -641,14 +687,18 @@ class _Validacion:
         if clave_insumo not in r.plan_insumos:
             existente = self.insumos_bd.get(clave_insumo)
             if existente is not None:
-                # Se reutiliza tal cual: el reporte muestra sus datos, no los del archivo.
+                # Se reutiliza tal cual (tipo y reposición incluidos): el
+                # reporte muestra sus datos, no los del archivo.
                 nombre, marca, stock_minimo = existente.nombre, existente.marca, existente.stock_minimo
+                tipo, reposicion = existente.tipo, existente.reposicion_obligatoria
             r.plan_insumos[clave_insumo] = {
                 'nombre': nombre,
                 'laboratorio': laboratorio,
                 'descripcion': v.get('descripcion', ''),
                 'marca': marca,
                 'stock_minimo': stock_minimo,
+                'tipo': tipo,
+                'reposicion': reposicion,
                 'existente': existente,
             }
         for c in nuevos:

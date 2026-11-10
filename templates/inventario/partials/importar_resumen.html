@@ -52,25 +52,47 @@
 </div>
 {% endif %}
 
+{% if resumen.insumos_consumibles %}
+<div class="alert alert-info small" id="lista-consumibles">
+    <i class="fa-solid fa-flask me-1"></i>Insumos nuevos de tipo <strong>consumible</strong> ({{ resumen.insumos_consumibles|length }}):
+    {{ resumen.insumos_consumibles|join:", " }}.
+</div>
+{% endif %}
+
+{% if resumen.insumos_no_reponen %}
+<div class="alert alert-warning small" id="aviso-no-reponen">
+    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+    <strong>{{ resumen.insumos_no_reponen|length }}</strong> insumo{{ resumen.insumos_no_reponen|length|pluralize }}
+    nuevo{{ resumen.insumos_no_reponen|length|pluralize }} quedará{{ resumen.insumos_no_reponen|length|pluralize:"n" }}
+    como consumible{{ resumen.insumos_no_reponen|length|pluralize }} que no repone{{ resumen.insumos_no_reponen|length|pluralize:"n" }}:
+    si se pierde{{ resumen.insumos_no_reponen|length|pluralize:"n" }}, no se genera veto.
+    ({{ resumen.insumos_no_reponen|join:", " }})
+</div>
+{% endif %}
+
 {% if resumen.insumos_nuevos or resumen.insumos_existentes %}
 <div class="card shadow-sm mb-3">
     <div class="card-header">Insumos</div>
     <div class="table-responsive">
         <table class="table table-sm table-hover mb-0 align-middle">
             <thead>
-                <tr><th>Nombre</th><th>Laboratorio</th><th>Marca</th><th class="text-end">Stock mín.</th><th class="text-end">Ítems</th><th></th></tr>
+                <tr><th>Nombre</th><th>Laboratorio</th><th>Tipo</th><th>Marca</th><th class="text-end">Stock mín.</th><th class="text-end">Ítems</th><th></th></tr>
             </thead>
             <tbody>
                 {% for i in resumen.insumos_nuevos %}
                 <tr>
-                    <td><strong>{{ i.nombre }}</strong></td><td>{{ i.laboratorio }}</td><td>{{ i.marca|default:"—" }}</td>
+                    <td><strong>{{ i.nombre }}</strong></td><td>{{ i.laboratorio }}</td>
+                    <td><span class="badge {% if i.tipo == 'consumible' %}bg-info text-dark{% else %}bg-secondary{% endif %}">{% if i.tipo == 'consumible' %}Consumible{% else %}Herramienta{% endif %}</span>{% if i.tipo == 'consumible' and not i.reposicion %} <span class="badge bg-light text-dark border" title="Perderlo no genera veto">No repone</span>{% endif %}</td>
+                    <td>{{ i.marca|default:"—" }}</td>
                     <td class="text-end">{{ i.stock_minimo }}</td><td class="text-end">{{ i.items }}</td>
                     <td><span class="badge bg-success">Nuevo</span></td>
                 </tr>
                 {% endfor %}
                 {% for i in resumen.insumos_existentes %}
                 <tr>
-                    <td><strong>{{ i.nombre }}</strong></td><td>{{ i.laboratorio }}</td><td>{{ i.marca|default:"—" }}</td>
+                    <td><strong>{{ i.nombre }}</strong></td><td>{{ i.laboratorio }}</td>
+                    <td><span class="badge {% if i.tipo == 'consumible' %}bg-info text-dark{% else %}bg-secondary{% endif %}">{% if i.tipo == 'consumible' %}Consumible{% else %}Herramienta{% endif %}</span>{% if i.tipo == 'consumible' and not i.reposicion %} <span class="badge bg-light text-dark border" title="Perderlo no genera veto">No repone</span>{% endif %}</td>
+                    <td>{{ i.marca|default:"—" }}</td>
                     <td class="text-end">{{ i.stock_minimo }}</td><td class="text-end">{{ i.items }}</td>
                     <td><span class="badge bg-secondary" title="Ya existe en el laboratorio: solo se le agregan ítems">Existente</span></td>
                 </tr>

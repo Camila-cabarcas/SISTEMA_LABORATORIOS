@@ -6,38 +6,20 @@
     Editar Insumo
 </h1>
 
-<div class="card p-4">
+<div class="card p-4" style="max-width: 720px;">
 
-    <form method="POST">
+    <form method="POST" novalidate>
 
         {% csrf_token %}
 
-        <div class="mb-3">
+        {% include 'inventario/partials/campos_insumo.html' %}
 
-            <input
-                type="text"
-                name="nombre"
-                class="form-control"
-                value="{{ insumo.nombre }}"
-            >
-
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-warning">
+                Guardar cambios
+            </button>
+            <a href="/inventario/" class="btn btn-secondary">Cancelar</a>
         </div>
-
-        <div class="mb-3">
-
-            <textarea
-                name="descripcion"
-                class="form-control"
-            >{{ insumo.descripcion }}</textarea>
-
-        </div>
-
-        <button
-            type="submit"
-            class="btn btn-warning"
-        >
-            Guardar cambios
-        </button>
 
     </form>
 

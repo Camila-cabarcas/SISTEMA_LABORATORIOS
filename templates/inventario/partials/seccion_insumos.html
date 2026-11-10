@@ -43,6 +43,7 @@
                     <th>ID</th>
                     <th>Nombre</th>
                     <th>Laboratorio</th>
+                    <th>Tipo</th>
                     <th>Estado</th>
                     <th>Stock Total</th>
                     <th>Disponible</th>
@@ -62,6 +63,12 @@
                         {% if insumo.descripcion %}<br><small class="text-muted">{{ insumo.descripcion }}</small>{% endif %}
                     </td>
                     <td>{{ insumo.laboratorio.nombre|default:"—" }}</td>
+                    <td class="text-nowrap">
+                        <span class="badge {% if insumo.tipo == 'consumible' %}bg-info text-dark{% else %}bg-secondary{% endif %}">{{ insumo.get_tipo_display }}</span>
+                        {% if insumo.tipo == 'consumible' and not insumo.reposicion_obligatoria %}
+                        <span class="badge bg-light text-dark border" title="Perderlo no genera veto">No repone</span>
+                        {% endif %}
+                    </td>
                     <td>{{ insumo.estado|default:"—" }}</td>
                     <td>{{ insumo.total_count }}</td>
                     <td>
@@ -81,7 +88,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="11" class="text-center text-muted py-3">
+                    <td colspan="12" class="text-center text-muted py-3">
                         {% if busqueda or lab_id or solo_stock_bajo %}No hay insumos que coincidan con los filtros.{% else %}No hay insumos registrados.{% endif %}
                     </td>
                 </tr>

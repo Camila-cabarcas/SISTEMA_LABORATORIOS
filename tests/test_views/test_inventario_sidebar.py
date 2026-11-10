@@ -355,3 +355,72 @@ def test_formulario_registrar_movimiento_usa_etiquetas(cliente_autenticado, inve
     assert 'Préstamo' in opciones and 'Devolución' in opciones
     assert 'Prestado' not in opciones
     assert form.fields['observacion'].label == 'Información'
+
+
+# ── Tipo y reposición obligatoria del insumo ────────────────────────────────
+
+def test_formulario_crear_muestra_tipo_y_reposicion(cliente_autenticado, catalogos):
+    contenido = cliente_autenticado.get(URL_CREAR).content.decode()
+
+    assert '<select name="tipo"' in contenido
+    assert '<option value="herramienta" selected>Herramienta</option>' in contenido
+    assert '<option value="consumible">Consumible</option>' in contenido
+    assert 'name="reposicion_obligatoria"' in contenido
+    assert 'Requiere reposición si se pierde' in contenido
+    assert 'Si está apagado, perderlo no genera veto (aplica a consumibles).' in contenido
+
+
+def test_crear_insumo_guarda_tipo_y_reposicion(cliente_autenticado, laboratorio):
+    # Checkbox sin marcar: el navegador no envía reposicion_obligatoria.
+    cliente_autenticado.post(URL_CREAR, {
+        'nombre': 'Guantes', 'laboratorio': laboratorio.id, 'descripcion': 'Caja de guantes',
+        'stock_minimo': 0, 'tipo': 'consumible',
+    })
+
+    insumo = Insumo.objects.get(nombre='Guantes')
+    assert insumo.tipo == 'consumible'
+    assert insumo.reposicion_obligatoria is False
+
+
+def test_crear_insumo_sin_tipo_usa_herramienta(cliente_autenticado, laboratorio):
+    cliente_autenticado.post(URL_CREAR, {
+        'nombre': 'Pinza', 'laboratorio': laboratorio.id, 'descripcion': 'Pinza',
+        'stock_minimo': 0, 'reposicion_obligatoria': 'on',
+    })
+
+    insumo = Insumo.objects.get(nombre='Pinza')
+    assert (insumo.tipo, insumo.reposicion_obligatoria) == ('herramienta', True)
+
+
+def test_editar_insumo_guarda_tipo_y_reposicion(cliente_autenticado, laboratorio):
+    insumo = _insumo('Guantes', laboratorio, marca='Nitrilo', stock_minimo=3)
+    url = f'/inventario/editar/{insumo.id}/'
+
+    contenido = cliente_autenticado.get(url).content.decode()
+    assert 'value="Guantes"' in contenido  # el formulario trae los datos actuales
+    assert 'name="reposicion_obligatoria"' in contenido and 'checked' in contenido
+
+    response = cliente_autenticado.post(url, {
+        'nombre': 'Guantes', 'laboratorio': laboratorio.id, 'descripcion': 'Guantes de prueba',
+        'marca': 'Nitrilo', 'stock_minimo': 3, 'tipo': 'consumible',
+    })
+
+    assert response.status_code == 302
+    insumo.refresh_from_db()
+    assert (insumo.tipo, insumo.reposicion_obligatoria) == ('consumible', False)
+    assert (insumo.marca, insumo.stock_minimo) == ('Nitrilo', 3)
+
+
+def test_lista_muestra_tipo(cliente_autenticado, laboratorio):
+    _insumo('Multímetro', laboratorio)
+    _insumo('Guantes', laboratorio, tipo='consumible', reposicion_obligatoria=False)
+    _insumo('Alcohol', laboratorio, tipo='consumible')
+
+    tabla = cliente_autenticado.get(URL_INSUMOS).content.decode().split('<table')[1]
+    filas = {nombre: fila for fila in tabla.split('<tr')
+             for nombre in ('Multímetro', 'Guantes', 'Alcohol') if nombre in fila}
+
+    assert '<th>Tipo</th>' in tabla
+    assert 'Herramienta</span>' in filas['Multímetro']
+    assert 'Consumible</span>' in filas['Guantes'] and 'No repone' in filas['Guantes']
+    assert 'Consumible</span>' in filas['Alcohol'] and 'No repone' not in filas['Alcohol']

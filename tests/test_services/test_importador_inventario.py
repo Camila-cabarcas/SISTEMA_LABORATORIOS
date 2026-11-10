@@ -587,3 +587,188 @@ class TestGuardar:
 
         resultado = ImportadorInventario.desde_sesion(datos).guardar(datos['mapeo'], laboratorio, usuario_admin)
         assert [i['fila'] for i in resultado.plan_items] == [2, 4]
+
+
+# ── Tipo de insumo ────────────────────────────────────────────────────────
+
+MAPEO_TIPO = {**MAPEO, 'Tipo': 'tipo'}
+CABECERA_TIPO = 'Código,Nombre,Marca,Estado,Stock mínimo,Tipo\n'
+
+
+def _validar_tipo(cuerpo, laboratorio):
+    return _validar(cuerpo, laboratorio, MAPEO_TIPO, CABECERA_TIPO)
+
+
+class TestTipo:
+
+    def test_columna_tipo_se_detecta(self):
+        assert detectar_columnas(['Nombre', 'Tipo'])['Tipo'] == 'tipo'
+
+    @pytest.mark.django_db
+    @pytest.mark.parametrize('texto', ['consumible', 'CONSUMIBLE', 'Consumíble', ' Consumibles '])
+    def test_acepta_consumible(self, catalogos, laboratorio, texto):
+        resumen = _validar_tipo(f'A-1,Guantes,,,,{texto}\n', laboratorio)
+        assert resumen['errores'] == []
+        assert resumen['insumos_nuevos'][0]['tipo'] == 'consumible'
+        assert resumen['insumos_consumibles'] == ['Guantes']
+
+    @pytest.mark.django_db
+    def test_vacio_o_sin_columna_es_herramienta(self, catalogos, laboratorio):
+        assert _validar_tipo('A-1,Pinza,,,,\n', laboratorio)['insumos_nuevos'][0]['tipo'] == 'herramienta'
+        resumen = _validar('A-1,Pinza,,,\n', laboratorio)
+        assert resumen['insumos_nuevos'][0]['tipo'] == 'herramienta'
+        assert resumen['insumos_consumibles'] == []
+
+    @pytest.mark.django_db
+    def test_tipo_invalido_es_error_por_fila(self, catalogos, laboratorio):
+        resumen = _validar_tipo('A-1,Pinza,,,,Herramienta\nA-2,Guantes,,,,Repuesto\n', laboratorio)
+        assert _mensajes(resumen['errores']) == [
+            'Fila 3: Tipo no válido ("Repuesto"). Usa: herramienta o consumible.'
+        ]
+        assert [i['codigo'] for i in resumen['items']] == ['A-1']
+
+    @pytest.mark.django_db
+    def test_guardar_asigna_el_tipo_a_insumos_nuevos(self, catalogos, laboratorio, usuario_admin):
+        from inventario.models import Insumo
+
+        _importador_csv('A-1,Guantes,,,,Consumible\nB-1,Pinza,,,,\n', CABECERA_TIPO).guardar(
+            MAPEO_TIPO, laboratorio, usuario_admin)
+
+        assert Insumo.objects.get(nombre='Guantes').tipo == 'consumible'
+        assert Insumo.objects.get(nombre='Pinza').tipo == 'herramienta'
+
+    @pytest.mark.django_db
+    def test_insumo_existente_no_cambia_de_tipo(self, catalogos, laboratorio, usuario_admin):
+        from inventario.models import Insumo
+
+        existente = Insumo.objects.create(nombre='Pipeta', descripcion='x', laboratorio=laboratorio)
+        importador = _importador_csv('A-1,Pipeta,,,,consumible\n', CABECERA_TIPO)
+
+        resumen = importador.validar(MAPEO_TIPO, laboratorio).resumen()
+        assert resumen['insumos_existentes'][0]['tipo'] == 'herramienta'
+        assert resumen['insumos_consumibles'] == []
+
+        importador.guardar(MAPEO_TIPO, laboratorio, usuario_admin)
+        existente.refresh_from_db()
+        assert existente.tipo == 'herramienta'
+        assert existente.items.count() == 1
+
+    @pytest.mark.django_db
+    def test_validacion_muestra_tipo_y_consumibles(self, catalogos, laboratorio):
+        from django.template.loader import render_to_string
+
+        resumen = _validar_tipo('A-1,Guantes,,,,consumible\nB-1,Pinza,,,,\n', laboratorio)
+        html = render_to_string('inventario/partials/importar_resumen.html', {'resumen': resumen})
+
+        assert '<th>Tipo</th>' in html
+        aviso = html.split('id="lista-consumibles"')[1].split('</div>')[0]
+        assert 'Guantes' in aviso and 'Pinza' not in aviso
+
+
+# ── Reposición obligatoria ────────────────────────────────────────────────
+
+MAPEO_REPO = {**MAPEO_TIPO, 'Requiere reposición': 'reposicion'}
+CABECERA_REPO = 'Código,Nombre,Marca,Estado,Stock mínimo,Tipo,Requiere reposición\n'
+
+
+def _validar_repo(cuerpo, laboratorio):
+    return _validar(cuerpo, laboratorio, MAPEO_REPO, CABECERA_REPO)
+
+
+def _guardar(cuerpo, laboratorio, usuario, mapeo, cabecera):
+    from inventario.models import Insumo
+
+    _importador_csv(cuerpo, cabecera).guardar(mapeo, laboratorio, usuario)
+    return {i.nombre: i.reposicion_obligatoria for i in Insumo.objects.all()}
+
+
+class TestReposicion:
+
+    @pytest.mark.parametrize('columna', ['Requiere reposición', 'Reposición obligatoria', 'Repone', 'Reposición'])
+    def test_columna_se_detecta(self, columna):
+        assert detectar_columnas(['Nombre', columna])[columna] == 'reposicion'
+
+    @pytest.mark.django_db
+    def test_sin_columna_consumible_false_y_herramienta_true(self, catalogos, laboratorio, usuario_admin):
+        repone = _guardar('A-1,Guantes,,,,consumible\nB-1,Pinza,,,,herramienta\nC-1,Bureta,,,,\n',
+                          laboratorio, usuario_admin, MAPEO_TIPO, CABECERA_TIPO)
+        assert repone == {'Guantes': False, 'Pinza': True, 'Bureta': True}
+
+    @pytest.mark.django_db
+    def test_celda_vacia_usa_el_tipo(self, catalogos, laboratorio, usuario_admin):
+        repone = _guardar('A-1,Guantes,,,,consumible,\nB-1,Pinza,,,,herramienta,\n',
+                          laboratorio, usuario_admin, MAPEO_REPO, CABECERA_REPO)
+        assert repone == {'Guantes': False, 'Pinza': True}
+
+    @pytest.mark.django_db
+    def test_columna_no_con_consumible_es_false(self, catalogos, laboratorio, usuario_admin):
+        repone = _guardar('A-1,Guantes,,,,consumible,no\n',
+                          laboratorio, usuario_admin, MAPEO_REPO, CABECERA_REPO)
+        assert repone == {'Guantes': False}
+
+    @pytest.mark.django_db
+    @pytest.mark.parametrize('texto, esperado', [
+        ('sí', True), ('SI', True), ('Sí', True), ('true', True), ('1', True),
+        ('no', False), ('NO', False), ('False', False), ('0', False),
+    ])
+    def test_valores_aceptados_mandan_sobre_el_tipo(self, catalogos, laboratorio, texto, esperado):
+        resumen = _validar_repo(f'A-1,Guantes,,,,consumible,{texto}\n', laboratorio)
+        assert resumen['errores'] == []
+        assert resumen['insumos_nuevos'][0]['reposicion'] is esperado
+
+    @pytest.mark.django_db
+    def test_valor_invalido_es_error_por_fila(self, catalogos, laboratorio):
+        resumen = _validar_repo('A-1,Pinza,,,,,sí\nA-2,Guantes,,,,consumible,quizás\n', laboratorio)
+        assert _mensajes(resumen['errores']) == [
+            'Fila 3: Reposición no válida ("quizás"). Usa: sí o no.'
+        ]
+        assert [i['codigo'] for i in resumen['items']] == ['A-1']
+
+    @pytest.mark.django_db
+    def test_insumo_existente_conserva_su_reposicion(self, catalogos, laboratorio, usuario_admin):
+        from inventario.models import Insumo
+
+        existente = Insumo.objects.create(nombre='Guantes', descripcion='x', laboratorio=laboratorio,
+                                          tipo='consumible', reposicion_obligatoria=True)
+        importador = _importador_csv('A-1,Guantes,,,,consumible,no\n', CABECERA_REPO)
+
+        resumen = importador.validar(MAPEO_REPO, laboratorio).resumen()
+        assert resumen['insumos_existentes'][0]['reposicion'] is True
+        assert resumen['insumos_no_reponen'] == []
+
+        importador.guardar(MAPEO_REPO, laboratorio, usuario_admin)
+        existente.refresh_from_db()
+        assert existente.reposicion_obligatoria is True
+        assert existente.items.count() == 1
+
+    @pytest.mark.django_db
+    def test_validacion_avisa_cuantos_no_reponen(self, catalogos, laboratorio):
+        from django.template.loader import render_to_string
+
+        from inventario.models import Insumo
+
+        Insumo.objects.create(nombre='Alcohol', descripcion='x', laboratorio=laboratorio,
+                              tipo='consumible', reposicion_obligatoria=False)  # existente: no cuenta
+        resumen = _validar_repo(
+            'A-1,Guantes,,,,consumible,\n'      # no repone (por tipo)
+            'B-1,Algodón,,,,consumible,no\n'    # no repone (columna)
+            'C-1,Tapabocas,,,,consumible,sí\n'  # consumible que sí repone
+            'D-1,Pinza,,,,,\n'                  # herramienta
+            'E-1,Alcohol,,,,consumible,\n',
+            laboratorio,
+        )
+        assert resumen['insumos_no_reponen'] == ['Guantes', 'Algodón']
+
+        html = render_to_string('inventario/partials/importar_resumen.html', {'resumen': resumen})
+        aviso = ' '.join(html.split('id="aviso-no-reponen"')[1].split('</div>')[0].split())
+        assert '<strong>2</strong> insumos nuevos quedarán como consumibles que no reponen' in aviso
+        assert 'Guantes, Algodón' in aviso
+        assert 'Tapabocas' not in aviso and 'Alcohol' not in aviso
+
+    @pytest.mark.django_db
+    def test_sin_consumibles_que_no_reponen_no_hay_aviso(self, catalogos, laboratorio):
+        from django.template.loader import render_to_string
+
+        resumen = _validar_repo('A-1,Pinza,,,,,\nB-1,Tapabocas,,,,consumible,sí\n', laboratorio)
+        html = render_to_string('inventario/partials/importar_resumen.html', {'resumen': resumen})
+        assert 'id="aviso-no-reponen"' not in html

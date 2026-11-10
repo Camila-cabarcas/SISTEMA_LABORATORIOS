@@ -22,7 +22,18 @@ class InsumoForm(forms.ModelForm):
             'marca',
             'stock_minimo',
             'estado',
+            'tipo',
+            'reposicion_obligatoria',
         ]
+
+        labels = {
+            'tipo': 'Tipo',
+            'reposicion_obligatoria': 'Requiere reposición si se pierde',
+        }
+
+        help_texts = {
+            'reposicion_obligatoria': 'Si está apagado, perderlo no genera veto (aplica a consumibles).',
+        }
 
         widgets = {
 
@@ -64,8 +75,29 @@ class InsumoForm(forms.ModelForm):
                 attrs={
                     'class': 'form-select'
                 }
-            )
+            ),
+
+            'tipo': forms.Select(
+                attrs={
+                    'class': 'form-select'
+                }
+            ),
+
+            'reposicion_obligatoria': forms.CheckboxInput(
+                attrs={
+                    'class': 'form-check-input'
+                }
+            ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # El navegador siempre envía el select; si falta (clientes viejos),
+        # se usa el valor por defecto del modelo en vez de dar error.
+        self.fields['tipo'].required = False
+
+    def clean_tipo(self):
+        return self.cleaned_data.get('tipo') or Insumo._meta.get_field('tipo').get_default()
 
 
 class ItemInventarioForm(forms.ModelForm):
