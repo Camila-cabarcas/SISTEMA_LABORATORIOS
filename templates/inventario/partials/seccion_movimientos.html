@@ -1,13 +1,16 @@
 <div class="card p-4 shadow-sm">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="mb-0"><i class="fa-solid fa-arrow-right-arrow-left text-brand me-2"></i>Movimientos</h4>
+        {% if puede_gestionar_inventario %}
         <button class="btn btn-success btn-sm" type="button" data-bs-toggle="collapse"
                 data-bs-target="#form-registrar-movimiento" aria-expanded="{% if form.errors %}true{% else %}false{% endif %}"
                 aria-controls="form-registrar-movimiento">
             <i class="fa-solid fa-plus me-1"></i>Registrar movimiento
         </button>
+        {% endif %}
     </div>
 
+    {% if puede_gestionar_inventario %}
     <div class="collapse {% if form.errors %}show{% endif %} mb-3" id="form-registrar-movimiento">
         <div class="border rounded p-3 bg-body-tertiary">
             <form method="POST" action="/inventario/movimientos/" class="row g-2 align-items-end">
@@ -25,6 +28,7 @@
             </form>
         </div>
     </div>
+    {% endif %}
 
     <form method="GET" class="row g-2 mb-3">
         <div class="col-sm-3">

@@ -44,10 +44,11 @@ class Veto(models.Model):
         (FALTA_INSUMO, 'Falta de insumo'),
     ]
 
-    # Tipos que un Laboratorista puede levantar por su cuenta; el resto
-    # (DANO, FALTA_INSUMO) solo un Administrador, y solo tras verificar la
-    # reposición/pago.
-    TIPOS_REMOVIBLES_POR_LABORATORISTA = (NO_CANCELO, RETRASO)
+    # Tipos que un Laboratorista puede levantar (en sus laboratorios), tras
+    # verificar la reposición/pago. NO_CANCELO y RETRASO tienen fecha_fin y
+    # dejan de bloquear solos cuando vence (ver esta_vigente); a mano solo
+    # los levanta un Administrador. El Monitor no levanta ninguno.
+    TIPOS_REMOVIBLES_POR_LABORATORISTA = (DANO, FALTA_INSUMO)
 
     # ── Estado del veto ───────────────────────────────────────────────────
     ACTIVO = 'ACTIVO'
@@ -164,17 +165,51 @@ class Veto(models.Model):
         return max((self.fecha_fin - date.today()).days, 0)
 
     # ── Reglas de remoción ──────────────────────────────────────────────
+    @property
+    def laboratorio(self):
+        """Laboratorio donde ocurrió la infracción: el de la reserva del
+        préstamo o, si no hay préstamo, el de la reserva. None si el veto no
+        está ligado a ninguno (p. ej. registro manual sin reserva)."""
+        from users.helpers import laboratorio_de_prestamo, laboratorio_de_reserva
+
+        if self.prestamo_id:
+            return laboratorio_de_prestamo(self.prestamo)
+        if self.reserva_id:
+            return laboratorio_de_reserva(self.reserva)
+        return None
+
     def puede_remover(self, usuario):
         """Reglas de quién puede levantar el veto:
-        - NO_CANCELO y RETRASO: Laboratorista o Administrador.
-        - DANO y FALTA_INSUMO: solo Administrador (tras verificar reposición).
+        - Administrador: cualquiera.
+        - Laboratorista: DANO y FALTA_INSUMO, solo de sus laboratorios.
+        - NO_CANCELO y RETRASO se levantan solos al vencer; a mano, solo el
+          Administrador.
+        - Monitor y demás roles: ninguno.
         """
+        from laboratorio.models import es_laboratorista_del_laboratorio
+
         rol = getattr(getattr(usuario, 'rol', None), 'nombre', None)
         if rol == 'Administrador':
             return True
-        if rol == 'Laboratorio':
-            return self.tipo in self.TIPOS_REMOVIBLES_POR_LABORATORISTA
+        if rol == 'Laboratorista':
+            return (
+                self.tipo in self.TIPOS_REMOVIBLES_POR_LABORATORISTA
+                and es_laboratorista_del_laboratorio(usuario, self.laboratorio)
+            )
         return False
+
+    def motivo_no_removible(self, usuario):
+        """Texto para el usuario cuando puede_remover() es False."""
+        rol = getattr(getattr(usuario, 'rol', None), 'nombre', None)
+        if rol == 'Laboratorista':
+            if self.tipo not in self.TIPOS_REMOVIBLES_POR_LABORATORISTA:
+                return (
+                    'Los vetos por no cancelar o por retraso se levantan solos '
+                    'cuando vence el plazo; antes de eso solo un Administrador '
+                    'puede levantarlos.'
+                )
+            return 'Solo puedes levantar vetos de los laboratorios que tienes asignados.'
+        return 'No tienes permiso para levantar vetos.'
 
     def resolver(self, usuario, pagado=False):
         """Levanta el veto. `pagado=True` lo marca PAGADO (reposición

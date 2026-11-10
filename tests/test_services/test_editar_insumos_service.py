@@ -75,9 +75,9 @@ class TestVerificarAcceso:
             nombre='Laboratorio de Física', ubicacion='Bloque 9',
         )
         otro_laboratorista = Usuario.objects.create_user(
-            username='lab_otro', password='x', rol=Rol.objects.get(nombre='Laboratorio'),
+            username='lab_otro', password='x', rol=Rol.objects.get(nombre='Laboratorista'),
         )
-        otro_laboratorio.encargados.add(otro_laboratorista)
+        otro_laboratorio.laboratoristas.add(otro_laboratorista)
 
         with pytest.raises(PermissionDenied):
             EditarInsumosReservaService.verificar_acceso(reserva_aprobada, otro_laboratorista)
@@ -208,9 +208,9 @@ class TestGuardar:
             nombre='Laboratorio de Física', ubicacion='Bloque 9',
         )
         otro_laboratorista = Usuario.objects.create_user(
-            username='lab_otro_guardar', password='x', rol=Rol.objects.get(nombre='Laboratorio'),
+            username='lab_otro_guardar', password='x', rol=Rol.objects.get(nombre='Laboratorista'),
         )
-        otro_laboratorio.encargados.add(otro_laboratorista)
+        otro_laboratorio.laboratoristas.add(otro_laboratorista)
 
         with pytest.raises(PermissionDenied):
             EditarInsumosReservaService.guardar(

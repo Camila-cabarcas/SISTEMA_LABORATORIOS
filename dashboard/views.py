@@ -3,7 +3,8 @@ views.py — dashboard
 Página de inicio con estadísticas por rol:
   - Administrador: sección general (todos los laboratorios) + sección
     filtrable por laboratorio (?lab=<id>).
-  - Laboratorio: las mismas tarjetas, fijas a sus laboratorios asignados.
+  - Laboratorista / Monitor: las mismas tarjetas, fijas a sus laboratorios
+    asignados (Laboratorio.laboratoristas / Laboratorio.monitores).
   - Docente / Estudiante: sus últimas reservas.
 """
 from django.contrib.auth.decorators import login_required
@@ -95,8 +96,9 @@ def dashboard(request):
             'por_lab': _estadisticas([lab_seleccionado.id]) if lab_seleccionado else None,
         })
 
-    elif rol == 'Laboratorio':
-        mis_labs = list(Laboratorio.objects.filter(encargados=request.user).order_by('nombre'))
+    elif rol in ('Laboratorista', 'Monitor'):
+        relacion = 'laboratoristas' if rol == 'Laboratorista' else 'monitores'
+        mis_labs = list(Laboratorio.objects.filter(**{relacion: request.user}).order_by('nombre'))
         context.update({
             'mis_labs': mis_labs,
             'varios_labs': len(mis_labs) > 1,

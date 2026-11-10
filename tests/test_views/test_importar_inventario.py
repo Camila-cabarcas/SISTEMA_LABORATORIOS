@@ -29,8 +29,16 @@ class TestPermisos:
         assert resp.context['seccion_activa'] == 'importar'
         assert b'form-importar' in resp.content
 
-    def test_laboratorista_no_puede(self, client, usuario_laboratorista):
+    def test_laboratorista_puede_y_solo_ve_sus_laboratorios(self, client, usuario_laboratorista, laboratorio):
+        from laboratorio.models import Laboratorio
+        Laboratorio.objects.create(nombre='Lab Ajeno', ubicacion='X')
         client.force_login(usuario_laboratorista)
+        resp = client.get(URL)
+        assert resp.status_code == 200
+        assert list(resp.context['form'].fields['laboratorio'].queryset) == [laboratorio]
+
+    def test_monitor_no_puede(self, client, usuario_monitor):
+        client.force_login(usuario_monitor)
         resp = client.get(URL)
         assert resp.status_code == 302
         assert 'login' not in resp.url
@@ -163,8 +171,8 @@ class TestSesion:
         assert 'importacion_inventario' not in subido.session
 
     @pytest.mark.parametrize('url', [URL_MAPEAR, URL_VALIDAR, URL_CONFIRMAR])
-    def test_solo_admin(self, client, usuario_laboratorista, url):
-        client.force_login(usuario_laboratorista)
+    def test_monitor_no_puede(self, client, usuario_monitor, url):
+        client.force_login(usuario_monitor)
         resp = client.get(url)
         assert resp.status_code == 302
         assert resp.url != URL
@@ -448,8 +456,8 @@ class TestCancelarGeneral:
         assert subido.get(URL_CANCELAR).status_code == 405
         assert SESION in subido.session
 
-    def test_solo_admin(self, client, usuario_laboratorista):
-        client.force_login(usuario_laboratorista)
+    def test_monitor_no_puede(self, client, usuario_monitor):
+        client.force_login(usuario_monitor)
         resp = _cancelar(client, 'importar')
         assert resp.status_code == 302
         assert resp.url != URL

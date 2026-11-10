@@ -405,13 +405,17 @@ class ImportadorInventario:
         return errores
 
     # ── Validación (simulación) y guardado ──────────────────────────
-    def validar(self, mapeo, laboratorio):
+    def validar(self, mapeo, laboratorio, labs_permitidos=None):
         """Simula la importación con `mapeo` ({columna: campo}) hacia
         `laboratorio` (el elegido al subir; una columna Laboratorio lo
-        reemplaza fila por fila). No escribe nada."""
-        return _Validacion(self, mapeo, laboratorio).ejecutar()
+        reemplaza fila por fila). No escribe nada.
 
-    def guardar(self, mapeo, laboratorio, usuario):
+        `labs_permitidos`: si no es None, una fila cuya columna Laboratorio
+        nombre un laboratorio fuera de esa lista se rechaza (Laboratorista
+        que importa solo en los suyos). None = sin restricción."""
+        return _Validacion(self, mapeo, laboratorio, labs_permitidos).ejecutar()
+
+    def guardar(self, mapeo, laboratorio, usuario, labs_permitidos=None):
         """Valida de nuevo contra la BD actual (pudo cambiar desde el paso
         de validación) y crea insumos, ítems y su movimiento "Registro
         inicial" en una sola transacción: o se importa todo lo válido o
@@ -421,7 +425,7 @@ class ImportadorInventario:
         from inventario.models import EstadoInsumo, Insumo, ItemInventario, MovimientoInventario, TipoMovimiento
 
         with transaction.atomic():
-            resultado = self.validar(mapeo, laboratorio)
+            resultado = self.validar(mapeo, laboratorio, labs_permitidos)
             estado_insumo = EstadoInsumo.objects.filter(nombre='Activo').first()
             tipo_registro, _ = TipoMovimiento.objects.get_or_create(nombre='Registro inicial')
 
@@ -564,7 +568,7 @@ class ResultadoImportacion:
 
 class _Validacion:
 
-    def __init__(self, importador, mapeo, laboratorio):
+    def __init__(self, importador, mapeo, laboratorio, labs_permitidos=None):
         from inventario.models import EstadoItem, Insumo, ItemInventario
         from laboratorio.models import Laboratorio
 
@@ -575,6 +579,9 @@ class _Validacion:
         self.resultado = ResultadoImportacion(importador.nombre, len(self.tabla))
 
         self.labs_por_nombre = {normalizar(lab.nombre): lab for lab in Laboratorio.objects.filter(activo=True)}
+        self.ids_permitidos = (
+            None if labs_permitidos is None else {lab.id for lab in labs_permitidos}
+        )
         self.estados = {e.nombre: e for e in EstadoItem.objects.all()}
         # Códigos ya usados en el sistema, incluidos ítems eliminados
         # (soft-delete): la columna es unique=True igual.
@@ -617,6 +624,8 @@ class _Validacion:
             lab_fila = self.labs_por_nombre.get(normalizar(v['laboratorio']))
             if lab_fila is None:
                 errores.append(f'Laboratorio no válido ("{v["laboratorio"]}")')
+            elif self.ids_permitidos is not None and lab_fila.id not in self.ids_permitidos:
+                errores.append(f'No tienes acceso al laboratorio "{v["laboratorio"]}"')
             else:
                 laboratorio = lab_fila
 

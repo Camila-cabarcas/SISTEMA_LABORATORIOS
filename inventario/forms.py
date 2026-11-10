@@ -206,10 +206,15 @@ class ImportarArchivoForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, laboratorios=None, **kwargs):
+        """`laboratorios`: si no es None, solo esos aparecen como destino
+        (Laboratorista: los suyos). None = todos los activos."""
         from laboratorio.models import Laboratorio
         super().__init__(*args, **kwargs)
-        self.fields['laboratorio'].queryset = Laboratorio.objects.filter(activo=True).order_by('nombre')
+        queryset = Laboratorio.objects.filter(activo=True).order_by('nombre')
+        if laboratorios is not None:
+            queryset = queryset.filter(id__in=[lab.id for lab in laboratorios])
+        self.fields['laboratorio'].queryset = queryset
 
     def clean_archivo(self):
         from .services.importador import ImportacionError, ImportadorInventario

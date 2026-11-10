@@ -124,10 +124,10 @@ class TestCancelarPropietario:
         from users.models import Rol
 
         laboratorista = usuario_admin
-        laboratorista.rol = Rol.objects.get(nombre='Laboratorio')
+        laboratorista.rol = Rol.objects.get(nombre='Laboratorista')
         laboratorista.email = 'lab@udea.edu.co'
         laboratorista.save()
-        laboratorio.encargados.add(laboratorista)
+        laboratorio.laboratoristas.add(laboratorista)
 
         reserva = _reserva_aprobada(laboratorio, horas_hasta_fecha=3)
 

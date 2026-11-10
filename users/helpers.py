@@ -1,65 +1,117 @@
 """
 helpers.py — users
-Control de acceso por laboratorio para las vistas de reservas/ y prestamos/
-que un usuario rol='Laboratorio' solo debe poder ver/actuar sobre lo que
-pertenece a su(s) laboratorio(s) — Administrador sigue viendo/actuando
-sobre todo (ver docs/auditoria_seguridad_codigo.md, CRÍTICO #2).
+Permisos por rol y control de acceso por laboratorio (ver
+docs/auditoria_seguridad_codigo.md, CRÍTICO #2).
 
-No hay un campo Laboratorio.usuario_laboratorio ni una relación 1-a-1 entre
-Usuario y Laboratorio: la real es Laboratorio.encargados (ManyToMany) — un
-mismo Usuario rol='Laboratorio' puede ser encargado de más de un
-laboratorio, y un laboratorio puede tener más de un encargado. Por eso
-estos helpers reutilizan es_laboratorista_del_laboratorio
-(laboratorio/models.py), la función que ya calcula esto correctamente y que
-ya usan EditarInsumosReservaService y laboratorio/views.py::_check_lab_access
-— no se reimplementa la lógica acá para no terminar con dos criterios de
-"es laboratorista de este lab" que puedan divergir.
+- Administrador: ve y actúa sobre todo.
+- Laboratorista: solo en los laboratorios de Laboratorio.laboratoristas.
+- Monitor: solo en los laboratorios de Laboratorio.monitores y, en reservas,
+  solo las de estudiantes.
 
-Tampoco se usa `Usuario.is_staff` para distinguir Administrador: ese flag de
-Django no es el sistema de roles de esta app (ver users.models.Rol /
-users.decorators.rol_requerido) — algunas cuentas Administrador lo tienen en
-True por comodidad de acceso al admin de Django, pero no es la fuente de
-verdad. La fuente de verdad es siempre `usuario.rol.nombre`.
+Un mismo usuario puede estar en varios laboratorios y un laboratorio puede
+tener varios laboratoristas y monitores (ambas relaciones son ManyToMany).
+La pertenencia se calcula con es_laboratorista_del_laboratorio /
+es_monitor_del_laboratorio (laboratorio/models.py) para no tener dos
+criterios que puedan divergir.
+
+No se usa `Usuario.is_staff` para distinguir Administrador: la fuente de
+verdad es siempre `usuario.rol.nombre` (ver users/roles.py).
 """
 from django.core.exceptions import PermissionDenied
 
-from laboratorio.models import Laboratorio, es_laboratorista_del_laboratorio
+from laboratorio.models import (
+    Laboratorio,
+    es_laboratorista_del_laboratorio,
+    es_monitor_del_laboratorio,
+)
+from users.roles import ADMINISTRADOR, LABORATORISTA, MONITOR
+
+TIPO_ESTUDIANTE = 'estudiante'
+
+
+# ── Rol ──────────────────────────────────────────────────────────────────────
+
+def nombre_rol(usuario):
+    if not usuario or not usuario.is_authenticated or not usuario.rol:
+        return None
+    return usuario.rol.nombre
 
 
 def es_administrador(usuario):
-    return bool(
-        usuario and usuario.is_authenticated and usuario.rol and usuario.rol.nombre == 'Administrador'
-    )
+    return nombre_rol(usuario) == ADMINISTRADOR
 
+
+def es_laboratorista(usuario):
+    return nombre_rol(usuario) == LABORATORISTA
+
+
+def es_monitor(usuario):
+    return nombre_rol(usuario) == MONITOR
+
+
+# ── Permisos por acción (los que no dependen solo del decorador) ────────────
+
+def puede_gestionar_inventario(usuario):
+    """Registrar ítems y movimientos. El Monitor solo consulta."""
+    return es_administrador(usuario) or es_laboratorista(usuario)
+
+
+def puede_importar_inventario(usuario):
+    return es_administrador(usuario) or es_laboratorista(usuario)
+
+
+def puede_importar_cursos(usuario):
+    """Preparado para la importación de cursos (otra fase): mismos roles que
+    la importación de inventario."""
+    return es_administrador(usuario) or es_laboratorista(usuario)
+
+
+def puede_aprobar_reservas(usuario):
+    return es_administrador(usuario) or es_laboratorista(usuario)
+
+
+# ── Acceso por laboratorio ──────────────────────────────────────────────────
 
 def laboratorios_visibles(usuario):
     """None si `usuario` es Administrador — sin restricción, ve todo (el
-    llamador debe interpretar None como "no filtrar"). Si no es
-    Administrador, la lista de Laboratorio de los que es encargado.
+    llamador debe interpretar None como "no filtrar"). Si es Laboratorista o
+    Monitor, la lista de laboratorios donde está asignado con ese rol.
 
     Raises:
         PermissionDenied: si no es Administrador y no tiene ningún
-            laboratorio asignado — no tiene sentido mostrarle una lista
-            vacía sin explicación quien de entrada no debería estar acá.
+            laboratorio asignado.
     """
     if es_administrador(usuario):
         return None
 
-    labs = list(Laboratorio.objects.filter(encargados=usuario))
+    if es_laboratorista(usuario):
+        labs = list(Laboratorio.objects.filter(laboratoristas=usuario))
+    elif es_monitor(usuario):
+        labs = list(Laboratorio.objects.filter(monitores=usuario))
+    else:
+        labs = []
+
     if not labs:
         raise PermissionDenied('No tienes ningún laboratorio asignado.')
     return labs
 
 
+def tiene_acceso_laboratorio(usuario, laboratorio):
+    if es_administrador(usuario):
+        return True
+    return (
+        es_laboratorista_del_laboratorio(usuario, laboratorio)
+        or es_monitor_del_laboratorio(usuario, laboratorio)
+    )
+
+
 def verificar_acceso_laboratorio(usuario, laboratorio):
     """Lanza PermissionDenied si `usuario` no puede operar sobre
-    `laboratorio` — Administrador siempre puede; un usuario rol='Laboratorio'
-    solo si `laboratorio` es uno de los suyos (o si `laboratorio` es None,
-    p. ej. una Reserva sin SolicitudReserva vinculada — no hay forma de
-    verificar pertenencia, así que se deniega por defecto)."""
-    if es_administrador(usuario):
-        return
-    if not laboratorio or not es_laboratorista_del_laboratorio(usuario, laboratorio):
+    `laboratorio` — Administrador siempre puede; Laboratorista o Monitor
+    solo si `laboratorio` es uno de los suyos (si `laboratorio` es None,
+    p. ej. una Reserva sin SolicitudReserva vinculada, no hay forma de
+    verificar pertenencia y se deniega)."""
+    if not tiene_acceso_laboratorio(usuario, laboratorio):
         raise PermissionDenied('No tienes acceso a este laboratorio.')
 
 
@@ -75,3 +127,30 @@ def laboratorio_de_reserva(reserva):
 def laboratorio_de_prestamo(prestamo):
     """El Laboratorio de la reserva de `prestamo` — ver laboratorio_de_reserva."""
     return laboratorio_de_reserva(prestamo.reserva)
+
+
+# ── Acceso a reservas (Monitor: solo de estudiantes) ────────────────────────
+
+def es_reserva_de_estudiante(reserva):
+    solicitud = reserva.solicitud.first()
+    return bool(solicitud and solicitud.tipo_solicitante == TIPO_ESTUDIANTE)
+
+
+def verificar_acceso_reserva(usuario, reserva):
+    """Acceso por laboratorio y, para el Monitor, además que la reserva sea
+    de un estudiante. Lanza PermissionDenied si no."""
+    verificar_acceso_laboratorio(usuario, laboratorio_de_reserva(reserva))
+    if es_monitor(usuario) and not es_reserva_de_estudiante(reserva):
+        raise PermissionDenied('Solo puedes gestionar reservas de estudiantes.')
+
+
+def filtrar_reservas_visibles(usuario, reservas):
+    """Restringe un queryset de Reserva a lo que `usuario` puede ver: sus
+    laboratorios (salvo Administrador) y, si es Monitor, solo las de
+    estudiantes. Lanza PermissionDenied si no tiene laboratorios."""
+    labs = laboratorios_visibles(usuario)
+    if labs is not None:
+        reservas = reservas.filter(solicitud__laboratorio__in=labs)
+    if es_monitor(usuario):
+        reservas = reservas.filter(solicitud__tipo_solicitante=TIPO_ESTUDIANTE)
+    return reservas.distinct()

@@ -282,8 +282,8 @@
     </div>
 </div>
 
-{% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Laboratorio' %}
-    {% if reserva.estado.nombre == 'Pendiente' %}
+{% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Laboratorista' or user.rol.nombre == 'Monitor' %}
+    {% if puede_aprobar_reservas and reserva.estado.nombre == 'Pendiente' %}
         <form method="POST" action="/reservas/{{ reserva.id }}/aprobar/">
             {% csrf_token %}
             <button type="submit" name="accion" value="cancelar" class="btn btn-danger"><i class="fa-solid fa-ban me-1"></i>Cancelar reserva</button>

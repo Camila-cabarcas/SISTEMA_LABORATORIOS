@@ -342,7 +342,7 @@ def buscar_insumos(request):
 
 # ── Gestión de cursos ────────────────────────────────────────────────────────
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def lista_cursos(request):
     q = request.GET.get('q', '').strip()
     laboratorio_id = request.GET.get('laboratorio', '').strip()
@@ -368,7 +368,7 @@ def lista_cursos(request):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def crear_curso(request):
     profesor_id = request.GET.get('profesor_id') or request.POST.get('profesor_id')
 
@@ -394,7 +394,7 @@ def crear_curso(request):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def editar_curso(request, id):
     curso = get_object_or_404(Curso, id=id)
     if request.method == 'POST':
@@ -410,7 +410,7 @@ def editar_curso(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 @requiere_contrasena_admin(
     titulo_accion='Eliminar',
     get_contexto=lambda r, *a, **kw: f"Curso - {Curso.objects.get(id=kw['id']).nombre}",

@@ -89,21 +89,23 @@
                 </ul>
             </li>
 
-        {% elif user.rol.nombre == 'Laboratorio' %}
+        {% elif user.rol.nombre == 'Laboratorista' %}
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-boxes-stacked me-1"></i>Inventario</a>
+                <a class="nav-link dropdown-toggle {% if '/inventario/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-boxes-stacked me-1"></i>Inventario</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
                     <li><a class="dropdown-item" href="/inventario/items/"><i class="fa-solid fa-cubes me-2"></i>Items</a></li>
                     <li><a class="dropdown-item" href="/inventario/movimientos/"><i class="fa-solid fa-arrow-right-arrow-left me-2"></i>Movimientos</a></li>
+                    <li><a class="dropdown-item" href="/inventario/importar/"><i class="fa-solid fa-file-import me-2"></i>Importar</a></li>
                 </ul>
             </li>
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-clipboard-list me-1"></i>Actividad</a>
+                <a class="nav-link dropdown-toggle {% if '/prestamos/' in request.path or '/reservas/' in request.path or '/vetos/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-clipboard-list me-1"></i>Actividad</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
                     <li><a class="dropdown-item" href="/prestamos/"><i class="fa-solid fa-hand-holding me-2"></i>Préstamos</a></li>
                     <li><a class="dropdown-item" href="/reservas/"><i class="fa-solid fa-calendar-check me-2"></i>Reservas</a></li>
+                    <li><a class="dropdown-item" href="/vetos/"><i class="fa-solid fa-ban me-2"></i>Vetos</a></li>
                 </ul>
             </li>
 
@@ -128,13 +130,32 @@
                 <a class="nav-link" href="/laboratorio/"><i class="fa-solid fa-flask me-1"></i>Laboratorio</a>
             </li>
 
+        {% elif user.rol.nombre == 'Monitor' %}
+
+            {# Monitor: consulta de inventario, préstamos y reservas. Sin Vetos, Importar ni Aprobar. #}
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle {% if '/inventario/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-boxes-stacked me-1"></i>Inventario</a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="/inventario/items/"><i class="fa-solid fa-cubes me-2"></i>Items</a></li>
+                    <li><a class="dropdown-item" href="/inventario/movimientos/"><i class="fa-solid fa-arrow-right-arrow-left me-2"></i>Movimientos</a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle {% if '/prestamos/' in request.path or '/reservas/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-clipboard-list me-1"></i>Actividad</a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="/prestamos/"><i class="fa-solid fa-hand-holding me-2"></i>Préstamos</a></li>
+                    <li><a class="dropdown-item" href="/reservas/"><i class="fa-solid fa-calendar-check me-2"></i>Reservas</a></li>
+                </ul>
+            </li>
+
         {% endif %}
         </ul>
 
         <ul class="navbar-nav ms-auto">
         {% if user.is_authenticated %}
             <li class="nav-item"><span class="nav-link text-light"><i class="fa-solid fa-circle-user me-1"></i>{{ user.username }}</span></li>
-            {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Laboratorio' %}
+            {% if user.rol.nombre == 'Administrador' or user.rol.nombre == 'Laboratorista' %}
             <li class="nav-item">
                 <a class="nav-link {% if 'cambiar-contrasena-admin' in request.path %}active{% endif %}" href="/usuarios/cambiar-contrasena-admin/">
                     <i class="fa-solid fa-key me-1"></i>Contraseña admin

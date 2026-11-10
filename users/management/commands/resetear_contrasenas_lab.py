@@ -8,7 +8,7 @@ laboratorista.
 
 SOLO PARA DESARROLLO/DEMO — no correr esto contra una base de datos de
 producción real: una contraseña compartida y predecible ('123456') para
-varias cuentas con permisos reales (rol='Laboratorio', pueden aprobar/
+varias cuentas con permisos reales (rol='Laboratorista', pueden aprobar/
 cancelar reservas, editar insumos, crear préstamos de su laboratorio) es
 justo lo que un atacante probaría primero. CREDENCIALES_LAB.txt queda
 gitignoreado (ver .gitignore) para que nunca se commitee, pero sigue siendo

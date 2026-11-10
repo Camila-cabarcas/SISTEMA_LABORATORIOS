@@ -1,6 +1,6 @@
 """
 views.py — vetos
-Gestión de vetos para Administrador y Laboratorio: listar los vigentes,
+Gestión de vetos para Administrador y Laboratorista (el Monitor no entra): listar los vigentes,
 registrar manualmente un "no canceló", y levantar un veto (según las reglas
 de Veto.puede_remover).
 """
@@ -19,7 +19,7 @@ from .services import RegistrarVetoService
 logger = logging.getLogger(__name__)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def lista_vetos(request):
     estado = request.GET.get('estado', Veto.ACTIVO)
     tipo = request.GET.get('tipo', '')
@@ -49,7 +49,7 @@ def lista_vetos(request):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def crear_veto(request):
     """Registro manual de un veto por "no canceló y dejó pasar el préstamo"
     (infracción A). El castigo (1 día, o 7 por reincidencia) lo calcula
@@ -85,17 +85,12 @@ def crear_veto(request):
     return render(request, 'vetos/crear.html', {'form': form, 'reserva': reserva})
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def remover_veto(request, id):
     veto = get_object_or_404(Veto, id=id)
 
     if not veto.puede_remover(request.user):
-        messages.error(
-            request,
-            'No tienes permiso para levantar este veto. Los vetos por daño o '
-            'falta de insumo solo los puede levantar un Administrador tras '
-            'verificar la reposición.',
-        )
+        messages.error(request, veto.motivo_no_removible(request.user))
         return redirect('vetos:lista')
 
     if request.method == 'POST':

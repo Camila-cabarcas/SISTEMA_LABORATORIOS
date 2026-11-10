@@ -21,7 +21,7 @@ def catalogos(db):
     Crea las filas de catálogo (Rol/Estado/TipoMovimiento) que el código de
     modelos, vistas y señales asume que ya existen en la base de datos.
     """
-    for nombre in ['Administrador', 'Laboratorio', 'Estudiante', 'Docente']:
+    for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante', 'Docente']:
         Rol.objects.get_or_create(nombre=nombre)
     for nombre in ['Pendiente', 'Aprobada', 'Cancelada', 'Expirada']:
         EstadoReserva.objects.get_or_create(nombre=nombre)
@@ -55,9 +55,9 @@ def usuario_estudiante(catalogos):
 
 @pytest.fixture
 def usuario_laboratorista(laboratorio, catalogos):
-    """Usuario rol='Laboratorio' asignado como encargado de `laboratorio`
-    (ver Laboratorio.encargados / laboratorio.models.es_laboratorista_del_laboratorio)."""
-    rol = Rol.objects.get(nombre='Laboratorio')
+    """Usuario rol='Laboratorista' asignado a `laboratorio` (Laboratorio.laboratoristas)
+    (ver Laboratorio.laboratoristas / laboratorio.models.es_laboratorista_del_laboratorio)."""
+    rol = Rol.objects.get(nombre='Laboratorista')
     usuario = Usuario.objects.create_user(
         username='laboratorista_test',
         password='clave12345',
@@ -68,7 +68,20 @@ def usuario_laboratorista(laboratorio, catalogos):
         # mismo test.
         codigo='LAB_TEST_001',
     )
-    laboratorio.encargados.add(usuario)
+    laboratorio.laboratoristas.add(usuario)
+    return usuario
+
+
+@pytest.fixture
+def usuario_monitor(laboratorio, catalogos):
+    """Usuario rol='Monitor' asignado a `laboratorio` (Laboratorio.monitores)."""
+    usuario = Usuario.objects.create_user(
+        username='monitor_test',
+        password='clave12345',
+        rol=Rol.objects.get(nombre='Monitor'),
+        codigo='MON_TEST_001',
+    )
+    laboratorio.monitores.add(usuario)
     return usuario
 
 

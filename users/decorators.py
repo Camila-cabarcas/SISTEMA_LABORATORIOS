@@ -10,14 +10,13 @@ import logging
 from django.shortcuts import redirect, render
 from functools import wraps
 
+from users.roles import ROLES_GESTION
+
 logger_acceso_admin = logging.getLogger('acceso_admin')
 
-# Roles reales del sistema (ver seed_e2e.py / users/models.py Rol) que
-# pueden ejecutar acciones críticas. 'Encargado' no es un Rol propio en
-# este sistema — el encargado de un laboratorio es un Usuario con
-# rol='Laboratorio' (ver laboratorio.models.Laboratorio.encargados) —, así
-# que "admin o encargado" se traduce aquí a estos dos nombres reales.
-ROLES_ACCION_CRITICA = ('Administrador', 'Laboratorio')
+# Roles que pueden ejecutar acciones críticas (las que piden contraseña
+# admin): Administrador y Laboratorista. El Monitor no.
+ROLES_ACCION_CRITICA = ROLES_GESTION
 
 
 def rol_requerido(*roles):

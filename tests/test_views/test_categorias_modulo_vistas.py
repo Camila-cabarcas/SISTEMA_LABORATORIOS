@@ -319,7 +319,7 @@ class TestGestionCategorias:
     def test_link_en_el_menu_del_administrador(self, cliente_autenticado):
         assert 'href="/laboratorio/categorias/"' in cliente_autenticado.get(URL_LISTA).content.decode()
 
-    @pytest.mark.parametrize('rol', ['Laboratorio', 'Docente', 'Estudiante'])
+    @pytest.mark.parametrize('rol', ['Laboratorista', 'Docente', 'Estudiante'])
     @pytest.mark.parametrize('metodo, url_fmt', [
         ('get', '/laboratorio/categorias/'),
         ('get', '/laboratorio/categorias/crear/'),

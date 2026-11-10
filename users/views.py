@@ -1,7 +1,7 @@
 """
 views.py — users
 Vistas para listar, crear, editar y desactivar usuarios del sistema (solo Administrador),
-y gestión completa de profesores (Administrador o Encargado).
+y gestión completa de profesores (Administrador o Laboratorista).
 """
 import logging
 
@@ -116,7 +116,7 @@ def sin_permiso(request):
     return render(request, 'users/sin_permiso.html')
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def cambiar_contrasena_admin(request):
     """
     Permite crear o cambiar la contraseña admin (distinta de la de login).
@@ -147,7 +147,7 @@ def cambiar_contrasena_admin(request):
 
 # ── Gestión de profesores ────────────────────────────────────────────────────
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def lista_profesores(request):
     q = request.GET.get('q', '').strip()
     profesores = Usuario.objects.filter(rol__nombre='Docente').order_by('last_name', 'first_name')
@@ -164,7 +164,7 @@ def lista_profesores(request):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def crear_profesor(request):
     import secrets
     import string
@@ -199,7 +199,7 @@ def crear_profesor(request):
     return render(request, 'profesores/crear_profesor.html', {'form': form, 'programas': programas})
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def detalle_profesor(request, id):
     from solicitudes.models import Curso
     profesor = get_object_or_404(Usuario, id=id, rol__nombre='Docente')
@@ -210,7 +210,7 @@ def detalle_profesor(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def editar_profesor(request, id):
     profesor = get_object_or_404(Usuario, id=id, rol__nombre='Docente')
     if request.method == 'POST':

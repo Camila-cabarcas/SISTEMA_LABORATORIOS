@@ -24,7 +24,7 @@ class EliminarItemInventarioTests(TestCase):
 
     def setUp(self):
         rol_admin = Rol.objects.get_or_create(nombre='Administrador')[0]
-        rol_lab = Rol.objects.get_or_create(nombre='Laboratorio')[0]
+        rol_lab = Rol.objects.get_or_create(nombre='Laboratorista')[0]
         rol_docente = Rol.objects.get_or_create(nombre='Docente')[0]
 
         self.admin = Usuario.objects.create_user(
@@ -104,7 +104,7 @@ class EliminarItemInventarioTests(TestCase):
     def _asignar_item_a_lab_del_laboratorista(self):
         from laboratorio.models import Laboratorio
         lab_propio = Laboratorio.objects.create(nombre='Lab Propio', ubicacion='Bloque 1')
-        lab_propio.encargados.add(self.laboratorista)
+        lab_propio.laboratoristas.add(self.laboratorista)
         self.item.laboratorio = lab_propio
         self.item.save()
 

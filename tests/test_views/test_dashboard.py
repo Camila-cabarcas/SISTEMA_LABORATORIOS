@@ -111,7 +111,7 @@ class TestLaboratorio:
         assert b'dash-lab' not in resp.content  # sin dropdown de filtro
 
     def test_sin_lab_asignado(self, client, usuario_laboratorista, datos):
-        datos['quimica'].encargados.clear()
+        datos['quimica'].laboratoristas.clear()
         client.force_login(usuario_laboratorista)
         resp = client.get(URL)
         assert resp.status_code == 200

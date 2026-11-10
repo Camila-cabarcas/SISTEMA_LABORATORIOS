@@ -12,7 +12,14 @@ from django.db.models import Count, Q
 from django.utils.decorators import method_decorator
 from django.views import View
 from users.decorators import rol_requerido, requiere_contrasena_admin
-from users.helpers import verificar_acceso_laboratorio
+from users.helpers import (
+    es_administrador,
+    laboratorios_visibles,
+    puede_gestionar_inventario,
+    puede_importar_inventario,
+    tiene_acceso_laboratorio,
+    verificar_acceso_laboratorio,
+)
 
 logger_acceso_admin = logging.getLogger('acceso_admin')
 logger_importacion = logging.getLogger(__name__)
@@ -65,10 +72,11 @@ def obtener_alertas_stock():
 
 
 def _contexto_sidebar(request, seccion):
-    from users.helpers import es_administrador
     return {
         'seccion_activa': seccion,
         'es_admin_inventario': es_administrador(request.user),
+        'puede_importar_inventario': puede_importar_inventario(request.user),
+        'puede_gestionar_inventario': puede_gestionar_inventario(request.user),
         'alertas_stock': obtener_alertas_stock(),
         'total_insumos': Insumo.objects.count(),
         'total_items': ItemInventario.activos.count(),
@@ -171,8 +179,12 @@ def editar_insumo(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def items_inventario(request):
+
+    # El Monitor solo consulta: no registra ítems.
+    if request.method == 'POST' and not puede_gestionar_inventario(request.user):
+        return redirect('sin_permiso')
 
     if request.method == 'POST':
 
@@ -242,8 +254,12 @@ def items_inventario(request):
     return render(request, 'inventario/items.html', contexto)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def movimientos_inventario(request):
+
+    # El Monitor solo consulta: no registra movimientos.
+    if request.method == 'POST' and not puede_gestionar_inventario(request.user):
+        return redirect('sin_permiso')
 
     if request.method == 'POST':
 
@@ -303,7 +319,7 @@ def movimientos_inventario(request):
     return render(request, 'inventario/movimientos.html', contexto)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def editar_item(request, id):
 
     item = ItemInventario.objects.get(id=id)
@@ -333,7 +349,7 @@ def editar_item(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def historial_item(request, id):
     # .objects (no .activos): un ítem eliminado (soft-delete) debe seguir
     # siendo consultable acá — ese es justamente el punto de no borrarlo de
@@ -379,8 +395,9 @@ def eliminar_item_inventario(request, id):
     """
     item = get_object_or_404(ItemInventario, id=id)
 
-    # Administrador pasa siempre; rol Laboratorio solo si es encargado del
-    # laboratorio del ítem (un ítem sin laboratorio se deniega).
+    # Administrador pasa siempre; Laboratorista solo si el ítem es de uno de
+    # sus laboratorios (un ítem sin laboratorio se deniega). El Monitor ni
+    # llega acá: requiere_contrasena_admin no lo deja pasar.
     try:
         verificar_acceso_laboratorio(request.user, item.laboratorio)
     except PermissionDenied:
@@ -424,6 +441,14 @@ URL_IMPORTAR = '/inventario/importar/'
 PASOS_IMPORTACION = [(1, 'Subir archivo'), (2, 'Mapear columnas'), (3, 'Validar'), (4, 'Guardar')]
 
 
+def _labs_importables(usuario):
+    """None = todos (Administrador); si no, los laboratorios del usuario."""
+    try:
+        return laboratorios_visibles(usuario)
+    except PermissionDenied:
+        return []
+
+
 def _contexto_importar(request, paso):
     contexto = _contexto_sidebar(request, 'importar')
     contexto.update({'paso': paso, 'pasos_importacion': PASOS_IMPORTACION})
@@ -440,14 +465,14 @@ def _datos_importacion(request):
         messages.warning(request, 'Primero sube un archivo para importar.')
         return None, None
     laboratorio = Laboratorio.objects.filter(id=datos.get('laboratorio_id'), activo=True).first()
-    if laboratorio is None:
+    if laboratorio is None or not tiene_acceso_laboratorio(request.user, laboratorio):
         request.session.pop(SESION_IMPORTACION, None)
         messages.error(request, 'El laboratorio elegido ya no es válido. Vuelve a subir el archivo.')
         return None, None
     return datos, laboratorio
 
 
-@method_decorator(rol_requerido('Administrador'), name='dispatch')
+@method_decorator(rol_requerido('Administrador', 'Laboratorista'), name='dispatch')
 class ImportarInventarioView(View):
     """Paso 1: sube un Excel/CSV/PDF + laboratorio destino y muestra la
     vista previa (primeras filas + columnas detectadas). Guarda la tabla en
@@ -473,23 +498,31 @@ class ImportarInventarioView(View):
         from laboratorio.models import Laboratorio
         from .services.importador import ImportadorInventario
 
+        labs = _labs_importables(request.user)
         datos = request.session.get(SESION_IMPORTACION)
         laboratorio = None
         if datos:
             laboratorio = Laboratorio.objects.filter(id=datos.get('laboratorio_id'), activo=True).first()
-            if laboratorio is None:
+            if laboratorio is None or not tiene_acceso_laboratorio(request.user, laboratorio):
+                laboratorio = None
                 request.session.pop(SESION_IMPORTACION, None)
         if laboratorio is None:
-            return self._render(request, ImportarArchivoForm())
+            return self._render(request, ImportarArchivoForm(laboratorios=labs))
 
         preview = ImportadorInventario.desde_sesion(datos).preview()
         preview['laboratorio'] = laboratorio
-        return self._render(request, ImportarArchivoForm(initial={'laboratorio': laboratorio}), preview=preview)
+        return self._render(
+            request,
+            ImportarArchivoForm(initial={'laboratorio': laboratorio}, laboratorios=labs),
+            preview=preview,
+        )
 
     def post(self, request):
         from .services.importador import ImportacionError, ImportadorInventario
 
-        form = ImportarArchivoForm(request.POST, request.FILES)
+        form = ImportarArchivoForm(
+            request.POST, request.FILES, laboratorios=_labs_importables(request.user),
+        )
         if not form.is_valid():
             return self._render(request, form)
 
@@ -514,7 +547,7 @@ class ImportarInventarioView(View):
         return self._render(request, form, preview=preview)
 
 
-@method_decorator(rol_requerido('Administrador'), name='dispatch')
+@method_decorator(rol_requerido('Administrador', 'Laboratorista'), name='dispatch')
 class MapearView(View):
     """Paso 2: un desplegable por columna para asignarle un campo del
     sistema (o ignorarla). Parte del mapeo detectado automáticamente."""
@@ -570,7 +603,7 @@ class MapearView(View):
         return redirect(f'{URL_IMPORTAR}validar/')
 
 
-@method_decorator(rol_requerido('Administrador'), name='dispatch')
+@method_decorator(rol_requerido('Administrador', 'Laboratorista'), name='dispatch')
 class ValidarView(View):
     """Paso 3: simula la importación (sin escribir) y muestra qué se
     creará, qué se salta por duplicado y los errores por fila."""
@@ -586,7 +619,9 @@ class ValidarView(View):
         if not datos.get('mapeo_confirmado'):
             return redirect(f'{URL_IMPORTAR}mapear/')
 
-        resultado = ImportadorInventario.desde_sesion(datos).validar(datos['mapeo'], laboratorio)
+        resultado = ImportadorInventario.desde_sesion(datos).validar(
+            datos['mapeo'], laboratorio, _labs_importables(request.user),
+        )
         contexto = _contexto_importar(request, 3)
         contexto.update({
             'datos': datos,
@@ -596,7 +631,7 @@ class ValidarView(View):
         return render(request, self.template_name, contexto)
 
 
-@method_decorator(rol_requerido('Administrador'), name='dispatch')
+@method_decorator(rol_requerido('Administrador', 'Laboratorista'), name='dispatch')
 class ConfirmarView(View):
     """Paso 4: POST guarda en la BD (revalidando) y redirige a GET, que
     muestra el reporte final — así recargar la página no reimporta."""
@@ -622,7 +657,9 @@ class ConfirmarView(View):
 
         importador = ImportadorInventario.desde_sesion(datos)
         try:
-            resultado = importador.guardar(datos['mapeo'], laboratorio, request.user)
+            resultado = importador.guardar(
+                datos['mapeo'], laboratorio, request.user, _labs_importables(request.user),
+            )
         except Exception:
             logger_importacion.exception(
                 'ConfirmarView | error guardando la importación de %s', importador.nombre,
@@ -646,7 +683,7 @@ class ConfirmarView(View):
         return redirect(f'{URL_IMPORTAR}confirmar/')
 
 
-@method_decorator(rol_requerido('Administrador'), name='dispatch')
+@method_decorator(rol_requerido('Administrador', 'Laboratorista'), name='dispatch')
 class CancelarImportacionView(View):
     """Cancela el paso actual y deja al usuario en el anterior. Solo POST
     — descarta datos de la sesión. El campo `paso` dice desde dónde:

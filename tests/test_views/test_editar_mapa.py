@@ -45,10 +45,10 @@ def test_anonimo_redirige_al_login(client, laboratorio):
     assert response.url.startswith('/login/')
 
 
-@pytest.mark.parametrize('rol', ['Laboratorio', 'Docente', 'Estudiante'])
+@pytest.mark.parametrize('rol', ['Laboratorista', 'Docente', 'Estudiante'])
 def test_otros_roles_reciben_403(client, catalogos, laboratorio, rol):
     usuario = _usuario(rol, f'user_{rol.lower()}')
-    laboratorio.encargados.add(usuario)  # ni siendo encargado del lab
+    laboratorio.laboratoristas.add(usuario)  # ni siendo encargado del lab
     client.force_login(usuario)
 
     assert client.get(_url(laboratorio)).status_code == 403
@@ -56,7 +56,7 @@ def test_otros_roles_reciben_403(client, catalogos, laboratorio, rol):
 
 def test_is_staff_sin_rol_administrador_recibe_403(client, catalogos, laboratorio):
     # El rol manda, no el flag de Django (ver users/helpers.py).
-    client.force_login(_usuario('Laboratorio', 'staff_lab', is_staff=True))
+    client.force_login(_usuario('Laboratorista', 'staff_lab', is_staff=True))
 
     assert client.get(_url(laboratorio)).status_code == 403
 
@@ -232,10 +232,10 @@ def test_get_no_permitido_405(cliente_autenticado, laboratorio):
     assert cliente_autenticado.get(_url_guardar(laboratorio)).status_code == 405
 
 
-@pytest.mark.parametrize('rol', ['Laboratorio', 'Docente', 'Estudiante'])
+@pytest.mark.parametrize('rol', ['Laboratorista', 'Docente', 'Estudiante'])
 def test_guardar_otros_roles_403_y_no_guarda(client, catalogos, laboratorio, modulos, rol):
     usuario = _usuario(rol, f'user_{rol.lower()}')
-    laboratorio.encargados.add(usuario)
+    laboratorio.laboratoristas.add(usuario)
     client.force_login(usuario)
     a, _ = modulos
 
@@ -292,8 +292,8 @@ def test_mapa_muestra_boton_editar_al_administrador(cliente_autenticado, laborat
 def test_mapa_no_muestra_boton_editar_al_encargado(client, catalogos, laboratorio):
     # El rol Laboratorio ve el mapa (y es_admin=True ahí), pero el editor le
     # daría 403: el botón no debe aparecer.
-    encargado = _usuario('Laboratorio', 'encargado_mapa')
-    laboratorio.encargados.add(encargado)
+    encargado = _usuario('Laboratorista', 'encargado_mapa')
+    laboratorio.laboratoristas.add(encargado)
     client.force_login(encargado)
 
     response = client.get(f'/laboratorio/{laboratorio.id}/mapa/')

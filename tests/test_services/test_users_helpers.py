@@ -68,7 +68,7 @@ class TestLaboratoriosVisibles:
 
     def test_laboratorista_con_dos_labs_ve_ambos(self, usuario_laboratorista, laboratorio, catalogos):
         segundo_laboratorio = Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='Bloque 9')
-        segundo_laboratorio.encargados.add(usuario_laboratorista)
+        segundo_laboratorio.laboratoristas.add(usuario_laboratorista)
 
         visibles = laboratorios_visibles(usuario_laboratorista)
 
@@ -76,7 +76,7 @@ class TestLaboratoriosVisibles:
 
     def test_laboratorista_sin_labs_lanza_permission_denied(self, catalogos):
         usuario = Usuario.objects.create_user(
-            username='lab_sin_asignar', password='x', rol=Rol.objects.get(nombre='Laboratorio'),
+            username='lab_sin_asignar', password='x', rol=Rol.objects.get(nombre='Laboratorista'),
         )
 
         with pytest.raises(PermissionDenied):

@@ -16,12 +16,23 @@ class Laboratorio(models.Model):
     nombre = models.CharField(max_length=100)
     ubicacion = models.CharField(max_length=200)
 
-    encargados = models.ManyToManyField(
+    # Usuarios con cuenta que operan este laboratorio. Los asigna solo el
+    # Administrador. Distinto del modelo Laboratorista de más abajo (persona
+    # sin cuenta).
+    laboratoristas = models.ManyToManyField(
         'users.Usuario',
         blank=True,
-        limit_choices_to={'rol__nombre': 'Encargado'},
+        limit_choices_to={'rol__nombre': 'Laboratorista'},
         related_name='laboratorios_asignados',
-        verbose_name='Encargados',
+        verbose_name='Laboratoristas',
+    )
+
+    monitores = models.ManyToManyField(
+        'users.Usuario',
+        blank=True,
+        limit_choices_to={'rol__nombre': 'Monitor'},
+        related_name='laboratorios_monitoreados',
+        verbose_name='Monitores',
     )
 
     programa = models.CharField(max_length=100, blank=True)
@@ -32,18 +43,26 @@ class Laboratorio(models.Model):
         return self.nombre
 
 
-def es_laboratorista_del_laboratorio(usuario, laboratorio):
-    """True si `usuario` es el Usuario (rol='Laboratorio') asignado como
-    encargado de `laboratorio` — mismo criterio que
-    laboratorio.views._check_lab_access, expuesto acá para reutilizar desde
-    otras apps (p. ej. reservas) sin depender de esa vista. Un Administrador
-    NO cuenta como laboratorista de un laboratorio puntual: quien necesite
-    que Administrador también pase debe chequearlo aparte."""
+def _asignado_con_rol(usuario, laboratorio, rol, relacion):
     if not laboratorio or not usuario or not usuario.is_authenticated:
         return False
-    if not usuario.rol or usuario.rol.nombre != 'Laboratorio':
+    if not usuario.rol or usuario.rol.nombre != rol:
         return False
-    return laboratorio.encargados.filter(id=usuario.id).exists()
+    return getattr(laboratorio, relacion).filter(id=usuario.id).exists()
+
+
+def es_laboratorista_del_laboratorio(usuario, laboratorio):
+    """True si `usuario` tiene rol Laboratorista y está en
+    `laboratorio.laboratoristas`. Un Administrador NO cuenta como
+    laboratorista de un laboratorio puntual: quien necesite que el
+    Administrador también pase debe chequearlo aparte (ver
+    users.helpers.verificar_acceso_laboratorio)."""
+    return _asignado_con_rol(usuario, laboratorio, 'Laboratorista', 'laboratoristas')
+
+
+def es_monitor_del_laboratorio(usuario, laboratorio):
+    """True si `usuario` tiene rol Monitor y está en `laboratorio.monitores`."""
+    return _asignado_con_rol(usuario, laboratorio, 'Monitor', 'monitores')
 
 
 class HorarioLaboratorio(models.Model):

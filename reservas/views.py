@@ -16,7 +16,15 @@ from .services.editar_insumos_service import EditarInsumosReservaService
 from .services.cancelar_reserva_service import CancelarReservaService
 from .services.estado_prestamo_service import ObtenerEstadoPrestamoService
 from solicitudes.services.mis_reservas_service import MisReservasService
-from users.helpers import laboratorio_de_reserva, laboratorios_visibles, verificar_acceso_laboratorio
+from users.helpers import (
+    es_monitor,
+    filtrar_reservas_visibles,
+    laboratorio_de_reserva,
+    laboratorios_visibles,
+    puede_aprobar_reservas,
+    verificar_acceso_laboratorio,
+    verificar_acceso_reserva,
+)
 from users.validators import validar_correo_institucional
 from laboratorio.models import HorarioLaboratorio
 from django.http import JsonResponse
@@ -26,7 +34,7 @@ from datetime import datetime, timedelta, date
 logger = logging.getLogger(__name__)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def lista_reservas(request):
     from django.utils import timezone
     from django.db.models import Q
@@ -62,16 +70,15 @@ def lista_reservas(request):
     listas_prestamo = request.GET.get('listas_prestamo', '')
 
     # labs_visibles es None para Administrador (sin restricción, ve todo);
-    # para un usuario Laboratorio es la lista de labs de los que es
-    # encargado — restringe tanto el queryset como el <select> de labs, así
-    # que ni siquiera puede pedir por querystring (?lab=<otro id>) datos de
-    # un laboratorio ajeno: el filtro de abajo ya corre sobre un queryset
-    # que nunca contuvo esas reservas para empezar.
+    # para Laboratorista o Monitor es la lista de sus laboratorios —
+    # restringe tanto el queryset como el <select> de labs, así que ni
+    # siquiera puede pedir por querystring (?lab=<otro id>) datos de un
+    # laboratorio ajeno. El Monitor además solo ve reservas de estudiantes.
     laboratorios = Laboratorio.objects.all() if labs_visibles is None else labs_visibles
 
-    reservas = Reserva.objects.all().order_by('-fecha_reserva')
-    if labs_visibles is not None:
-        reservas = reservas.filter(solicitud__laboratorio__in=labs_visibles).distinct()
+    reservas = filtrar_reservas_visibles(
+        request.user, Reserva.objects.all().order_by('-fecha_reserva'),
+    )
 
     if estado_filtro:
         reservas = reservas.filter(estado__nombre=estado_filtro)
@@ -130,7 +137,7 @@ def lista_reservas(request):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def crear_reserva(request):
     from solicitudes.models import SolicitudReserva, Curso
     from laboratorio.models import Laboratorio
@@ -138,13 +145,23 @@ def crear_reserva(request):
     from django.db.models import Q
 
     from users.models import ProgramaAcademico
-    laboratorios = Laboratorio.objects.all()
+
+    # Laboratorista y Monitor solo crean reservas en sus laboratorios; el
+    # Monitor, además, solo de estudiantes.
+    try:
+        labs_visibles = laboratorios_visibles(request.user)
+    except PermissionDenied:
+        return render(request, 'error_sin_laboratorio.html', status=403)
+    laboratorios = Laboratorio.objects.all() if labs_visibles is None else labs_visibles
+    solo_estudiantes = es_monitor(request.user)
     programas = ProgramaAcademico.objects.filter(activo=True)
 
     if request.method == 'POST':
         logger.info(f"crear_reserva | iniciando | usuario={request.user.email}")
 
         tipo          = request.POST.get('tipo_solicitante', 'estudiante')
+        if solo_estudiantes:
+            tipo = 'estudiante'
         nombre        = request.POST.get('nombre', '').strip()
         cedula        = request.POST.get('cedula', '').strip()
         programa      = request.POST.get('programa', '').strip()
@@ -206,12 +223,14 @@ def crear_reserva(request):
             laboratorio = Laboratorio.objects.filter(id=lab_id).first()
             if not laboratorio:
                 errors.append('Laboratorio no válido.')
+            elif labs_visibles is not None and laboratorio not in labs_visibles:
+                errors.append('No tienes acceso a ese laboratorio.')
 
             curso = None
             usuario = None
             if tipo == 'profesor' and profesor_invitado:
                 # Profesor invitado/externo: se usan nombre/cédula/email tal
-                # cual los dio el encargado, sin buscarlo ni vincularlo a
+                # cual los dio quien crea la reserva, sin buscarlo ni vincularlo a
                 # ningún Usuario ni Curso registrado.
                 pass
             else:
@@ -294,21 +313,23 @@ def crear_reserva(request):
             'laboratorios': laboratorios,
             'programas': programas,
             'post_data': request.POST,
+            'solo_estudiantes': solo_estudiantes,
         })
 
     return render(request, 'reservas/crear.html', {
         'laboratorios': laboratorios,
         'programas': programas,
+        'solo_estudiantes': solo_estudiantes,
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def detalle_reserva(request, id):
     from django.utils import timezone
 
     reserva = get_object_or_404(Reserva, id=id)
     try:
-        verificar_acceso_laboratorio(request.user, laboratorio_de_reserva(reserva))
+        verificar_acceso_reserva(request.user, reserva)
     except PermissionDenied:
         return render(request, 'error_sin_acceso.html', status=403)
 
@@ -354,6 +375,7 @@ def detalle_reserva(request, id):
         'fecha_vencida': ahora > reserva.fecha_devolucion if reserva.fecha_devolucion else False,
         'puede_crear_prestamo': puede_crear_prestamo,
         'puede_editar_insumos': puede_editar_insumos,
+        'puede_aprobar_reservas': puede_aprobar_reservas(request.user),
         'email_solicitante': email_solicitante,
         'observaciones_solicitante': observaciones_solicitante,
     })
@@ -443,14 +465,14 @@ def cancelar_reserva(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def cancelar_reserva_admin(request, id):
     """Cancelación administrativa: sin las restricciones de
     cancelar_reserva (estado, préstamo, 2 horas de anticipación) — por eso
     exige un motivo, que queda en el log y en el email al solicitante."""
     reserva = get_object_or_404(Reserva, id=id)
     try:
-        verificar_acceso_laboratorio(request.user, laboratorio_de_reserva(reserva))
+        verificar_acceso_reserva(request.user, reserva)
     except PermissionDenied:
         return render(request, 'error_sin_acceso.html', status=403)
 
@@ -469,7 +491,7 @@ def cancelar_reserva_admin(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def aprobar_reserva(request, id):
     reserva = get_object_or_404(Reserva, id=id)
     try:
@@ -488,7 +510,7 @@ def aprobar_reserva(request, id):
     return render(request, 'reservas/aprobar.html', {'reserva': reserva})
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def exportar_reservas_excel(request):
     if request.method != 'POST':
         return redirect('lista_reservas')
@@ -503,6 +525,10 @@ def exportar_reservas_excel(request):
     reservas = Reserva.objects.select_related('estado').prefetch_related(
         'solicitud', 'solicitud__laboratorio', 'solicitud__modulos_asignados__division', 'solicitud__modulos_asignados__categoria'
     ).order_by('-fecha_reserva')
+    try:
+        reservas = filtrar_reservas_visibles(request.user, reservas)
+    except PermissionDenied:
+        return render(request, 'error_sin_laboratorio.html', status=403)
 
     estado_filtro = request.POST.get('estado', '')
     fecha_inicio  = request.POST.get('fecha_inicio', '')
@@ -530,7 +556,7 @@ def exportar_reservas_excel(request):
     )
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def reservas_para_prestamo(request):
     ahora = datetime.now()
     reservas = Reserva.objects.filter(
@@ -539,11 +565,15 @@ def reservas_para_prestamo(request):
         hora_limite_retiro__gt=ahora,
         fecha_reserva__lte=ahora
     ).order_by('-fecha_creacion')
+    try:
+        reservas = filtrar_reservas_visibles(request.user, reservas)
+    except PermissionDenied:
+        return render(request, 'error_sin_laboratorio.html', status=403)
 
     return render(request, 'reservas/para_prestamo.html', {'reservas': reservas})
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def horarios_disponibles(request):
     slots = []
     hoy   = datetime.now()
@@ -577,11 +607,11 @@ def horarios_disponibles(request):
     return JsonResponse(slots, safe=False)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def eliminar_insumo_reserva(request, reserva_id, insumo_id):
     reserva = get_object_or_404(Reserva, id=reserva_id)
     try:
-        verificar_acceso_laboratorio(request.user, laboratorio_de_reserva(reserva))
+        verificar_acceso_reserva(request.user, reserva)
     except PermissionDenied:
         return render(request, 'error_sin_acceso.html', status=403)
 
@@ -601,10 +631,10 @@ def eliminar_insumo_reserva(request, reserva_id, insumo_id):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def editar_insumos_reserva(request, id):
-    """Permite a un laboratorista (solo del laboratorio de esta reserva, o a
-    un Administrador) agregar/quitar/cambiar la cantidad de los insumos de
+    """Permite a un Laboratorista o Monitor (solo del laboratorio de esta
+    reserva; el Monitor solo si es de un estudiante) o a un Administrador agregar/quitar/cambiar la cantidad de los insumos de
     una Reserva Aprobada mientras todavía no exista un Prestamo asociado —
     fecha/hora, laboratorio y módulos no se tocan acá. Ver
     EditarInsumosReservaService para las reglas de acceso y validación."""

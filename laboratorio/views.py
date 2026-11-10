@@ -13,7 +13,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from users.decorators import rol_requerido
-from users.helpers import es_administrador
+from users.helpers import es_administrador, tiene_acceso_laboratorio
 from users.models import Usuario
 from users.validators import validar_correo_institucional
 from .models import CategoriaModulo, Division, Laboratorio, EventoLaboratorio, Laboratorista, LaboratoristaLab, Modulo
@@ -30,13 +30,13 @@ from solicitudes.models import SolicitudReserva
 
 
 def _check_lab_access(request, laboratorio):
-    """403 si el Encargado no tiene este laboratorio asignado."""
-    if request.user.rol.nombre == 'Laboratorio':
-        if not laboratorio.encargados.filter(id=request.user.id).exists():
-            raise PermissionDenied
+    """403 si el usuario no es Administrador ni está asignado a este
+    laboratorio como Laboratorista o Monitor."""
+    if not tiene_acceso_laboratorio(request.user, laboratorio):
+        raise PermissionDenied
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def lista_laboratorios(request):
     if request.user.rol.nombre == 'Administrador':
         laboratorios = list(Laboratorio.objects.all())
@@ -85,10 +85,10 @@ def crear_laboratorio(request):
                 username=cuenta_username,
                 password=cuenta_password,
                 first_name=laboratorio.nombre,
-                rol=Rol.objects.get(nombre='Laboratorio'),
+                rol=Rol.objects.get(nombre='Laboratorista'),
                 codigo=cuenta_username,
             )
-            laboratorio.encargados.add(usuario_lab)
+            laboratorio.laboratoristas.add(usuario_lab)
             from django.contrib import messages
             messages.success(request, f"Laboratorio creado. Cuenta: {cuenta_username}")
             return redirect('detalle_laboratorio', id=laboratorio.id)
@@ -183,7 +183,7 @@ def _prestamos_del_laboratorio(laboratorio, estado=''):
     return prestamos.select_related('responsable', 'estado').order_by('-fecha_entrega', '-id')
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def detalle_laboratorio(request, id):
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
@@ -193,7 +193,7 @@ def detalle_laboratorio(request, id):
     if seccion_activa not in SECCIONES_DETALLE:
         seccion_activa = 'personal'
 
-    cuenta_lab          = laboratorio.encargados.filter(username__startswith='lab_').first()
+    cuenta_lab          = laboratorio.laboratoristas.filter(username__startswith='lab_').first()
     encargado_principal = LaboratoristaLab.objects.filter(
         laboratorio=laboratorio, tipo='encargado'
     ).select_related('laboratorista').first()
@@ -257,7 +257,7 @@ def detalle_laboratorio(request, id):
     return render(request, 'laboratorio/detalle.html', context)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def modal_items_insumo(request, lab_id, insumo_id):
     """JSON con los ítems activos de `insumo_id` en el laboratorio `lab_id`
     y su último movimiento; lo consume el modal de la pestaña Inventario."""
@@ -321,7 +321,7 @@ def eliminar_laboratorio(request, id):
     return render(request, 'laboratorio/eliminar.html', {'laboratorio': laboratorio})
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def reservas_laboratorio(request, id):
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
@@ -340,7 +340,7 @@ def reservas_laboratorio(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def prestamos_laboratorio(request, id):
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
@@ -359,7 +359,7 @@ def prestamos_laboratorio(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def disponibilidad_laboratorio(request, id):
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
@@ -367,7 +367,7 @@ def disponibilidad_laboratorio(request, id):
     return render(request, 'laboratorio/disponibilidad.html', {'laboratorio': laboratorio})
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def eventos_laboratorio(request, id):
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
@@ -387,7 +387,7 @@ def eventos_laboratorio(request, id):
     return JsonResponse(data, safe=False)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def crear_evento(request, id):
     laboratorio = get_object_or_404(Laboratorio, id=id)
     _check_lab_access(request, laboratorio)
@@ -411,7 +411,7 @@ def crear_evento(request, id):
     return JsonResponse({'status': 'error'}, status=400)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def eliminar_evento(request, id):
     evento = get_object_or_404(EventoLaboratorio, id=id)
     _check_lab_access(request, evento.laboratorio)
@@ -435,7 +435,7 @@ def _categorias_de(modulos):
     return sorted(categorias.values(), key=lambda c: c.nombre.casefold()), sin_categoria
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def mapa_laboratorio(request, id):
     from datetime import date, datetime, time, timedelta
     from laboratorio.models import HistorialModulo
@@ -646,9 +646,9 @@ def mapa_laboratorio(request, id):
         'modulos_data':       modulos_data,
         'fecha':              fecha.strftime('%Y-%m-%d'),
         'fecha_display':      fecha.strftime('%d/%m/%Y'),
-        'es_admin':           request.user.rol.nombre in ['Administrador', 'Laboratorio'],
+        'es_admin':           request.user.rol.nombre in ['Administrador', 'Laboratorista'],
         # Solo Administrador: mismo criterio que editar_mapa_laboratorio
-        # (es_admin de arriba también incluye al rol Laboratorio).
+        # (es_admin de arriba también incluye al rol Laboratorista).
         'puede_editar_mapa':  es_administrador(request.user),
         'horas_disponibles':  horas_disponibles,
         'hora_inicio_filtro': hora_inicio_str,
@@ -733,7 +733,7 @@ def guardar_mapa_laboratorio(request, lab_id):
     return JsonResponse({'status': 'ok', 'actualizados': len(modulos), 'divisiones': len(divisiones)})
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def toggle_modulo(request, lab_id, mod_id):
     from .models import Modulo, HistorialModulo
     laboratorio = get_object_or_404(Laboratorio, id=lab_id)
@@ -773,7 +773,7 @@ def toggle_modulo(request, lab_id, mod_id):
     return JsonResponse({'status': 'error'}, status=400)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def estado_modulos_api(request, id):
     from datetime import date, datetime, time
 
@@ -877,7 +877,8 @@ def _serializar_divisiones(laboratorio):
     return [{'id': d.id, 'nombre': d.nombre} for d in laboratorio.divisiones.all()]
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+# Monitor incluido: el formulario de crear reserva (/reservas/crear/) lo usa.
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def modulos_disponibles_api(request, id):
     from datetime import date, datetime
 
@@ -922,7 +923,7 @@ def modulos_disponibles_publica_api(request, id):
     })
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def historial_modulo(request, lab_id, mod_id):
     from .models import Modulo, HistorialModulo
     laboratorio = get_object_or_404(Laboratorio, id=lab_id)
@@ -939,7 +940,7 @@ def historial_modulo(request, lab_id, mod_id):
 @rol_requerido('Administrador')
 def gestionar_encargados(request, lab_id):
     laboratorio = get_object_or_404(Laboratorio, id=lab_id)
-    cuenta_lab = laboratorio.encargados.filter(username__startswith='lab_').first()
+    cuenta_lab = laboratorio.laboratoristas.filter(username__startswith='lab_').first()
 
     return render(request, 'laboratorio/gestionar_encargados.html', {
         'laboratorio': laboratorio,

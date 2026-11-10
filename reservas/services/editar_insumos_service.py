@@ -12,8 +12,8 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
 from inventario.models import Insumo
-from laboratorio.models import es_laboratorista_del_laboratorio
 from reservas.models import ReservaInsumo
+from users.helpers import verificar_acceso_reserva
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +30,14 @@ class EditarInsumosReservaService:
         """Lanza PermissionDenied si `usuario` no puede editar los insumos
         de `reserva` ahora mismo. Devuelve el Laboratorio de la reserva
         (o None) para que la vista no tenga que resolverlo de nuevo."""
-        es_admin = bool(usuario.rol and usuario.rol.nombre == 'Administrador')
         laboratorio = EditarInsumosReservaService._laboratorio_de(reserva)
 
-        if not es_admin:
-            if not es_laboratorista_del_laboratorio(usuario, laboratorio):
-                raise PermissionDenied('No eres laboratorista de este laboratorio.')
+        # Administrador siempre; Laboratorista o Monitor de este laboratorio
+        # (el Monitor, solo en reservas de estudiantes).
+        try:
+            verificar_acceso_reserva(usuario, reserva)
+        except PermissionDenied:
+            raise PermissionDenied('No tienes acceso a las reservas de este laboratorio.')
 
         if not reserva.estado or reserva.estado.nombre != 'Aprobada':
             raise PermissionDenied(

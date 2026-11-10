@@ -386,9 +386,9 @@ def test_modal_items_insumo_inexistente_404(cliente_autenticado, laboratorio):
 def test_modal_items_laboratorista_de_otro_lab_403(client, catalogos, laboratorio, otro_laboratorio, inventario):
     ajeno = Usuario.objects.create_user(
         username='lab_ajeno', password='clave12345',
-        rol=Rol.objects.get(nombre='Laboratorio'), codigo='LAB_AJENO_001',
+        rol=Rol.objects.get(nombre='Laboratorista'), codigo='LAB_AJENO_001',
     )
-    otro_laboratorio.encargados.add(ajeno)
+    otro_laboratorio.laboratoristas.add(ajeno)
     client.force_login(ajeno)
 
     response = client.get(f'/laboratorio/{laboratorio.id}/insumos/{inventario["multimetro"].id}/items/')

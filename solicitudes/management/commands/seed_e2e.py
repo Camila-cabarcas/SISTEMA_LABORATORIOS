@@ -29,7 +29,7 @@ class Command(BaseCommand):
         from prestamos.models import EstadoPrestamo
         from datetime import time
 
-        for nombre in ['Administrador', 'Laboratorio', 'Estudiante', 'Docente']:
+        for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante', 'Docente']:
             Rol.objects.get_or_create(nombre=nombre)
 
         for nombre in ['Pendiente', 'Aprobada', 'Cancelada', 'Expirada']:
@@ -44,7 +44,7 @@ class Command(BaseCommand):
         estado_activo_insumo, _ = EstadoInsumo.objects.get_or_create(nombre='Activo')
 
         rol_admin = Rol.objects.get(nombre='Administrador')
-        rol_lab = Rol.objects.get(nombre='Laboratorio')
+        rol_lab = Rol.objects.get(nombre='Laboratorista')
 
         # codigo es unique en Usuario: no se puede dejar en blanco, o choca
         # con cualquier otro usuario que también lo tenga vacío.

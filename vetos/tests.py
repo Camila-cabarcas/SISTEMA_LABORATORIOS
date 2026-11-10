@@ -23,7 +23,7 @@ from vetos.services import RegistrarVetoService, consultar_bloqueo, mensaje_bloq
 
 
 def _catalogos():
-    for nombre in ['Administrador', 'Laboratorio', 'Estudiante', 'Docente']:
+    for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante', 'Docente']:
         Rol.objects.get_or_create(nombre=nombre)
     for nombre in ['Pendiente', 'Aprobada', 'Cancelada', 'Expirada']:
         EstadoReserva.objects.get_or_create(nombre=nombre)
@@ -78,11 +78,39 @@ class VetoModelTests(TestCase):
             v.full_clean()
 
     def test_puede_remover_laboratorista(self):
-        lab = Usuario(username='lab', rol=Rol.objects.get(nombre='Laboratorio'))
-        self.assertTrue(Veto(tipo=Veto.NO_CANCELO).puede_remover(lab))
-        self.assertTrue(Veto(tipo=Veto.RETRASO).puede_remover(lab))
-        self.assertFalse(Veto(tipo=Veto.DANO).puede_remover(lab))
-        self.assertFalse(Veto(tipo=Veto.FALTA_INSUMO).puede_remover(lab))
+        """Laboratorista: DANO y FALTA_INSUMO solo de sus laboratorios;
+        NO_CANCELO y RETRASO nunca (vencen solos o los levanta el Admin)."""
+        propio = Laboratorio.objects.create(nombre='Lab Propio', ubicacion='B1')
+        ajeno = Laboratorio.objects.create(nombre='Lab Ajeno', ubicacion='B2')
+        lab = Usuario.objects.create_user(
+            username='lab', password='x', codigo='LABM',
+            rol=Rol.objects.get(nombre='Laboratorista'),
+        )
+        propio.laboratoristas.add(lab)
+
+        def reserva_en(laboratorio):
+            reserva = Reserva.objects.create(
+                fecha_reserva=datetime(2026, 8, 1, 8, 0),
+                fecha_devolucion=datetime(2026, 8, 1, 10, 0),
+                estado=EstadoReserva.objects.get(nombre='Aprobada'),
+            )
+            SolicitudReserva.objects.create(
+                tipo_solicitante='estudiante', cedula='111', laboratorio=laboratorio,
+                fecha_reserva=reserva.fecha_reserva, reserva=reserva,
+            )
+            return reserva
+
+        r_propia, r_ajena = reserva_en(propio), reserva_en(ajeno)
+        self.assertTrue(Veto(tipo=Veto.DANO, reserva=r_propia).puede_remover(lab))
+        self.assertTrue(Veto(tipo=Veto.FALTA_INSUMO, reserva=r_propia).puede_remover(lab))
+        self.assertFalse(Veto(tipo=Veto.DANO, reserva=r_ajena).puede_remover(lab))
+        self.assertFalse(Veto(tipo=Veto.NO_CANCELO, reserva=r_propia).puede_remover(lab))
+        self.assertFalse(Veto(tipo=Veto.RETRASO, reserva=r_propia).puede_remover(lab))
+
+    def test_monitor_no_puede_remover_ningun_veto(self):
+        monitor = Usuario(username='mon', rol=Rol.objects.get(nombre='Monitor'))
+        for tipo, _ in Veto.TIPO_CHOICES:
+            self.assertFalse(Veto(tipo=tipo).puede_remover(monitor))
 
     def test_puede_remover_administrador_cualquier_tipo(self):
         adm = Usuario(username='adm', rol=Rol.objects.get(nombre='Administrador'))
@@ -269,7 +297,7 @@ class VetoViewsTests(TestCase):
         )
         self.laboratorista = Usuario.objects.create_user(
             username='lab_v', password='clave12345',
-            rol=Rol.objects.get(nombre='Laboratorio'), codigo='LABV',
+            rol=Rol.objects.get(nombre='Laboratorista'), codigo='LABV',
         )
 
     def test_lista_vetos_muestra_vigentes(self):
@@ -296,15 +324,15 @@ class VetoViewsTests(TestCase):
         veto.refresh_from_db()
         self.assertEqual(veto.estado, Veto.ACTIVO)
 
-    def test_laboratorista_puede_remover_veto_de_retraso(self):
+    def test_laboratorista_no_puede_remover_veto_de_retraso(self):
+        """RETRASO vence solo; a mano solo lo levanta el Administrador."""
         veto = Veto.objects.create(cedula='111', tipo=Veto.RETRASO,
                                    fecha_fin=date.today() + timedelta(days=3))
         self.client.force_login(self.laboratorista)
         resp = self.client.post(f'/vetos/{veto.id}/remover/')
         self.assertEqual(resp.status_code, 302)
         veto.refresh_from_db()
-        self.assertEqual(veto.estado, Veto.RESUELTO)
-        self.assertEqual(veto.resuelto_por, self.laboratorista)
+        self.assertEqual(veto.estado, Veto.ACTIVO)
 
     def test_admin_puede_remover_veto_de_dano_como_pagado(self):
         veto = Veto.objects.create(cedula='111', tipo=Veto.DANO, fecha_fin=None)

@@ -304,10 +304,10 @@ class TestNotificarCancelacion:
     def test_estudiante_avisa_a_los_encargados(self, solicitud_valida, laboratorio, usuario_admin, catalogos):
         from users.models import Rol
 
-        usuario_admin.rol = Rol.objects.get(nombre='Laboratorio')
+        usuario_admin.rol = Rol.objects.get(nombre='Laboratorista')
         usuario_admin.email = 'lab@udea.edu.co'
         usuario_admin.save()
-        laboratorio.encargados.add(usuario_admin)
+        laboratorio.laboratoristas.add(usuario_admin)
 
         reserva = solicitud_valida.crear_reserva()
 

@@ -37,7 +37,7 @@ from users.models import ProgramaAcademico, Rol, Usuario
 
 
 def crear_catalogos():
-    for nombre in ['Administrador', 'Laboratorio', 'Estudiante', 'Docente']:
+    for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante', 'Docente']:
         Rol.objects.get_or_create(nombre=nombre)
     for nombre in ['Pendiente', 'Aprobada', 'Cancelada', 'Expirada']:
         EstadoReserva.objects.get_or_create(nombre=nombre)
@@ -683,7 +683,7 @@ class SolicitudReservaEstadoServiceTests(TestCase):
         )
         self.encargado = Usuario.objects.create_user(
             username='encargado_test', password='x', codigo='ENC001',
-            rol=Rol.objects.get(nombre='Laboratorio'),
+            rol=Rol.objects.get(nombre='Laboratorista'),
         )
 
     def _crear_solicitud_con_reserva(self, reserva_libre=False, estado_reserva='Pendiente'):

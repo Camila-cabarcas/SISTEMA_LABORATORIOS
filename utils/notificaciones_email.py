@@ -210,8 +210,8 @@ def notificar_cancelacion(reserva, cancelada_por, motivo='', async_=True):
     destinatario cambia según quién canceló:
 
     - cancelada_por='estudiante': el propio solicitante se autocanceló (ver
-      cancelar_propietario) — se avisa a TODOS los encargados
-      (Laboratorio.encargados) del laboratorio de la reserva, no al
+      cancelar_propietario) — se avisa a TODOS los laboratoristas
+      (Laboratorio.laboratoristas) del laboratorio de la reserva, no al
       solicitante (que ya sabe que canceló porque fue él quien lo hizo).
     - cancelada_por='laboratorista': cancelación administrativa (ver
       cancelar_admin) — se avisa al solicitante, con el motivo que dio quien
@@ -222,12 +222,12 @@ def notificar_cancelacion(reserva, cancelada_por, motivo='', async_=True):
     if cancelada_por == 'estudiante':
         laboratorio = solicitud.laboratorio if solicitud else None
         destinatarios = [
-            e for e in (laboratorio.encargados.values_list('email', flat=True) if laboratorio else [])
+            e for e in (laboratorio.laboratoristas.values_list('email', flat=True) if laboratorio else [])
             if e
         ]
         if not destinatarios:
             logger.info(
-                'notificar_cancelacion | sin encargados con email | reserva_id=%s | laboratorio_id=%s',
+                'notificar_cancelacion | sin laboratoristas con email | reserva_id=%s | laboratorio_id=%s',
                 reserva.id if reserva else None, laboratorio.id if laboratorio else None,
             )
             return

@@ -578,7 +578,7 @@ def test_lista_reservas_laboratorista_sin_lab_asignado_403(client, catalogos):
     from users.models import Rol, Usuario
 
     usuario = Usuario.objects.create_user(
-        username='lab_sin_asignar', password='x', rol=Rol.objects.get(nombre='Laboratorio'),
+        username='lab_sin_asignar', password='x', rol=Rol.objects.get(nombre='Laboratorista'),
     )
     client.force_login(usuario)
 

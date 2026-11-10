@@ -15,7 +15,7 @@ from .forms import PrestamoForm, CambiarEstadoPrestamoForm, PrestamoItemForm
 logger = logging.getLogger(__name__)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def lista_prestamos(request):
     from django.utils import timezone
     from django.core.paginator import Paginator
@@ -90,7 +90,7 @@ def lista_prestamos(request):
     )
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def exportar_prestamos_excel(request):
     if request.method != 'POST':
         return redirect('lista_prestamos')
@@ -132,7 +132,7 @@ def exportar_prestamos_excel(request):
     )
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def exportar_inspecciones_excel(request):
     if request.method != 'POST':
         return redirect('lista_prestamos')
@@ -163,7 +163,7 @@ def exportar_inspecciones_excel(request):
     )
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def crear_prestamo(request, reserva_id):
 
     from reservas.models import Reserva, ReservaInsumo
@@ -281,7 +281,7 @@ def crear_prestamo(request, reserva_id):
     )
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def detalle_prestamo(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
@@ -331,7 +331,7 @@ def detalle_prestamo(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista')
 def cambiar_estado_prestamo(request, id):
 
     from datetime import datetime
@@ -371,7 +371,7 @@ def cambiar_estado_prestamo(request, id):
         }
     )
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def iniciar_inspeccion(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
@@ -394,7 +394,7 @@ def iniciar_inspeccion(request, id):
     return redirect('detalle_prestamo', id=prestamo.pk)
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def inspeccionar_prestamo(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
@@ -441,7 +441,7 @@ def inspeccionar_prestamo(request, id):
     )
 
 
-@rol_requerido('Administrador', 'Laboratorio')
+@rol_requerido('Administrador', 'Laboratorista', 'Monitor')
 def marcar_devuelto(request, id):
 
     prestamo = get_object_or_404(Prestamo, id=id)
