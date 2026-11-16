@@ -63,6 +63,7 @@ class TestLaboratoriosVisibles:
 
         visibles = laboratorios_visibles(usuario_laboratorista)
 
+        assert visibles is not None  # None solo para Administrador
         assert visibles == [laboratorio]
         assert otro_laboratorio not in visibles
 
@@ -72,6 +73,7 @@ class TestLaboratoriosVisibles:
 
         visibles = laboratorios_visibles(usuario_laboratorista)
 
+        assert visibles is not None  # None solo para Administrador
         assert set(visibles) == {laboratorio, segundo_laboratorio}
 
     def test_laboratorista_sin_labs_lanza_permission_denied(self, catalogos):

@@ -159,7 +159,9 @@ class TestCicloDeStock:
 
         movimientos = MovimientoInventario.objects.filter(item_inventario=items[0])
         assert movimientos.count() == 1
-        assert movimientos.first().usuario == usuario_admin
+        movimiento = movimientos.first()
+        assert movimiento is not None
+        assert movimiento.usuario == usuario_admin
 
     def test_devolver_bien_reintegra_stock(self, laboratorio, usuario_admin, catalogos):
         insumo, items = _insumo_con_items(laboratorio, cantidad=1, nombre='Probeta')

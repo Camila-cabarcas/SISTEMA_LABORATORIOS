@@ -167,6 +167,7 @@ class RegistrarVetoServiceTests(TestCase):
             estado=EstadoPrestamo.objects.get(nombre='Devuelto'),
         )
         veto = RegistrarVetoService.registrar_retraso(prestamo=prestamo, dias_atraso=3)
+        assert veto is not None  # solo es None si dias_atraso <= 0
         self.assertEqual(veto.tipo, Veto.RETRASO)
         self.assertEqual(veto.fecha_fin, date.today() + timedelta(days=6))
 
@@ -259,7 +260,7 @@ class BloqueoReservaPorVetoTests(TestCase):
         )
         form = self._form()
         self.assertFalse(form.is_valid())
-        msg = ' '.join(form.errors.get('__all__', []))
+        msg = ' '.join(str(e) for e in form.errors.get('__all__', []))
         self.assertIn('bloqueado', msg.lower())
 
     def test_veto_vencido_no_bloquea(self):

@@ -148,5 +148,6 @@ class TestExcel:
         ])
 
         hoja = export_reservas_excel([reserva]).active
+        assert hoja is not None  # un Workbook nuevo siempre trae hoja activa
         valores = [c.value for fila in hoja.iter_rows() for c in fila]
         assert 'PC 1 · Proyector' in valores
