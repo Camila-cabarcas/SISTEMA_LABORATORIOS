@@ -175,7 +175,7 @@ def crear_profesor(request):
             profesor = form.save(commit=False)
 
             # Username automático: "doc_<cedula>", con sufijo si ya existe
-            cedula = form.cleaned_data['codigo']
+            cedula = form.cleaned_data['codigo'] or ''  # None si vino vacío
             base   = f"doc_{cedula}"
             username = base
             counter  = 2

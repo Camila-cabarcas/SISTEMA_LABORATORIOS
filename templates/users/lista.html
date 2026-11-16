@@ -31,7 +31,7 @@
                 <td>{{ usuario.username }}</td>
                 <td>{{ usuario.first_name }} {{ usuario.last_name }}</td>
                 <td>{{ usuario.email }}</td>
-                <td>{{ usuario.codigo }}</td>
+                <td>{{ usuario.codigo|default_if_none:"" }}</td>
                 <td>{{ usuario.programa }}</td>
                 <td>{{ usuario.rol }}</td>
                 <td>

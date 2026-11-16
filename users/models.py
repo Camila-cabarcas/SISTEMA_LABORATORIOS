@@ -3,6 +3,7 @@ models.py — users
 Define los modelos Rol y Usuario (extiende AbstractUser con los campos codigo, programa y rol).
 """
 from django.db import models
+from django.db.models.functions import Lower
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
@@ -34,8 +35,11 @@ class Usuario(AbstractUser):
     # Mismo campo que AbstractUser.email + solo correos @udea.edu.co, para que
     # el admin de Django y los ModelForm de usuario lo apliquen. Vacío se
     # sigue permitiendo (blank=True: p. ej. un superusuario sin correo).
+    # Único (sin distinguir mayúsculas) cuando no está vacío: ver Meta.constraints.
     email = models.EmailField(_('email address'), blank=True, validators=[validar_correo_udea])
-    codigo = models.CharField(max_length=50, unique=True, blank=True)
+    # NULL (no '') cuando no hay código: unique deja convivir varios NULL,
+    # pero no dos ''. save() convierte '' en None.
+    codigo = models.CharField(max_length=50, unique=True, null=True, blank=True)
     programa = models.CharField(max_length=100, blank=True)
 
     rol = models.ForeignKey(
@@ -51,6 +55,25 @@ class Usuario(AbstractUser):
     # la contraseña de login (make_password/check_password de Django), pero
     # es un campo aparte — nunca se deriva ni se compara contra `password`.
     admin_password_hash = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta(AbstractUser.Meta):
+        constraints = [
+            # Sin distinguir mayúsculas: Ana@… y ana@… son el mismo correo
+            # (el login por correo tampoco las distingue).
+            models.UniqueConstraint(
+                Lower('email'),
+                condition=~models.Q(email=''),
+                name='usuario_email_unico_ci',
+                violation_error_message='Ya existe una cuenta con ese correo electrónico.',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Formularios, create_user, admin y seeds: un código vacío se guarda
+        # como NULL para no chocar con el unique de otro usuario sin código.
+        if self.codigo is not None and not self.codigo.strip():
+            self.codigo = None
+        super().save(*args, **kwargs)
 
     def set_admin_password(self, raw_password):
         """Guarda la contraseña admin hasheada en la BD."""

@@ -129,6 +129,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.Usuario'
 
+# Login con usuario o correo (sin distinguir mayúsculas). Hereda de
+# ModelBackend, así que reemplaza al backend por defecto sin perder nada.
+AUTHENTICATION_BACKENDS = ['users.backends.UsuarioOCorreoBackend']
+
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 

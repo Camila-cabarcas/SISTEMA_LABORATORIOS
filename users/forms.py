@@ -4,7 +4,29 @@ Formularios para crear y editar usuarios del sistema (UsuarioForm, EditarUsuario
 ProfesorForm y EditarProfesorForm) y gestión de ProgramaAcademico.
 """
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
+
 from .models import Usuario, ProgramaAcademico
+
+
+class LoginForm(AuthenticationForm):
+    """Login con usuario o correo en el mismo campo (lo resuelve
+    users.backends.UsuarioOCorreoBackend)."""
+
+    error_messages = {
+        **AuthenticationForm.error_messages,
+        'invalid_login': 'Usuario/correo o contraseña incorrectos.',
+    }
+
+    def __init__(self, request=None, *args, **kwargs):
+        super().__init__(request, *args, **kwargs)
+        campo = self.fields['username']
+        campo.label = 'Usuario o correo'
+        # AuthenticationForm toma max_length del username (150); un correo
+        # puede llegar a 254.
+        campo.max_length = 254
+        campo.widget.attrs['maxlength'] = 254
+        campo.widget.attrs['autocomplete'] = 'username'
 
 
 class UsuarioForm(forms.ModelForm):
