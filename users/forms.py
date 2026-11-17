@@ -7,6 +7,28 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 
 from .models import Usuario, ProgramaAcademico
+from .roles import ROLES_SOLO_DESDE_PERSONAL
+
+AYUDA_ROL_PERSONAL = 'Este rol se administra desde Personal.'
+
+
+def limitar_campo_rol(form):
+    """Los roles Laboratorista y Monitor solo se asignan desde Personal
+    (llevan laboratorio y reglas propias). En la pantalla genérica de
+    usuarios y en el admin de Django:
+    - una cuenta que NO tiene esos roles no puede recibirlos;
+    - una cuenta que YA los tiene muestra su rol bloqueado (campo
+      deshabilitado: Django ignora lo que llegue por POST y conserva el
+      valor actual)."""
+    campo = form.fields.get('rol')
+    if campo is None:
+        return
+    rol_actual = form.instance.rol if form.instance.pk and form.instance.rol_id else None
+    if rol_actual is not None and rol_actual.nombre in ROLES_SOLO_DESDE_PERSONAL:
+        campo.disabled = True
+        campo.help_text = AYUDA_ROL_PERSONAL
+    else:
+        campo.queryset = campo.queryset.exclude(nombre__in=ROLES_SOLO_DESDE_PERSONAL)
 
 
 class LoginForm(AuthenticationForm):
@@ -105,6 +127,10 @@ class UsuarioForm(forms.ModelForm):
                 }
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        limitar_campo_rol(self)
 
 
 class ProfesorForm(forms.ModelForm):
@@ -225,6 +251,10 @@ class EditarUsuarioForm(forms.ModelForm):
                 }
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        limitar_campo_rol(self)
 
 
 class ProgramaAcademicoForm(forms.ModelForm):

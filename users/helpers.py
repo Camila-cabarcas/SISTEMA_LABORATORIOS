@@ -8,8 +8,10 @@ docs/auditoria_seguridad_codigo.md, CRÍTICO #2).
 - Monitor: solo en los laboratorios de Laboratorio.monitores y, en reservas,
   solo las de estudiantes.
 
-Un mismo usuario puede estar en varios laboratorios y un laboratorio puede
-tener varios laboratoristas y monitores (ambas relaciones son ManyToMany).
+Una cuenta Laboratorista o Monitor está en un solo laboratorio (restricciones
+de laboratorio.0024); un laboratorio puede tener varios laboratoristas y una
+sola cuenta de monitor. Las relaciones siguen siendo ManyToMany, así que el
+código que recorre "los laboratorios" de un usuario sigue sirviendo.
 La pertenencia se calcula con es_laboratorista_del_laboratorio /
 es_monitor_del_laboratorio (laboratorio/models.py) para no tener dos
 criterios que puedan divergir.
@@ -24,7 +26,14 @@ from laboratorio.models import (
     es_laboratorista_del_laboratorio,
     es_monitor_del_laboratorio,
 )
-from users.roles import ADMINISTRADOR, LABORATORISTA, MONITOR
+from users.roles import (
+    ADMINISTRADOR,
+    LABORATORISTA,
+    MONITOR,
+    ROLES_ADMIN_PERSONAL,
+    ROLES_DESCRIPCION_LAB,
+    ROLES_FICHAS_MONITOR,
+)
 
 TIPO_ESTUDIANTE = 'estudiante'
 
@@ -68,6 +77,41 @@ def puede_importar_cursos(usuario):
 
 def puede_aprobar_reservas(usuario):
     return es_administrador(usuario) or es_laboratorista(usuario)
+
+
+# ── Personal ────────────────────────────────────────────────────────────────
+
+def _en_su_laboratorio(usuario, laboratorio, roles):
+    """True si el rol de `usuario` está en `roles` y, salvo el
+    Administrador (que actúa en cualquier laboratorio), es laboratorista
+    de `laboratorio`."""
+    rol = nombre_rol(usuario)
+    if rol not in roles:
+        return False
+    if rol == ADMINISTRADOR:
+        return True
+    return es_laboratorista_del_laboratorio(usuario, laboratorio)
+
+
+def puede_administrar_personal(usuario):
+    """Crear, editar y dar de baja cuentas de laboratorista y de monitor."""
+    return nombre_rol(usuario) in ROLES_ADMIN_PERSONAL
+
+
+def puede_ver_personal(usuario, laboratorio):
+    """Sección Personal de `laboratorio`: el Administrador en cualquiera, el
+    laboratorista en el suyo. El Monitor nunca."""
+    return _en_su_laboratorio(usuario, laboratorio, ROLES_FICHAS_MONITOR)
+
+
+def puede_gestionar_fichas(usuario, laboratorio):
+    """Agregar, editar, vincular y quitar fichas de monitor en `laboratorio`."""
+    return _en_su_laboratorio(usuario, laboratorio, ROLES_FICHAS_MONITOR)
+
+
+def puede_editar_descripcion(usuario, laboratorio):
+    """Editar Laboratorio.descripcion de `laboratorio`."""
+    return _en_su_laboratorio(usuario, laboratorio, ROLES_DESCRIPCION_LAB)
 
 
 # ── Acceso por laboratorio ──────────────────────────────────────────────────
