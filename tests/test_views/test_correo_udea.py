@@ -16,7 +16,7 @@ from solicitudes.forms import EstudianteSolicitudForm, ProfesorSolicitudForm
 from solicitudes.models import SolicitudRegistroProfesor, SolicitudReserva
 from solicitudes.services.solicitud_reserva_service import ValidarSolicitudReservaService
 from users.fields import CorreoUdeaField
-from users.forms import ProfesorForm
+from users.forms import UsuarioForm
 from users.models import Rol, Usuario
 from users.validators import MENSAJE_CORREO_UDEA, validar_correo_institucional, validar_correo_udea
 
@@ -153,8 +153,7 @@ class TestRegistroProfesor:
     def _post(self, client, correo):
         return client.post('/solicitudes/registro-profesor/', {
             'nombre': 'Pedro', 'apellido': 'Suárez', 'cedula': '321321321', 'correo': correo,
-            'programa': 'Ingeniería', 'curso_nombre': ['Cálculo I'], 'curso_codigo': ['CAL-UDEA'],
-            'curso_cantidad': ['30'],
+            'programa': 'Ingeniería',
         })
 
     def test_rechaza_gmail(self, client, catalogos):
@@ -258,10 +257,12 @@ class TestUsuario:
         Usuario(username='u2', email='', codigo='U2').full_clean(exclude=['password'])
 
     @pytest.mark.parametrize('email, valido', [(GMAIL, False), (UDEA, True)])
-    def test_formulario_de_profesor(self, catalogos, email, valido):
-        # Los ModelForm de Usuario (ProfesorForm, UsuarioForm, ...) heredan el
+    def test_formulario_de_usuario(self, catalogos, email, valido):
+        # Los ModelForm de Usuario (UsuarioForm, EditarUsuarioForm) heredan el
         # validador del modelo (corre en is_valid); también el admin de Django.
-        form = ProfesorForm({'first_name': 'Ana', 'last_name': 'Ríos', 'email': email, 'codigo': '444555'})
+        form = UsuarioForm({'username': 'ana', 'first_name': 'Ana', 'last_name': 'Ríos', 'email': email,
+                            'codigo': '444555', 'programa': '', 'password': 'Clave12345',
+                            'rol': Rol.objects.get(nombre='Estudiante').id})
         assert form.is_valid() is valido, form.errors
         if not valido:
             assert MENSAJE_CORREO_UDEA in form.errors['email']

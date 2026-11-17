@@ -8,13 +8,10 @@ una Reserva "Pendiente" (para el flujo de aprobación) y un Prestamo
 fijo para que el comando sea idempotente (no crea filas nuevas en cada
 corrida).
 
-Desde v3 del locustfile también asegura: un profesor YA REGISTRADO con
-contraseña conocida (`e2e_profesor`) — necesario porque los caminos que crea
-el propio sistema (crear_profesor, aprobar SolicitudRegistroProfesor) le
-asignan una contraseña aleatoria no recuperable, así que no sirven para un
-login real de pruebas —, un Curso a su nombre, y varios Módulos en
-Laboratorio E2E (que seed_e2e no crea) para poder ejercitar la asignación de
-módulos.
+También asegura: un Profesor de prueba SIN cuenta (fase 2: los profesores
+ya no tienen usuario; se identifican por cédula, PROFESOR_E2E_CEDULA) con un
+Curso a su nombre, y varios Módulos en Laboratorio E2E (que seed_e2e no
+crea) para poder ejercitar la asignación de módulos.
 
 Uso: python manage.py seed_locust
 Imprime al final las variables de entorno que locustfile.py puede leer.
@@ -22,6 +19,9 @@ Imprime al final las variables de entorno que locustfile.py puede leer.
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
+
+# Profesor de prueba (sin cuenta). Lo usa locustfile.py (LOCUST_PROF_CEDULA).
+PROFESOR_E2E_CEDULA = '900000001'
 
 
 class Command(BaseCommand):
@@ -36,35 +36,25 @@ class Command(BaseCommand):
         from reservas.models import EstadoReserva, Reserva
         from prestamos.models import EstadoPrestamo, Prestamo, PrestamoItem
         from inventario.models import Insumo, ItemInventario
-        from users.models import Usuario, Rol
-        from solicitudes.models import Curso
+        from users.models import Usuario
+        from solicitudes.models import Curso, Profesor
 
         # Obtener datos base
         laboratorio = Laboratorio.objects.get(nombre='Laboratorio E2E')
         insumo = Insumo.objects.get(nombre='Insumo E2E')
         admin = Usuario.objects.get(username='e2e_admin')
 
-        # Crear/asegurar profesor registrado
-        rol_docente = Rol.objects.get(nombre='Docente')
-        profesor, _ = Usuario.objects.get_or_create(
-            username='e2e_profesor',
-            defaults={
-                'rol': rol_docente,
-                'codigo': 'E2E-PROF',
-                'first_name': 'Profesor',
-                'last_name': 'E2E',
-            }
+        # Profesor de prueba (sin cuenta), activo.
+        profesor, _ = Profesor.objects.get_or_create(
+            cedula=PROFESOR_E2E_CEDULA,
+            defaults={'nombre': 'Profesor', 'apellido': 'E2E', 'correo': 'profesor.e2e@udea.edu.co'},
         )
-        profesor.rol = rol_docente
-        profesor.codigo = profesor.codigo or 'E2E-PROF'
-        profesor.first_name = profesor.first_name or 'Profesor'
-        profesor.last_name = profesor.last_name or 'E2E'
-        profesor.is_active = True
-        profesor.set_password('E2eProfesor!2026')
-        profesor.save()
+        if not profesor.activo:
+            profesor.activo = True
+            profesor.save(update_fields=['activo'])
 
-        # Crear curso para el profesor
-        Curso.objects.get_or_create(
+        # Curso del profesor de prueba
+        curso, _ = Curso.objects.get_or_create(
             codigo='CURSO-E2E-101',
             defaults={
                 'nombre': 'Curso E2E',
@@ -72,6 +62,9 @@ class Command(BaseCommand):
                 'cantidad_estudiantes': 30,
             }
         )
+        if curso.profesor_id != profesor.id:
+            curso.profesor = profesor
+            curso.save(update_fields=['profesor'])
 
         # Crear módulos en diferentes zonas
         zonas = ['izquierda', 'centro-top', 'centro-mid', 'centro-bot', 'derecha', 'inferior']
@@ -142,5 +135,5 @@ class Command(BaseCommand):
             f'  LOCUST_PRESTAMO_ID={prestamo.id}\n'
             '  LOCUST_ADMIN_USER=e2e_admin  LOCUST_ADMIN_PASS=E2eAdmin!2026\n'
             '  LOCUST_LAB_USER=e2e_laboratorista_v2  LOCUST_LAB_PASS=E2eLab!2026\n'
-            '  LOCUST_PROF_USER=e2e_profesor  LOCUST_PROF_PASS=E2eProfesor!2026  LOCUST_PROF_NOMBRE="Profesor E2E"'
+            f'  LOCUST_PROF_CEDULA={PROFESOR_E2E_CEDULA}  LOCUST_PROF_NOMBRE="Profesor E2E"'
         ))

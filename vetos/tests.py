@@ -23,7 +23,7 @@ from vetos.services import RegistrarVetoService, consultar_bloqueo, mensaje_bloq
 
 
 def _catalogos():
-    for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante', 'Docente']:
+    for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante']:
         Rol.objects.get_or_create(nombre=nombre)
     for nombre in ['Pendiente', 'Aprobada', 'Cancelada', 'Expirada']:
         EstadoReserva.objects.get_or_create(nombre=nombre)

@@ -4,7 +4,7 @@ locustfile.py — pruebas de carga v3 del Sistema de Laboratorios (14 flujos de 
 REQUISITO PREVIO: python manage.py seed_locust
 Crea/asegura: Laboratorio E2E (horario lun-vie 06:00-18:00) con 6 Módulos,
 Insumo E2E con ítems Disponibles, e2e_admin / e2e_laboratorista_v2, y (desde
-v3) un profesor YA REGISTRADO con contraseña conocida — e2e_profesor — más
+v3) un Profesor de prueba SIN cuenta (cédula 900000001, fase 2) — más
 un Curso a su nombre (ver seed_e2e.py y seed_locust.py).
 
 Variables de entorno relevantes (con sus defaults):
@@ -12,8 +12,8 @@ Variables de entorno relevantes (con sus defaults):
     LOCUST_LAB_ID               id del laboratorio a usar (default 1)
     LOCUST_ADMIN_USER/PASS      credenciales del admin        (default e2e_admin / E2eAdmin!2026)
     LOCUST_LAB_USER/PASS        credenciales del laboratorista (default e2e_laboratorista_v2 / E2eLab!2026)
-    LOCUST_PROF_USER/PASS       credenciales del profesor YA REGISTRADO (default e2e_profesor / E2eProfesor!2026)
-    LOCUST_PROF_NOMBRE          nombre completo del profesor, debe calzar con SolicitudReserva.clean() (default "Profesor E2E")
+    LOCUST_PROF_CEDULA          cédula del Profesor de prueba, sin cuenta (default 900000001)
+    LOCUST_PROF_NOMBRE          nombre del profesor en la solicitud (default "Profesor E2E")
     LOCUST_PROGRAMA             programa académico activo a usar (default "Ingeniería de Sistemas")
     LOCUST_SPEED_FACTOR         ver "TIMING" abajo (default 60)
     LOCUST_MAX_SLEEP_SEG        tope de las esperas comprimidas admin/laboratorista, en segundos reales (default 300)
@@ -150,8 +150,8 @@ ProfesorInvitadoConReserva=5, LaboratoristaConPrestamoDirecto=4,
 InspeccionConItemsDanados=4, DevolucionAnticipada=4, CancelacionDeSolicitud=3,
 CancelacionDeReservaAprobada=3, InspeccionConItemsNoEntregados=3,
 MultiplosModulosEnMismaReserva=3, ProrrogaDeDevolucion=2.
-Nota sobre `e2e_profesor` compartido: los flujos 1 y 10 reutilizan la MISMA
-cuenta de profesor sembrada; SolicitudReserva.clean() limita a 8h de
+Nota sobre el Profesor de prueba compartido: los flujos 1 y 10 reutilizan la MISMA
+cédula de profesor sembrada; SolicitudReserva.clean() limita a 8h de
 solicitudes por profesor por día, así que bajo carga sostenida es normal
 ver 'rechazada_validacion' crecer en esos dos flujos según avanza la
 corrida — es la regla de negocio real, no un bug del script.
@@ -186,8 +186,7 @@ ADMIN_USER = os.environ.get('LOCUST_ADMIN_USER', 'e2e_admin')
 ADMIN_PASS = os.environ.get('LOCUST_ADMIN_PASS', 'E2eAdmin!2026')
 LAB_USER = os.environ.get('LOCUST_LAB_USER', 'e2e_laboratorista_v2')
 LAB_PASS = os.environ.get('LOCUST_LAB_PASS', 'E2eLab!2026')
-PROF_USER = os.environ.get('LOCUST_PROF_USER', 'e2e_profesor')
-PROF_PASS = os.environ.get('LOCUST_PROF_PASS', 'E2eProfesor!2026')
+PROF_CEDULA = os.environ.get('LOCUST_PROF_CEDULA', '900000001')  # fase 2: profesor sin cuenta
 PROF_NOMBRE = os.environ.get('LOCUST_PROF_NOMBRE', 'Profesor E2E')
 PROGRAMA = os.environ.get('LOCUST_PROGRAMA', 'Ingeniería de Sistemas')
 
@@ -388,7 +387,7 @@ def obtener_curso_id(client):
 
         with client.get(
             '/solicitudes/cursos-profesor/',
-            params={'nombre': PROF_NOMBRE},
+            params={'cedula': PROF_CEDULA},
             name='/solicitudes/cursos-profesor/',
             catch_response=True,
         ) as resp:
@@ -918,7 +917,8 @@ class ProfesorRegistradoConReserva(HttpUser):
     wait_time = between(1, 3)
 
     def on_start(self):
-        self.autenticado = login_django(self.client, PROF_USER, PROF_PASS)
+        # Fase 2: el profesor no tiene cuenta; /solicitudes/profesor/ es pública.
+        self.autenticado = True
 
     @task
     def solicitar_reserva(self):
@@ -947,7 +947,7 @@ class ProfesorRegistradoConReserva(HttpUser):
             duracion_horas = random.choice([h for h in [2, 2.5, 3, 3.5, 4] if h <= margen_horas])
             hora_fin = (datetime.combine(hoy, hora_inicio) + timedelta(hours=duracion_horas)).time()
 
-        cedula = nueva_cedula()
+        cedula = PROF_CEDULA  # reserva de curso: cédula de un Profesor activo
         insumo_id = obtener_insumo_id(self.client)
 
         resp = self.client.get('/solicitudes/profesor/', name='/solicitudes/profesor/ [GET]')
@@ -1640,7 +1640,8 @@ class MultiplosModulosEnMismaReserva(HttpUser):
     wait_time = between(1, 3)
 
     def on_start(self):
-        self.autenticado = login_django(self.client, PROF_USER, PROF_PASS)
+        # Fase 2: el profesor no tiene cuenta; /solicitudes/profesor/ es pública.
+        self.autenticado = True
 
     @task
     def solicitar_con_modulos(self):
@@ -1668,7 +1669,7 @@ class MultiplosModulosEnMismaReserva(HttpUser):
             hora_fin = hora_inicio.replace(hour=18, minute=0)
         else:
             hora_fin = (momento_slot + timedelta(hours=3)).time()
-        cedula = nueva_cedula()
+        cedula = PROF_CEDULA  # reserva de curso: cédula de un Profesor activo
 
         resp = self.client.get('/solicitudes/profesor/', name='/solicitudes/profesor/ [GET]')
         token = resp.cookies.get('csrftoken')

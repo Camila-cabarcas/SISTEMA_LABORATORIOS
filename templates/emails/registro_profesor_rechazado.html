@@ -1,0 +1,19 @@
+{% extends "emails/base_email.html" %}
+
+{% block titulo %}Registro de profesor rechazado{% endblock %}
+
+{% block contenido %}
+<h2 style="margin-top:0; color:#dc3545;">Hola, {{ nombre }}</h2>
+<p>Tu solicitud de registro como profesor (cédula {{ cedula }}) fue <strong>rechazada</strong>.</p>
+
+{% if motivo %}
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; width:160px; border:1px solid #e9ecef;">Motivo</td>
+<td style="border:1px solid #e9ecef;">{{ motivo }}</td>
+</tr>
+</table>
+{% endif %}
+
+<p>Si crees que es un error, puedes enviar una nueva solicitud.</p>
+{% endblock %}

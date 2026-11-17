@@ -17,13 +17,59 @@ from reservas.models import Reserva
 logger = logging.getLogger(__name__)
 
 
+class Profesor(models.Model):
+    """Profesor habilitado, SIN cuenta en el sistema (reemplaza a las cuentas
+    de rol Docente, ver migraciones solicitudes.0012 y users.0008). Se
+    identifica por cédula: la usan los cursos (Curso.profesor) y,
+    más adelante, la importación de cursos y las reservas públicas."""
+
+    nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100)
+    cedula = models.CharField(max_length=20, unique=True)
+    correo = models.EmailField(blank=True, default='')
+    programa = models.CharField(max_length=200, blank=True, default='')
+    activo = models.BooleanField(default=True)
+    solicitud_origen = models.ForeignKey(
+        'solicitudes.SolicitudRegistroProfesor', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='profesores_creados',
+    )
+    # Solo rastro de la migración desde la cuenta Docente (permite
+    # deshacerla). No da acceso a nada.
+    cuenta_anterior = models.ForeignKey(
+        'users.Usuario', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='profesores_migrados',
+    )
+
+    class Meta:
+        ordering = ['apellido', 'nombre']
+        verbose_name = 'Profesor'
+        verbose_name_plural = 'Profesores'
+
+    def __str__(self):
+        return f'{self.nombre} {self.apellido} ({self.cedula})'
+
+    @property
+    def nombre_completo(self):
+        return f'{self.nombre} {self.apellido}'.strip()
+
+    @classmethod
+    def buscar_activo(cls, cedula):
+        """El Profesor activo con esa cédula, o None. Para reservas de curso
+        y la API pública de cursos."""
+        cedula = (cedula or '').strip()
+        if not cedula:
+            return None
+        return cls.objects.filter(cedula=cedula, activo=True).first()
+
+
 class Curso(models.Model):
     nombre = models.CharField(max_length=200)
     codigo = models.CharField(max_length=50, unique=True)
+    # El Profesor (sin cuenta) del curso. PROTECT: no se puede borrar un
+    # profesor que tenga cursos. Hasta la fase 2 era una cuenta Docente; ver
+    # migraciones solicitudes.0010-0013.
     profesor = models.ForeignKey(
-        Usuario,
-        on_delete=models.CASCADE,
-        limit_choices_to={'rol__nombre': 'Docente'}
+        Profesor, on_delete=models.PROTECT, related_name='cursos',
     )
     cantidad_estudiantes = models.PositiveIntegerField()
     laboratorio = models.ForeignKey(
@@ -38,8 +84,9 @@ class Curso(models.Model):
         errors = {}
         if self.cantidad_estudiantes is not None and self.cantidad_estudiantes < 1:
             errors['cantidad_estudiantes'] = 'La cantidad de estudiantes debe ser al menos 1.'
-        if self.profesor_id and (not self.profesor.rol or self.profesor.rol.nombre != 'Docente'):
-            errors['profesor'] = 'El profesor debe tener rol Docente.'
+        # Que haya profesor lo exige el campo (obligatorio); aquí, que esté activo.
+        if self.profesor_id and not self.profesor.activo:
+            errors['profesor'] = 'El profesor seleccionado no está activo.'
         if errors:
             raise ValidationError(errors)
 
@@ -47,6 +94,21 @@ class Curso(models.Model):
         if self.laboratorio_id:
             return f"{self.codigo} - {self.nombre} ({self.laboratorio.nombre})"
         return f"{self.codigo} - {self.nombre}"
+
+
+def validar_profesor_de_reserva(cedula):
+    """Mensaje de error si `cedula` no es de un Profesor ACTIVO, o None si
+    lo es. Regla de las reservas de curso (fase 2): solo profesores
+    habilitados, buscados por cédula — ya no se busca una cuenta Docente por
+    nombre. La usan SolicitudReserva.clean() y la reserva interna
+    (reservas/views.py)."""
+    cedula = (cedula or '').strip()
+    profesor = Profesor.objects.filter(cedula=cedula).first() if cedula else None
+    if profesor is None:
+        return f'No hay un profesor habilitado con la cédula "{cedula}".'
+    if not profesor.activo:
+        return f'El profesor con la cédula "{cedula}" no está activo.'
+    return None
 
 
 class SolicitudReserva(models.Model):
@@ -119,23 +181,16 @@ class SolicitudReserva(models.Model):
         if self.fecha_reserva and self.fecha_reserva.date() < date.today():
             errors['fecha_reserva'] = 'La fecha de reserva no puede ser anterior a hoy.'
 
-        # Validación de profesor
+        # Validación de profesor. Reserva de curso: solo un Profesor ACTIVO,
+        # buscado por cédula (el profesor no tiene cuenta). La reserva libre
+        # (profesor invitado) no exige estar registrado.
         if self.tipo_solicitante == 'profesor':
             if not self.nombre or not self.cedula:
                 errors['nombre'] = 'Nombre y cédula son requeridos para profesores.'
-
-            if self.nombre:
-                partes_nombre = self.nombre.split()
-                query = Q()
-                for parte in partes_nombre:
-                    query |= Q(first_name__icontains=parte) | Q(last_name__icontains=parte) | Q(username__icontains=parte)
-
-                usuarios = Usuario.objects.filter(query, rol__nombre='Docente')
-
-                if not usuarios.exists():
-                    errors['nombre'] = f'No se encontró un profesor registrado con el nombre "{self.nombre}".'
-                else:
-                    self.usuario = usuarios.first()
+            elif not self.reserva_libre:
+                error_profesor = validar_profesor_de_reserva(self.cedula)
+                if error_profesor:
+                    errors['cedula'] = error_profesor
 
         # Validación de horario
         if self.hora_inicio is not None and self.hora_fin is not None:
@@ -178,9 +233,10 @@ class SolicitudReserva(models.Model):
                         cedula=self.cedula,
                         tipo_solicitante='estudiante'
                     )
-                elif self.tipo_solicitante == 'profesor' and self.usuario:
+                elif self.tipo_solicitante == 'profesor' and self.cedula:
+                    # Por cédula: el profesor ya no tiene cuenta (fase 2).
                     solicitudes_mismo_dia = solicitudes_mismo_dia.filter(
-                        usuario=self.usuario,
+                        cedula=self.cedula,
                         tipo_solicitante='profesor'
                     )
                 else:
@@ -232,9 +288,9 @@ class SolicitudReserva(models.Model):
         return consultar_bloqueo(cedula=self.cedula or None, usuario=self.usuario)
 
     def limite_pendientes_alcanzado(self):
-        """True si el solicitante (identificado por cédula si es estudiante,
-        o por usuario si es profesor — mismo criterio que la validación de
-        horas acumuladas por día de arriba) ya tiene 2 o más solicitudes
+        """True si el solicitante (identificado por cédula, sea estudiante o
+        profesor — mismo criterio que la validación de horas acumuladas por
+        día de arriba) ya tiene 2 o más solicitudes
         cuya Reserva sigue en estado "Aprobada" (las reservas se aprueban
         automáticamente al crearse — ver crear_reserva() — así que ya no
         existe un estado "Pendiente" intermedio contra el cual contar). Solo
@@ -245,8 +301,8 @@ class SolicitudReserva(models.Model):
 
         if self.tipo_solicitante == 'estudiante' and self.cedula:
             filtro = Q(cedula=self.cedula, tipo_solicitante='estudiante')
-        elif self.tipo_solicitante == 'profesor' and self.usuario_id:
-            filtro = Q(usuario_id=self.usuario_id, tipo_solicitante='profesor')
+        elif self.tipo_solicitante == 'profesor' and self.cedula:
+            filtro = Q(cedula=self.cedula, tipo_solicitante='profesor')
         else:
             return False
 
@@ -328,7 +384,20 @@ class SolicitudReserva(models.Model):
         if not estado_aprobada:
             raise ValueError('No existe estado "Aprobada" en EstadoReserva')
 
-        usuario = Usuario.objects.filter(codigo=self.cedula).first()
+        # Quién es el solicitante, para los choques del mismo día y laboratorio:
+        # - profesor: NO tiene cuenta (fase 2). La Reserva no se liga a ningún
+        #   Usuario (las cuentas Docente viejas siguen existiendo, inactivas,
+        #   con codigo = cédula, y no deben volver a usarse). En reservas de
+        #   curso se identifica por la cédula de la solicitud; la reserva libre
+        #   (invitado) no tenía ni tiene este chequeo.
+        # - estudiante: su cuenta, si tiene una con esa cédula (sin cambios).
+        if self.tipo_solicitante == 'profesor':
+            usuario = None
+            identidad = (Q(solicitud__cedula=self.cedula, solicitud__tipo_solicitante='profesor')
+                         if self.cedula and not self.reserva_libre else None)
+        else:
+            usuario = Usuario.objects.filter(codigo=self.cedula).first()
+            identidad = Q(usuario_id=usuario.id) if usuario else None
 
         fecha_base = datetime.combine(
             self.fecha_reserva.date(),
@@ -349,14 +418,14 @@ class SolicitudReserva(models.Model):
         # laboratorio queda hasta que su SolicitudReserva se guarda
         # (chicken-and-egg). Si el choque es en otro laboratorio, lo sigue
         # bloqueando el chequeo genérico de Reserva.clean() más abajo.
-        if usuario:
+        if identidad is not None:
             fin = fecha_devolucion or fecha_base
             reservas_mismo_dia_mismo_lab = Reserva.objects.filter(
-                usuario_id=usuario.id,
+                identidad,
                 solicitud__laboratorio_id=self.laboratorio_id,
                 estado__nombre__in=['Aprobada', 'Pendiente'],
                 fecha_reserva__date=fecha_base.date(),
-            )
+            ).distinct()
 
             # Solapamiento horario en el mismo laboratorio: mensaje
             # específico ("a esa hora").
@@ -425,7 +494,9 @@ ESTADO_SOLICITUD_REGISTRO = [
 class SolicitudRegistroProfesor(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
-    cedula = models.CharField(max_length=20, unique=True)
+    # Única solo entre solicitudes pendientes o aprobadas (ver Meta): después
+    # de un rechazo, la misma cédula puede volver a solicitar.
+    cedula = models.CharField(max_length=20)
     correo = models.EmailField(blank=True, default='')
     programa = models.CharField(max_length=200, blank=True, default='')
     estado = models.CharField(
@@ -436,6 +507,30 @@ class SolicitudRegistroProfesor(models.Model):
         'users.Usuario', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='solicitud_registro'
     )
+    laboratorio_interes = models.ForeignKey(
+        Laboratorio, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='solicitudes_registro_profesor',
+    )
+    resuelto_por = models.ForeignKey(
+        'users.Usuario', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='solicitudes_profesor_resueltas',
+    )
+    fecha_resolucion = models.DateTimeField(null=True, blank=True)
+    motivo_rechazo = models.TextField(blank=True, default='')
+    profesor = models.ForeignKey(
+        Profesor, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='solicitudes',
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cedula'],
+                condition=Q(estado__in=['pendiente', 'aprobada']),
+                name='solicitud_profesor_cedula_activa_unica',
+                violation_error_message='Ya existe una solicitud pendiente o aprobada con esta cédula.',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.nombre} {self.apellido} ({self.cedula})"

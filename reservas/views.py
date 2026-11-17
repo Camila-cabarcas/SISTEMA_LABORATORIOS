@@ -141,8 +141,6 @@ def lista_reservas(request):
 def crear_reserva(request):
     from solicitudes.models import SolicitudReserva, Curso
     from laboratorio.models import Laboratorio
-    from users.models import Usuario
-    from django.db.models import Q
 
     from users.models import ProgramaAcademico
 
@@ -235,14 +233,14 @@ def crear_reserva(request):
                 pass
             else:
                 curso = Curso.objects.filter(id=curso_id).first() if curso_id else None
-                if tipo == 'profesor' and nombre:
-                    partes = nombre.split()
-                    query  = Q()
-                    for p in partes:
-                        query |= (Q(first_name__icontains=p) |
-                                  Q(last_name__icontains=p)  |
-                                  Q(username__icontains=p))
-                    usuario = Usuario.objects.filter(query, rol__nombre='Docente').first()
+                if tipo == 'profesor':
+                    # Reserva de curso: solo un Profesor ACTIVO, buscado por
+                    # cédula (fase 2: el profesor no tiene cuenta, así que la
+                    # solicitud no se liga a ningún Usuario).
+                    from solicitudes.models import validar_profesor_de_reserva
+                    error_profesor = validar_profesor_de_reserva(cedula)
+                    if error_profesor:
+                        errors.append(error_profesor)
 
             if fecha_obj and hora_inicio_obj and not errors:
                 fecha_dt = datetime.combine(fecha_obj, hora_inicio_obj)

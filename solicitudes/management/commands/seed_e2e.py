@@ -61,7 +61,7 @@ class Command(BaseCommand):
         from prestamos.models import EstadoPrestamo
         from datetime import time
 
-        for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante', 'Docente']:
+        for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante']:
             Rol.objects.get_or_create(nombre=nombre)
 
         for nombre in ['Pendiente', 'Aprobada', 'Cancelada', 'Expirada']:

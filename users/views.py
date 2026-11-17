@@ -1,17 +1,18 @@
 """
 views.py — users
 Vistas para listar, crear, editar y desactivar usuarios del sistema (solo Administrador),
-y gestión completa de profesores (Administrador o Laboratorista).
+profesores habilitados (sin cuenta, solo Administrador) y programas académicos.
 """
 import logging
 
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q
+from django.db.models import Count, Q
+from django.views.decorators.http import require_POST
 from users.decorators import rol_requerido, requiere_contrasena_admin
 from users.helpers import es_cuenta_de_personal
-from .models import Usuario, Rol, ProgramaAcademico
-from .forms import UsuarioForm, EditarUsuarioForm, ProfesorForm, EditarProfesorForm, ProgramaAcademicoForm
+from .models import Usuario, ProgramaAcademico
+from .forms import UsuarioForm, EditarUsuarioForm, ProgramaAcademicoForm
 
 logger_acceso_admin = logging.getLogger('acceso_admin')
 
@@ -167,96 +168,63 @@ def cambiar_contrasena_admin(request):
     return render(request, 'users/cambiar_contrasena_admin.html')
 
 
-# ── Gestión de profesores ────────────────────────────────────────────────────
+# ── Profesores habilitados (fase 2: sin cuenta) ─────────────────────────────
+# Solo el Administrador. Lista, ver, editar (nombre, apellido, correo,
+# programa) y desactivar. No se crean cuentas: un profesor se habilita al
+# aprobar su solicitud de registro (o vino de la migración de las cuentas
+# Docente).
 
-@rol_requerido('Administrador', 'Laboratorista')
+@rol_requerido('Administrador')
 def lista_profesores(request):
+    from solicitudes.models import Profesor
+
     q = request.GET.get('q', '').strip()
-    profesores = Usuario.objects.filter(rol__nombre='Docente').order_by('last_name', 'first_name')
+    profesores = Profesor.objects.annotate(total_cursos=Count('cursos')).order_by('apellido', 'nombre')
     if q:
         profesores = profesores.filter(
-            Q(first_name__icontains=q) |
-            Q(last_name__icontains=q)  |
-            Q(codigo__icontains=q)     |
-            Q(username__icontains=q)
+            Q(nombre__icontains=q) | Q(apellido__icontains=q) | Q(cedula__icontains=q) | Q(correo__icontains=q)
         )
-    return render(request, 'profesores/lista_profesores.html', {
-        'profesores': profesores,
-        'q': q,
-    })
-
-
-@rol_requerido('Administrador', 'Laboratorista')
-def crear_profesor(request):
-    import secrets
-    import string
-
-    if request.method == 'POST':
-        form = ProfesorForm(request.POST)
-        if form.is_valid():
-            profesor = form.save(commit=False)
-
-            # Username automático: "doc_<cedula>", con sufijo si ya existe
-            cedula = form.cleaned_data['codigo'] or ''  # None si vino vacío
-            base   = f"doc_{cedula}"
-            username = base
-            counter  = 2
-            while Usuario.objects.filter(username=username).exists():
-                username = f"{base}_{counter}"
-                counter += 1
-            profesor.username = username
-            profesor.email = form.cleaned_data.get('email', '')
-
-            # Contraseña aleatoria — el profesor no usa el sistema
-            alphabet = string.ascii_letters + string.digits
-            profesor.set_password(''.join(secrets.choice(alphabet) for _ in range(16)))
-
-            profesor.rol       = Rol.objects.filter(nombre='Docente').first()
-            profesor.is_active = True
-            profesor.save()
-            return redirect('lista_profesores')
-    else:
-        form = ProfesorForm()
-    programas = ProgramaAcademico.objects.filter(activo=True)
-    return render(request, 'profesores/crear_profesor.html', {'form': form, 'programas': programas})
-
-
-@rol_requerido('Administrador', 'Laboratorista')
-def detalle_profesor(request, id):
-    from solicitudes.models import Curso
-    profesor = get_object_or_404(Usuario, id=id, rol__nombre='Docente')
-    cursos = Curso.objects.filter(profesor=profesor).order_by('codigo')
-    return render(request, 'profesores/detalle_profesor.html', {
-        'profesor': profesor,
-        'cursos': cursos,
-    })
-
-
-@rol_requerido('Administrador', 'Laboratorista')
-def editar_profesor(request, id):
-    profesor = get_object_or_404(Usuario, id=id, rol__nombre='Docente')
-    if request.method == 'POST':
-        form = EditarProfesorForm(request.POST, instance=profesor)
-        if form.is_valid():
-            form.save()
-            return redirect('detalle_profesor', id=profesor.id)
-    else:
-        form = EditarProfesorForm(instance=profesor)
-    programas = ProgramaAcademico.objects.filter(activo=True)
-    return render(request, 'profesores/editar_profesor.html', {
-        'form': form,
-        'profesor': profesor,
-        'programas': programas,
-    })
+    return render(request, 'profesores/lista_profesores.html', {'profesores': profesores, 'q': q})
 
 
 @rol_requerido('Administrador')
-def toggle_profesor(request, id):
-    profesor = get_object_or_404(Usuario, id=id, rol__nombre='Docente')
-    if request.method == 'POST':
-        profesor.is_active = not profesor.is_active
-        profesor.save()
-    return redirect('detalle_profesor', id=id)
+def detalle_profesor(request, id):
+    from solicitudes.models import Curso, Profesor
+
+    profesor = get_object_or_404(Profesor, id=id)
+    cursos = Curso.objects.filter(profesor=profesor).select_related('laboratorio').order_by('codigo')
+    return render(request, 'profesores/detalle_profesor.html', {'profesor': profesor, 'cursos': cursos})
+
+
+@rol_requerido('Administrador')
+def editar_profesor(request, id):
+    from solicitudes.forms import ProfesorHabilitadoForm
+    from solicitudes.models import Profesor
+
+    profesor = get_object_or_404(Profesor, id=id)
+    form = ProfesorHabilitadoForm(request.POST or None, instance=profesor)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, f'Profesor "{profesor.nombre_completo}" actualizado.')
+        return redirect('detalle_profesor', id=profesor.id)
+    return render(request, 'profesores/editar_profesor.html', {'form': form, 'profesor': profesor})
+
+
+@rol_requerido('Administrador')
+@require_POST
+def desactivar_profesor(request, id):
+    """activo=False: deja de poder reservar cursos y de aparecer al crear
+    cursos. Sus cursos y reservas se conservan."""
+    from solicitudes.models import Profesor
+
+    profesor = get_object_or_404(Profesor, id=id)
+    if profesor.activo:
+        profesor.activo = False
+        profesor.save(update_fields=['activo'])
+        messages.success(request, f'Profesor "{profesor.nombre_completo}" desactivado.')
+    else:
+        messages.info(request, f'El profesor "{profesor.nombre_completo}" ya estaba desactivado.')
+    return redirect('detalle_profesor', id=profesor.id)
 
 
 # ── Gestión de programas académicos ─────────────────────────────────────────

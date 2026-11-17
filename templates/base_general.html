@@ -64,28 +64,29 @@
             </li>
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle {% if '/usuarios/programas' in request.path or '/usuarios/profesores' in request.path or '/solicitudes/cursos' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                <a class="nav-link dropdown-toggle {% if '/usuarios/programas' in request.path or '/solicitudes/cursos' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                     <i class="fa-solid fa-graduation-cap me-1"></i>Académico
-                    {% if notif_profesores > 0 or notif_cursos > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores|add:notif_cursos }}</span>{% endif %}
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark">
                     <li><a class="dropdown-item {% if '/usuarios/programas' in request.path %}active{% endif %}" href="/usuarios/programas/"><i class="fa-solid fa-list-check me-2"></i>Programas</a></li>
-                    <li><a class="dropdown-item {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">
-                        <i class="fa-solid fa-chalkboard-user me-2"></i>Profesores
-                        {% if notif_profesores > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
-                    </a></li>
                     <li><a class="dropdown-item {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">
                         <i class="fa-solid fa-book me-2"></i>Cursos
-                        {% if notif_cursos > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
                     </a></li>
                 </ul>
             </li>
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle {% if '/usuarios/' in request.path or 'solicitudes-profesores' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-user-shield me-1"></i>Administración</a>
+                <a class="nav-link dropdown-toggle {% if '/usuarios/' in request.path or 'solicitudes-profesores' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="fa-solid fa-user-shield me-1"></i>Administración
+                    {% if notif_profesores > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
+                </a>
                 <ul class="dropdown-menu dropdown-menu-dark">
                     <li><a class="dropdown-item" href="/usuarios/"><i class="fa-solid fa-users me-2"></i>Usuarios</a></li>
-                    <li><a class="dropdown-item {% if 'solicitudes-profesores' in request.path %}active{% endif %}" href="/solicitudes/solicitudes-profesores/"><i class="fa-solid fa-file-signature me-2"></i>Solicitudes Registro</a></li>
+                    <li><a class="dropdown-item {% if 'solicitudes-profesores' in request.path %}active{% endif %}" href="{% url 'lista_solicitudes_profesores' %}" data-menu="solicitudes-profesor">
+                        <i class="fa-solid fa-file-signature me-2"></i>Solicitudes de profesor
+                        {% if notif_profesores > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
+                    </a></li>
+                    <li><a class="dropdown-item {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="{% url 'lista_profesores' %}" data-menu="profesores-habilitados"><i class="fa-solid fa-chalkboard-user me-2"></i>Profesores habilitados</a></li>
                 </ul>
             </li>
 
@@ -110,18 +111,17 @@
             </li>
 
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <a class="nav-link dropdown-toggle {% if 'solicitudes-profesores' in request.path or '/solicitudes/cursos' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                     <i class="fa-solid fa-graduation-cap me-1"></i>Académico
-                    {% if notif_profesores > 0 or notif_cursos > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores|add:notif_cursos }}</span>{% endif %}
+                    {% if notif_profesores > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark">
-                    <li><a class="dropdown-item {% if '/usuarios/profesores' in request.path %}active{% endif %}" href="/usuarios/profesores/">
-                        <i class="fa-solid fa-chalkboard-user me-2"></i>Profesores
+                    <li><a class="dropdown-item {% if 'solicitudes-profesores' in request.path %}active{% endif %}" href="{% url 'lista_solicitudes_profesores' %}" data-menu="solicitudes-profesor">
+                        <i class="fa-solid fa-file-signature me-2"></i>Solicitudes de profesor
                         {% if notif_profesores > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_profesores }}</span>{% endif %}
                     </a></li>
                     <li><a class="dropdown-item {% if '/solicitudes/cursos' in request.path %}active{% endif %}" href="/solicitudes/cursos/">
                         <i class="fa-solid fa-book me-2"></i>Cursos
-                        {% if notif_cursos > 0 %}<span class="badge rounded-pill bg-danger ms-1">{{ notif_cursos }}</span>{% endif %}
                     </a></li>
                 </ul>
             </li>

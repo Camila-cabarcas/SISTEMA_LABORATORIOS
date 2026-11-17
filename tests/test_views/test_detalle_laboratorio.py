@@ -129,9 +129,10 @@ def test_informacion_general_siempre_visible(cliente_autenticado, laboratorio, s
 def test_contadores_del_sidebar(cliente_autenticado, laboratorio, inventario, usuario_admin):
     _laboratorista(laboratorio, '100')
     _laboratorista(laboratorio, '200', activo=False)  # inactivo: no cuenta
-    docente = Usuario.objects.create_user(
-        username='doc', password='x', rol=Rol.objects.get(nombre='Docente'), codigo='DOC_1')
-    Curso.objects.create(nombre='Química', codigo='QUIM-101', profesor=docente,
+    from solicitudes.models import Profesor
+
+    profesor = Profesor.objects.create(nombre='Ana', apellido='Gómez', cedula='1001')  # sin cuenta
+    Curso.objects.create(nombre='Química', codigo='QUIM-101', profesor=profesor,
                          cantidad_estudiantes=20, laboratorio=laboratorio)
 
     ctx = _get(cliente_autenticado, laboratorio).context
@@ -245,10 +246,10 @@ def test_seccion_personal_no_muestra_cursos_ni_inventario(cliente_autenticado, l
 # ── Sección Cursos ───────────────────────────────────────────────────────────
 
 def test_seccion_cursos_muestra_tabla(cliente_autenticado, catalogos, laboratorio):
-    docente = Usuario.objects.create_user(
-        username='doc', password='x', rol=Rol.objects.get(nombre='Docente'),
-        codigo='DOC_1', first_name='Ana', last_name='Gómez')
-    Curso.objects.create(nombre='Química General', codigo='QUIM-101', profesor=docente,
+    from solicitudes.models import Profesor
+
+    profesor = Profesor.objects.create(nombre='Ana', apellido='Gómez', cedula='1001')  # sin cuenta (fase 2)
+    Curso.objects.create(nombre='Química General', codigo='QUIM-101', profesor=profesor,
                          cantidad_estudiantes=30, laboratorio=laboratorio)
 
     contenido = _get(cliente_autenticado, laboratorio, seccion='cursos').content.decode()

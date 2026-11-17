@@ -17,8 +17,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from laboratorio.models import Laboratorio
-from solicitudes.models import Curso
-from users.models import Usuario
+from solicitudes.models import Curso, Profesor
 
 
 # (nombres candidatos del laboratorio, en orden de preferencia) -> cursos
@@ -60,15 +59,16 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        # Curso.profesor es obligatorio: se reparten los docentes existentes.
-        docentes = list(Usuario.objects.filter(rol__nombre='Docente').order_by('id'))
-        if not docentes:
-            raise CommandError('No hay usuarios con rol Docente; cree al menos uno antes de ejecutar el comando.')
+        # Curso.clean() exige un profesor activo: se reparten los Profesor activos
+        # (fase 2: los profesores ya no tienen cuenta).
+        profesores = list(Profesor.objects.filter(activo=True).order_by('id'))
+        if not profesores:
+            raise CommandError('No hay profesores activos; registre al menos uno antes de ejecutar el comando.')
 
         laboratorios = list(Laboratorio.objects.all())
         codigos = generar_codigos([c for _, cursos in CURSOS_POR_LAB for c in cursos])
         creados = actualizados = sin_cambios = 0
-        indice_docente = 0
+        indice_profesor = 0
 
         for candidatos, cursos in CURSOS_POR_LAB:
             lab = self._buscar_laboratorio(candidatos, laboratorios)
@@ -84,13 +84,13 @@ class Command(BaseCommand):
                     codigo=codigo,
                     defaults={
                         'nombre': nombre,
-                        'profesor': docentes[indice_docente % len(docentes)],
+                        'profesor': profesores[indice_profesor % len(profesores)],
                         'cantidad_estudiantes': random.randint(20, 50),
                         'laboratorio': lab,
                     },
                 )
                 if creado:
-                    indice_docente += 1
+                    indice_profesor += 1
                     creados += 1
                     self.stdout.write(f"  + {curso.codigo} {curso.nombre} -> {lab.nombre}")
                 elif curso.laboratorio_id != lab.id:

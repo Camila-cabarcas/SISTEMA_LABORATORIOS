@@ -16,16 +16,13 @@ from reservas.models import EstadoReserva, Reserva
 from solicitudes.forms import EstudianteSolicitudForm, ProfesorSolicitudForm
 from solicitudes.models import (
     Curso,
+    Profesor,
     SolicitudInsumo,
     SolicitudRegistroCurso,
     SolicitudRegistroProfesor,
     SolicitudReserva,
 )
-from solicitudes.services.registro_profesor_service import (
-    AprobarCursoService,
-    AprobarSolicitudRegistroProfesorService,
-    CrearSolicitudRegistroProfesorService,
-)
+from solicitudes.services.registro_profesor_service import CrearSolicitudRegistroProfesorService
 from solicitudes.services.solicitud_reserva_service import (
     AprobarSolicitudReservaService,
     CancelarSolicitudReservaService,
@@ -37,10 +34,21 @@ from users.models import ProgramaAcademico, Rol, Usuario
 
 
 def crear_catalogos():
-    for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante', 'Docente']:
+    for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante']:
         Rol.objects.get_or_create(nombre=nombre)
     for nombre in ['Pendiente', 'Aprobada', 'Cancelada', 'Expirada']:
         EstadoReserva.objects.get_or_create(nombre=nombre)
+
+
+def crear_profesor_con_curso(cedula='999888777', codigo='FIS101', activo=True):
+    """Profesor sin cuenta (fase 2) con un curso, para las reservas de curso."""
+    profesor = Profesor.objects.create(
+        nombre='Carlos', apellido='Ramirez', cedula=cedula, correo='carlos.ramirez@udea.edu.co', activo=activo,
+    )
+    curso = Curso.objects.create(
+        nombre='Física General', codigo=codigo, profesor=profesor, cantidad_estudiantes=20,
+    )
+    return profesor, curso
 
 
 class ValidarSolicitudReservaServiceTests(TestCase):
@@ -523,13 +531,7 @@ class CrearSolicitudReservaServiceTests(TestCase):
         self.assertIn('Ya tienes 2 reservas aprobadas', errores)
 
     def test_crear_desde_profesor_crea_solicitud_y_reserva(self):
-        docente = Usuario.objects.create_user(
-            username='profe_test', password='x', first_name='Carlos', last_name='Ramirez',
-            rol=Rol.objects.get(nombre='Docente'),
-        )
-        curso = Curso.objects.create(
-            nombre='Física General', codigo='FIS101', profesor=docente, cantidad_estudiantes=20,
-        )
+        _, curso = crear_profesor_con_curso()
         form = ProfesorSolicitudForm({
             'nombre': 'Carlos Ramirez',
             'cedula': '999888777',
@@ -547,16 +549,32 @@ class CrearSolicitudReservaServiceTests(TestCase):
 
         self.assertEqual(solicitud.tipo_solicitante, 'profesor')
         assert reserva is not None
-        self.assertEqual(solicitud.usuario_id, docente.id)
+        # El profesor no tiene cuenta: ni la solicitud ni la reserva se ligan a un Usuario.
+        self.assertIsNone(solicitud.usuario_id)
+        self.assertIsNone(reserva.usuario_id)
+
+    def test_crear_desde_profesor_inactivo_se_rechaza(self):
+        _, curso = crear_profesor_con_curso(activo=False)
+        form = ProfesorSolicitudForm({
+            'nombre': 'Carlos Ramirez', 'cedula': '999888777', 'curso': curso.id,
+            'laboratorio': self.laboratorio.id, 'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '08:00', 'hora_fin': '10:00', 'necesita_modulo': False, 'observaciones': '',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('no está activo', ' '.join(form.errors.get('cedula', [])))
+
+    def test_crear_desde_profesor_con_cedula_no_registrada_se_rechaza(self):
+        _, curso = crear_profesor_con_curso()
+        form = ProfesorSolicitudForm({
+            'nombre': 'Carlos Ramirez', 'cedula': '111000111', 'curso': curso.id,
+            'laboratorio': self.laboratorio.id, 'fecha_reserva': self.fecha.isoformat(),
+            'hora_inicio': '08:00', 'hora_fin': '10:00', 'necesita_modulo': False, 'observaciones': '',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('No hay un profesor habilitado', ' '.join(form.errors.get('cedula', [])))
 
     def _form_profesor(self, **overrides):
-        docente = Usuario.objects.create_user(
-            username='profe_email', password='x', first_name='Carlos', last_name='Ramirez',
-            rol=Rol.objects.get(nombre='Docente'),
-        )
-        curso = Curso.objects.create(
-            nombre='Física General', codigo='FIS-EMAIL', profesor=docente, cantidad_estudiantes=20,
-        )
+        _, curso = crear_profesor_con_curso(codigo='FIS-EMAIL')
         datos = dict(
             nombre='Carlos Ramirez', cedula='999888777', curso=curso.id,
             laboratorio=self.laboratorio.id, fecha_reserva=self.fecha.isoformat(),
@@ -781,12 +799,14 @@ class SolicitudReservaEstadoServiceTests(TestCase):
 
 
 class CrearSolicitudRegistroProfesorServiceTests(TestCase):
+    """Formulario público de registro (fase 2): sin contraseña, sin cursos,
+    correo UdeA obligatorio. Aprobar y rechazar están en
+    tests/test_services/test_registro_profesor.py."""
 
     def _datos_validos(self, **overrides):
         datos = dict(
             nombre='Pedro', apellido='Suárez', cedula='123123123',
             correo='pedro@udea.edu.co', programa='Ingeniería',
-            nombres_curso=['Cálculo I'], codigos_curso=['CAL101'], cantidades_curso=['30'],
         )
         datos.update(overrides)
         return datos
@@ -795,32 +815,45 @@ class CrearSolicitudRegistroProfesorServiceTests(TestCase):
         solicitud = CrearSolicitudRegistroProfesorService.crear(**self._datos_validos())
 
         self.assertEqual(solicitud.estado, 'pendiente')
-        self.assertEqual(solicitud.cursos_solicitados.count(), 1)
-        curso = solicitud.cursos_solicitados.first()
-        self.assertEqual(curso.codigo, 'CAL101')
+        self.assertEqual(solicitud.cursos_solicitados.count(), 0)
+        self.assertIsNone(solicitud.laboratorio_interes)
+
+    def test_crear_con_laboratorio_de_interes(self):
+        laboratorio = Laboratorio.objects.create(nombre='Lab Interés', ubicacion='X')
+        solicitud = CrearSolicitudRegistroProfesorService.crear(
+            **self._datos_validos(laboratorio_interes=laboratorio))
+        self.assertEqual(solicitud.laboratorio_interes, laboratorio)
 
     def test_cedula_duplicada_pendiente_lanza_error(self):
         CrearSolicitudRegistroProfesorService.crear(**self._datos_validos())
 
         with self.assertRaises(ValidationError) as ctx:
-            CrearSolicitudRegistroProfesorService.crear(**self._datos_validos(
-                nombres_curso=['Cálculo II'], codigos_curso=['CAL102'], cantidades_curso=['25'],
-            ))
+            CrearSolicitudRegistroProfesorService.crear(**self._datos_validos())
         self.assertTrue(any('Ya existe una solicitud' in m for m in ctx.exception.messages))
 
-    def test_curso_incompleto_lanza_error(self):
-        with self.assertRaises(ValidationError) as ctx:
-            CrearSolicitudRegistroProfesorService.crear(**self._datos_validos(
-                nombres_curso=['Cálculo I'], codigos_curso=[''], cantidades_curso=['30'],
-            ))
-        self.assertTrue(any('código' in m for m in ctx.exception.messages))
+    def test_cedula_rechazada_puede_volver_a_solicitar(self):
+        anterior = CrearSolicitudRegistroProfesorService.crear(**self._datos_validos())
+        anterior.estado = 'rechazada'
+        anterior.save()
 
-    def test_sin_cursos_lanza_error(self):
+        nueva = CrearSolicitudRegistroProfesorService.crear(**self._datos_validos())
+        self.assertEqual(nueva.estado, 'pendiente')
+
+    def test_profesor_ya_habilitado_lanza_error(self):
+        Profesor.objects.create(nombre='Pedro', apellido='Suárez', cedula='123123123')
         with self.assertRaises(ValidationError) as ctx:
-            CrearSolicitudRegistroProfesorService.crear(**self._datos_validos(
-                nombres_curso=[], codigos_curso=[], cantidades_curso=[],
-            ))
-        self.assertIn('Debes agregar al menos un curso.', ctx.exception.messages)
+            CrearSolicitudRegistroProfesorService.crear(**self._datos_validos())
+        self.assertTrue(any('Ya hay un profesor habilitado' in m for m in ctx.exception.messages))
+
+    def test_correo_es_obligatorio(self):
+        with self.assertRaises(ValidationError) as ctx:
+            CrearSolicitudRegistroProfesorService.crear(**self._datos_validos(correo=''))
+        self.assertIn('El correo institucional es requerido.', ctx.exception.messages)
+
+    def test_correo_debe_ser_udea(self):
+        with self.assertRaises(ValidationError) as ctx:
+            CrearSolicitudRegistroProfesorService.crear(**self._datos_validos(correo='pedro@gmail.com'))
+        self.assertTrue(any('@udea.edu.co' in m for m in ctx.exception.messages))
 
     def test_cedula_no_numerica_lanza_error(self):
         with self.assertRaises(ValidationError) as ctx:
@@ -831,111 +864,6 @@ class CrearSolicitudRegistroProfesorServiceTests(TestCase):
         with self.assertRaises(ValidationError):
             CrearSolicitudRegistroProfesorService.crear(**self._datos_validos(nombre=''))
         self.assertEqual(SolicitudRegistroProfesor.objects.count(), 0)
-
-
-class AprobarSolicitudRegistroProfesorServiceTests(TestCase):
-
-    def setUp(self):
-        crear_catalogos()
-        self.solicitud = SolicitudRegistroProfesor.objects.create(
-            nombre='Pedro', apellido='Suárez', cedula='123123123', correo='p@example.com',
-        )
-        SolicitudRegistroCurso.objects.create(
-            solicitud_profesor=self.solicitud, nombre='Cálculo I', codigo='CAL101',
-            cantidad_estudiantes=30,
-        )
-
-    def test_aprobar_crea_usuario_docente(self):
-        solicitud = AprobarSolicitudRegistroProfesorService.aprobar(self.solicitud.id)
-
-        self.assertEqual(solicitud.estado, 'aprobada')
-        self.assertIsNotNone(solicitud.usuario_creado)
-        self.assertEqual(solicitud.usuario_creado.username, 'doc_123123123')
-        self.assertEqual(solicitud.usuario_creado.rol.nombre, 'Docente')
-
-    def test_aprobar_username_colision_agrega_sufijo(self):
-        Usuario.objects.create_user(username='doc_123123123', password='x')
-
-        solicitud = AprobarSolicitudRegistroProfesorService.aprobar(self.solicitud.id)
-
-        self.assertEqual(solicitud.usuario_creado.username, 'doc_123123123_2')
-
-    def test_aprobar_no_pendiente_lanza_error(self):
-        AprobarSolicitudRegistroProfesorService.aprobar(self.solicitud.id)
-
-        with self.assertRaises(ValidationError):
-            AprobarSolicitudRegistroProfesorService.aprobar(self.solicitud.id)
-
-    def test_aprobar_solicitud_inexistente_lanza_error(self):
-        with self.assertRaises(ValidationError):
-            AprobarSolicitudRegistroProfesorService.aprobar(999999)
-
-    def test_rechazar_marca_estado_y_cursos(self):
-        AprobarSolicitudRegistroProfesorService.rechazar(self.solicitud.id)
-
-        self.solicitud.refresh_from_db()
-        self.assertEqual(self.solicitud.estado, 'rechazada')
-        curso = self.solicitud.cursos_solicitados.first()
-        self.assertEqual(curso.estado, 'rechazada')
-
-    def test_rechazar_no_pendiente_lanza_error(self):
-        AprobarSolicitudRegistroProfesorService.rechazar(self.solicitud.id)
-
-        with self.assertRaises(ValidationError):
-            AprobarSolicitudRegistroProfesorService.rechazar(self.solicitud.id)
-
-
-class AprobarCursoServiceTests(TestCase):
-
-    def setUp(self):
-        crear_catalogos()
-        self.solicitud = SolicitudRegistroProfesor.objects.create(
-            nombre='Pedro', apellido='Suárez', cedula='123123123', correo='p@example.com',
-        )
-        self.solicitud_curso = SolicitudRegistroCurso.objects.create(
-            solicitud_profesor=self.solicitud, nombre='Cálculo I', codigo='CAL101',
-            cantidad_estudiantes=30,
-        )
-
-    def _aprobar_profesor(self):
-        return AprobarSolicitudRegistroProfesorService.aprobar(self.solicitud.id)
-
-    def test_aprobar_curso_requiere_solicitud_profesor_aprobada(self):
-        with self.assertRaises(ValidationError):
-            AprobarCursoService.aprobar(self.solicitud.id, self.solicitud_curso.id)
-
-    def test_aprobar_crea_curso(self):
-        self._aprobar_profesor()
-
-        curso = AprobarCursoService.aprobar(self.solicitud.id, self.solicitud_curso.id)
-
-        self.assertEqual(curso.codigo, 'CAL101')
-        self.assertEqual(curso.profesor.username, 'doc_123123123')
-        self.solicitud_curso.refresh_from_db()
-        self.assertEqual(self.solicitud_curso.estado, 'aprobada')
-        self.assertEqual(self.solicitud_curso.curso_creado_id, curso.id)
-
-    def test_aprobar_curso_ya_procesado_lanza_error(self):
-        self._aprobar_profesor()
-        AprobarCursoService.aprobar(self.solicitud.id, self.solicitud_curso.id)
-
-        with self.assertRaises(ValidationError):
-            AprobarCursoService.aprobar(self.solicitud.id, self.solicitud_curso.id)
-
-    def test_aprobar_curso_inexistente_lanza_error(self):
-        self._aprobar_profesor()
-
-        with self.assertRaises(ValidationError):
-            AprobarCursoService.aprobar(self.solicitud.id, 999999)
-
-    def test_rechazar_curso(self):
-        self._aprobar_profesor()
-
-        AprobarCursoService.rechazar(self.solicitud.id, self.solicitud_curso.id)
-
-        self.solicitud_curso.refresh_from_db()
-        self.assertEqual(self.solicitud_curso.estado, 'rechazada')
-        self.assertIsNone(self.solicitud_curso.curso_creado)
 
 
 class SolicitudesViewsHttpTests(TestCase):
@@ -981,13 +909,7 @@ class SolicitudesViewsHttpTests(TestCase):
         self.assertTrue(SolicitudReserva.objects.filter(cedula='111222333').exists())
 
     def test_solicitud_profesor_normal_post_crea_solicitud(self):
-        docente = Usuario.objects.create_user(
-            username='profe_http_test', password='x', codigo='DOCHTTP1',
-            first_name='Carlos', last_name='Ramirez', rol=Rol.objects.get(nombre='Docente'),
-        )
-        curso = Curso.objects.create(
-            nombre='Física General', codigo='FIS-HTTP', profesor=docente, cantidad_estudiantes=20,
-        )
+        _, curso = crear_profesor_con_curso(codigo='FIS-HTTP')
 
         response = self.client.post('/solicitudes/profesor/', {
             'nombre': 'Carlos Ramirez',
@@ -1059,6 +981,8 @@ class SolicitudesViewsHttpTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(SolicitudRegistroProfesor.objects.filter(cedula='321321321').exists())
+        # Los cursos ya no entran por el registro (fase 2): se ignoran.
+        self.assertFalse(SolicitudRegistroCurso.objects.exists())
 
     def test_detalle_solicitud_profesor_aprobar_profesor(self):
         solicitud = SolicitudRegistroProfesor.objects.create(
@@ -1073,7 +997,9 @@ class SolicitudesViewsHttpTests(TestCase):
         self.assertEqual(response.status_code, 302)
         solicitud.refresh_from_db()
         self.assertEqual(solicitud.estado, 'aprobada')
-        self.assertIsNotNone(solicitud.usuario_creado)
+        # Sin cuenta: crea un Profesor, no un Usuario.
+        self.assertIsNone(solicitud.usuario_creado)
+        self.assertEqual(solicitud.profesor.cedula, '321321321')
 
     def test_detalle_solicitud_profesor_accion_invalida_no_rompe_y_muestra_mensaje(self):
         solicitud = SolicitudRegistroProfesor.objects.create(
@@ -1081,9 +1007,8 @@ class SolicitudesViewsHttpTests(TestCase):
         )
         self.client.force_login(self.admin)
 
-        # aprobar_curso sin que la solicitud del profesor esté aprobada: antes
-        # era un no-op silencioso; ahora responde igual (redirect, no 500) y
-        # además informa el error via messages.
+        # aprobar_curso ya no existe (los cursos no entran por el registro):
+        # redirect, no 500, y un mensaje de acción inválida.
         response = self.client.post(
             f'/solicitudes/solicitudes-profesores/{solicitud.id}/',
             {'accion': 'aprobar_curso', 'curso_id': '999999'},
@@ -1092,7 +1017,9 @@ class SolicitudesViewsHttpTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         mensajes = [str(m) for m in response.context['messages']]
-        self.assertTrue(any('todavía no está aprobada' in m for m in mensajes))
+        self.assertIn('Acción inválida.', mensajes)
+        solicitud.refresh_from_db()
+        self.assertEqual(solicitud.estado, 'pendiente')
 
 
 class ModelosCleanValidationTests(TestCase):
@@ -1101,39 +1028,40 @@ class ModelosCleanValidationTests(TestCase):
     def setUp(self):
         crear_catalogos()
         self.laboratorio = Laboratorio.objects.create(nombre='Lab Clean Test', ubicacion='X')
-        self.docente = Usuario.objects.create_user(
-            username='docente_clean_test', password='x', codigo='DOCCLEAN1',
-            rol=Rol.objects.get(nombre='Docente'),
-        )
-        self.no_docente = Usuario.objects.create_user(
-            username='admin_clean_test', password='x', codigo='ADMCLEAN1',
-            rol=Rol.objects.get(nombre='Administrador'),
-        )
+        self.profesor = Profesor.objects.create(nombre='Ana', apellido='Gómez', cedula='5551')
+        self.inactivo = Profesor.objects.create(nombre='Luis', apellido='Pardo', cedula='5552', activo=False)
 
     # -- Curso ------------------------------------------------------------
 
     def test_curso_valido(self):
         curso = Curso(
             nombre='Física General', codigo='FIS-CLEAN-1',
-            profesor=self.docente, cantidad_estudiantes=20,
+            profesor=self.profesor, cantidad_estudiantes=20,
         )
         curso.full_clean()
 
     def test_curso_cantidad_estudiantes_cero_es_invalida(self):
         curso = Curso(
             nombre='Física General', codigo='FIS-CLEAN-2',
-            profesor=self.docente, cantidad_estudiantes=0,
+            profesor=self.profesor, cantidad_estudiantes=0,
         )
         with self.assertRaises(ValidationError):
             curso.full_clean()
 
-    def test_curso_profesor_sin_rol_docente_es_invalido(self):
+    def test_curso_con_profesor_inactivo_es_invalido(self):
         curso = Curso(
             nombre='Física General', codigo='FIS-CLEAN-3',
-            profesor=self.no_docente, cantidad_estudiantes=20,
+            profesor=self.inactivo, cantidad_estudiantes=20,
         )
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as ctx:
             curso.full_clean()
+        self.assertIn('profesor', ctx.exception.message_dict)
+
+    def test_curso_sin_profesor_es_invalido(self):
+        curso = Curso(nombre='Física General', codigo='FIS-CLEAN-4', cantidad_estudiantes=20)
+        with self.assertRaises(ValidationError) as ctx:
+            curso.full_clean()
+        self.assertIn('profesor', ctx.exception.message_dict)
 
     # -- SolicitudRegistroCurso ----------------------------------------------
 

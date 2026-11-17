@@ -26,9 +26,9 @@ Resolución del destinatario: solicitud.email es ahora obligatorio y
 verificado (@udea.edu.co) en EstudianteSolicitudForm y en el flujo "reserva
 libre" (ver ValidarSolicitudReservaService), así que es la fuente preferida
 cuando está presente. ProfesorSolicitudForm (flujo normal, con curso
-registrado) NO lo pide — para esos casos se cae a solicitud.usuario.email,
-que siempre existe porque ese flujo exige encontrar un Usuario Docente
-registrado por nombre (ver SolicitudReserva.clean()). Si no hay ningún
+registrado) NO lo pide — para esos casos se cae al correo del Profesor
+(sin cuenta) con esa cédula, que ese flujo exige que exista y esté activo
+(ver SolicitudReserva.clean()). Si no hay ningún
 email disponible por ninguna vía, se omite el envío silenciosamente (log
 info, no error) — no hay a quién escribirle.
 """
@@ -52,6 +52,14 @@ def _email_y_nombre(solicitud):
     email = None
     if solicitud.email:
         email = solicitud.email
+    elif solicitud.tipo_solicitante == 'profesor' and solicitud.cedula:
+        # El profesor no tiene cuenta (fase 2): el respaldo es el correo de
+        # su registro Profesor, buscado por cédula.
+        from solicitudes.models import Profesor
+        profesor = Profesor.objects.filter(cedula=solicitud.cedula.strip()).first()
+        if profesor and profesor.correo:
+            email = profesor.correo
+            nombre = nombre or profesor.nombre_completo
     elif solicitud.usuario and solicitud.usuario.email:
         email = solicitud.usuario.email
 
@@ -309,6 +317,48 @@ def notificar_recordatorio_devolucion(prestamo, async_=True):
             'fecha_vencimiento': fecha_vencimiento,
             'minutos_atraso': minutos_atraso,
             'laboratorio': solicitud.laboratorio.nombre if solicitud else None,
+        },
+        async_=async_,
+    )
+    return True
+
+
+# ── Registro de profesor (fase 2) ───────────────────────────────────────────
+# Avisan al profesor que su solicitud de registro (SolicitudRegistroProfesor,
+# sin cuenta) fue aprobada o rechazada. Se omiten si la solicitud no tiene
+# correo. Quien las llama (registro_profesor_service) las envuelve en
+# try/except: un error de correo nunca interrumpe la aprobación o el rechazo.
+
+def notificar_registro_profesor_aprobado(solicitud, async_=True):
+    if not solicitud.correo:
+        logger.info('notificar_registro_profesor_aprobado | sin correo | solicitud_id=%s', solicitud.id)
+        return False
+    enviar_email_html(
+        destinatarios=solicitud.correo,
+        asunto='Tu registro como profesor fue aprobado',
+        template_name='emails/registro_profesor_aprobado.html',
+        contexto={
+            'nombre': f'{solicitud.nombre} {solicitud.apellido}'.strip(),
+            'cedula': solicitud.cedula,
+            'laboratorio': solicitud.laboratorio_interes.nombre if solicitud.laboratorio_interes_id else None,
+        },
+        async_=async_,
+    )
+    return True
+
+
+def notificar_registro_profesor_rechazado(solicitud, async_=True):
+    if not solicitud.correo:
+        logger.info('notificar_registro_profesor_rechazado | sin correo | solicitud_id=%s', solicitud.id)
+        return False
+    enviar_email_html(
+        destinatarios=solicitud.correo,
+        asunto='Tu solicitud de registro como profesor fue rechazada',
+        template_name='emails/registro_profesor_rechazado.html',
+        contexto={
+            'nombre': f'{solicitud.nombre} {solicitud.apellido}'.strip(),
+            'cedula': solicitud.cedula,
+            'motivo': solicitud.motivo_rechazo,
         },
         async_=async_,
     )

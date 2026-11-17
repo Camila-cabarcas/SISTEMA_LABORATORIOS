@@ -1,68 +1,26 @@
 {% extends 'base_general.html' %}
 
 {% block contenido %}
-
-<h1 class="mb-4">Editar Profesor — {{ profesor.first_name }} {{ profesor.last_name }}</h1>
-
-<div class="card p-4" style="max-width: 620px;">
-    <form method="POST">
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger">
-            {% for error in form.non_field_errors %}
-                <div>{{ error }}</div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Nombre *</label>
-                {{ form.first_name }}
-                {% if form.first_name.errors %}
-                    <div class="invalid-feedback d-block">{{ form.first_name.errors }}</div>
-                {% endif %}
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Apellido *</label>
-                {{ form.last_name }}
-                {% if form.last_name.errors %}
-                    <div class="invalid-feedback d-block">{{ form.last_name.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Correo electrónico</label>
-            {{ form.email }}
-            {% if form.email.errors %}
-                <div class="invalid-feedback d-block">{{ form.email.errors }}</div>
-            {% endif %}
-        </div>
-
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Cédula *</label>
-                {{ form.codigo }}
-                {% if form.codigo.errors %}
-                    <div class="invalid-feedback d-block">{{ form.codigo.errors }}</div>
-                {% endif %}
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Programa académico</label>
-                {{ form.programa }}
-                {% if form.programa.errors %}
-                    <div class="invalid-feedback d-block">{{ form.programa.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="d-flex gap-2 mt-2">
-            <button type="submit" class="btn btn-primary">Guardar cambios</button>
-            <a href="/usuarios/profesores/{{ profesor.id }}/" class="btn btn-secondary">Cancelar</a>
-        </div>
-    </form>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="fa-solid fa-chalkboard-user text-brand me-2"></i>Editar profesor — {{ profesor.cedula }}</h2>
+    <a href="{% url 'detalle_profesor' profesor.id %}" class="btn btn-outline-secondary">&larr; Volver</a>
 </div>
 
+<div class="card shadow-sm" style="max-width: 640px;">
+    <div class="card-body">
+        <p class="text-muted small">La cédula no se edita: identifica al profesor en sus cursos y reservas.</p>
+        <form method="post" novalidate id="form-profesor">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            {% for campo in form %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ campo.id_for_label }}">{{ campo.label }}{% if campo.field.required %} *{% endif %}</label>
+                {{ campo }}
+                {% for err in campo.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-success">Guardar</button>
+        </form>
+    </div>
+</div>
 {% endblock %}

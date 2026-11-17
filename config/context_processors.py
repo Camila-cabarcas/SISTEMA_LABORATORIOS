@@ -1,20 +1,18 @@
 def notificaciones_admin(request):
+    """`notif_profesores`: solicitudes de profesor PENDIENTES que el usuario
+    puede resolver (Administrador: todas; Laboratorista: las de su
+    laboratorio y las sin laboratorio). El Monitor y los demás roles no ven
+    el contador. (El contador de cursos pedidos en el registro se quitó en
+    la fase 2: los cursos ya no entran por el registro.)"""
     if not request.user.is_authenticated:
         return {}
-    try:
-        rol = request.user.rol.nombre
-    except Exception:
+    from users.helpers import filtrar_solicitudes_profesor_visibles, puede_ver_solicitudes_profesor
+    if not puede_ver_solicitudes_profesor(request.user):
         return {}
-    if rol not in ('Administrador', 'Laboratorista'):
-        return {}
-    from solicitudes.models import SolicitudRegistroProfesor, SolicitudRegistroCurso
+    from solicitudes.models import SolicitudRegistroProfesor
+    pendientes = SolicitudRegistroProfesor.objects.filter(estado='pendiente')
     return {
-        'notif_profesores': SolicitudRegistroProfesor.objects.filter(
-            estado='pendiente'
-        ).count(),
-        'notif_cursos': SolicitudRegistroCurso.objects.filter(
-            estado='pendiente'
-        ).count(),
+        'notif_profesores': filtrar_solicitudes_profesor_visibles(request.user, pendientes).count(),
     }
 
 

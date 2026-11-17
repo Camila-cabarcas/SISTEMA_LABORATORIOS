@@ -49,8 +49,7 @@
             {% if profesor_preseleccionado %}
                 <input type="hidden" name="profesor" value="{{ profesor_preseleccionado.id }}">
                 <p class="form-control-plaintext fw-semibold">
-                    {{ profesor_preseleccionado.get_full_name|default:profesor_preseleccionado.username }}
-                    {% if profesor_preseleccionado.codigo %}— {{ profesor_preseleccionado.codigo }}{% endif %}
+                    {{ profesor_preseleccionado.nombre_completo }} — {{ profesor_preseleccionado.cedula }}
                 </p>
             {% else %}
                 {{ form.profesor }}

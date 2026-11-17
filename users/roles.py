@@ -34,6 +34,9 @@ ROLES_ADMIN_PERSONAL = (ADMINISTRADOR,)
 ROLES_FICHAS_MONITOR = (ADMINISTRADOR, LABORATORISTA)
 # Descripción del laboratorio: mismo criterio que las fichas.
 ROLES_DESCRIPCION_LAB = (ADMINISTRADOR, LABORATORISTA)
+# Aprobar o rechazar solicitudes de registro de profesor: el Administrador
+# todas; el Laboratorista las de su laboratorio de interés o sin laboratorio.
+ROLES_SOLICITUDES_PROFESOR = (ADMINISTRADOR, LABORATORISTA)
 # Roles que solo se asignan desde Personal (no desde la pantalla genérica de
 # usuarios ni desde el admin de Django).
 ROLES_SOLO_DESDE_PERSONAL = (LABORATORISTA, MONITOR)
