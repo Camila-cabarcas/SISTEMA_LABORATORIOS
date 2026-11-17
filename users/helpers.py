@@ -33,6 +33,7 @@ from users.roles import (
     ROLES_ADMIN_PERSONAL,
     ROLES_DESCRIPCION_LAB,
     ROLES_FICHAS_MONITOR,
+    ROLES_SOLICITUDES_PROFESOR,
     ROLES_SOLO_DESDE_PERSONAL,
 )
 
@@ -123,6 +124,39 @@ def puede_gestionar_fichas(usuario, laboratorio):
 def puede_editar_descripcion(usuario, laboratorio):
     """Editar Laboratorio.descripcion de `laboratorio`."""
     return _en_su_laboratorio(usuario, laboratorio, ROLES_DESCRIPCION_LAB)
+
+
+# ── Solicitudes de registro de profesor ─────────────────────────────────────
+
+def puede_ver_solicitudes_profesor(usuario):
+    """Entrar a la lista de solicitudes de registro de profesor."""
+    return nombre_rol(usuario) in ROLES_SOLICITUDES_PROFESOR
+
+
+def puede_resolver_solicitud_profesor(usuario, solicitud):
+    """Aprobar o rechazar `solicitud` (SolicitudRegistroProfesor):
+    - Administrador: todas;
+    - Laboratorista: las de su laboratorio de interés y las que no tienen
+      laboratorio de interés;
+    - Monitor y demás roles: ninguna."""
+    if solicitud.laboratorio_interes_id is None:
+        return puede_ver_solicitudes_profesor(usuario)
+    return _en_su_laboratorio(usuario, solicitud.laboratorio_interes, ROLES_SOLICITUDES_PROFESOR)
+
+
+def filtrar_solicitudes_profesor_visibles(usuario, solicitudes):
+    """Restringe un queryset de SolicitudRegistroProfesor a las que
+    `usuario` puede resolver (mismo criterio que
+    puede_resolver_solicitud_profesor). Vacío si no puede ver ninguna."""
+    from django.db.models import Q
+
+    if es_administrador(usuario):
+        return solicitudes
+    if not puede_ver_solicitudes_profesor(usuario):
+        return solicitudes.none()
+    return solicitudes.filter(
+        Q(laboratorio_interes__isnull=True) | Q(laboratorio_interes__laboratoristas=usuario)
+    ).distinct()
 
 
 # ── Acceso por laboratorio ──────────────────────────────────────────────────

@@ -45,7 +45,7 @@ def test_anonimo_redirige_al_login(client, laboratorio):
     assert response.url.startswith('/login/')
 
 
-@pytest.mark.parametrize('rol', ['Laboratorista', 'Docente', 'Estudiante'])
+@pytest.mark.parametrize('rol', ['Laboratorista', 'Estudiante'])
 def test_otros_roles_reciben_403(client, catalogos, laboratorio, rol):
     usuario = _usuario(rol, f'user_{rol.lower()}')
     laboratorio.laboratoristas.add(usuario)  # ni siendo encargado del lab
@@ -232,7 +232,7 @@ def test_get_no_permitido_405(cliente_autenticado, laboratorio):
     assert cliente_autenticado.get(_url_guardar(laboratorio)).status_code == 405
 
 
-@pytest.mark.parametrize('rol', ['Laboratorista', 'Docente', 'Estudiante'])
+@pytest.mark.parametrize('rol', ['Laboratorista', 'Estudiante'])
 def test_guardar_otros_roles_403_y_no_guarda(client, catalogos, laboratorio, modulos, rol):
     usuario = _usuario(rol, f'user_{rol.lower()}')
     laboratorio.laboratoristas.add(usuario)

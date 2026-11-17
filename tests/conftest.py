@@ -11,7 +11,7 @@ from inventario.models import EstadoItem, Insumo, ItemInventario, TipoMovimiento
 from laboratorio.models import Laboratorio
 from prestamos.models import EstadoPrestamo, Prestamo, PrestamoItem
 from reservas.models import EstadoReserva, Reserva
-from solicitudes.models import Curso, SolicitudReserva
+from solicitudes.models import Curso, Profesor, SolicitudReserva
 from users.models import Rol, Usuario
 
 
@@ -21,7 +21,7 @@ def catalogos(db):
     Crea las filas de catálogo (Rol/Estado/TipoMovimiento) que el código de
     modelos, vistas y señales asume que ya existen en la base de datos.
     """
-    for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante', 'Docente']:
+    for nombre in ['Administrador', 'Laboratorista', 'Monitor', 'Estudiante']:
         Rol.objects.get_or_create(nombre=nombre)
     for nombre in ['Pendiente', 'Aprobada', 'Cancelada', 'Expirada']:
         EstadoReserva.objects.get_or_create(nombre=nombre)
@@ -95,14 +95,11 @@ def laboratorio(db):
 
 @pytest.fixture
 def curso(catalogos):
-    profesor = Usuario.objects.create_user(
-        username='docente_curso_test',
-        password='clave12345',
-        rol=Rol.objects.get(nombre='Docente'),
-        first_name='Prof.',
-        last_name='Pérez',
-        # codigo explícito: ver nota en usuario_laboratorista.
-        codigo='DOC_CURSO_001',
+    """Curso con su Profesor sin cuenta (fase 2: Curso.profesor;
+    el campo viejo Curso.profesor ya no se usa)."""
+    profesor = Profesor.objects.create(
+        nombre='Prof.', apellido='Pérez', cedula='100200300',
+        correo='prof.perez@udea.edu.co',
     )
     return Curso.objects.create(
         codigo='QUIM101',

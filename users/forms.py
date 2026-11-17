@@ -1,7 +1,8 @@
 """
 forms.py — users
-Formularios para crear y editar usuarios del sistema (UsuarioForm, EditarUsuarioForm,
-ProfesorForm y EditarProfesorForm) y gestión de ProgramaAcademico.
+Formularios de login, de usuarios del sistema (UsuarioForm, EditarUsuarioForm)
+y de ProgramaAcademico. Los profesores ya no tienen cuenta: su formulario es
+solicitudes.forms.ProfesorHabilitadoForm.
 """
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
@@ -131,71 +132,6 @@ class UsuarioForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         limitar_campo_rol(self)
-
-
-class ProfesorForm(forms.ModelForm):
-
-    programa = forms.ModelChoiceField(
-        queryset=ProgramaAcademico.objects.filter(activo=True),
-        required=False,
-        empty_label='-- Selecciona un programa --',
-        widget=forms.Select(attrs={'class': 'form-select'}),
-    )
-
-    class Meta:
-        model = Usuario
-        fields = ['first_name', 'last_name', 'email', 'codigo', 'programa']
-        widgets = {
-            'first_name': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Nombre'}
-            ),
-            'last_name': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Apellido'}
-            ),
-            'email': forms.EmailInput(
-                attrs={'class': 'form-control', 'placeholder': 'Correo electrónico'}
-            ),
-            'codigo': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Cédula'}
-            ),
-        }
-
-    def clean_programa(self):
-        programa = self.cleaned_data.get('programa')
-        return programa.nombre if programa else ''
-
-
-class EditarProfesorForm(forms.ModelForm):
-
-    programa = forms.ModelChoiceField(
-        queryset=ProgramaAcademico.objects.filter(activo=True),
-        required=False,
-        empty_label='-- Selecciona un programa --',
-        widget=forms.Select(attrs={'class': 'form-select'}),
-    )
-
-    class Meta:
-        model = Usuario
-        fields = ['first_name', 'last_name', 'email', 'codigo', 'programa']
-        widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'last_name':  forms.TextInput(attrs={'class': 'form-control'}),
-            'email':      forms.EmailInput(attrs={'class': 'form-control'}),
-            'codigo':     forms.TextInput(attrs={'class': 'form-control'}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk and self.instance.programa:
-            prog = ProgramaAcademico.objects.filter(
-                nombre=self.instance.programa
-            ).first()
-            if prog:
-                self.initial['programa'] = prog.pk
-
-    def clean_programa(self):
-        programa = self.cleaned_data.get('programa')
-        return programa.nombre if programa else ''
 
 
 class EditarUsuarioForm(forms.ModelForm):

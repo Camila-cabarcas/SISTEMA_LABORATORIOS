@@ -5,7 +5,7 @@ Página de inicio con estadísticas por rol:
     filtrable por laboratorio (?lab=<id>).
   - Laboratorista / Monitor: las mismas tarjetas, fijas a sus laboratorios
     asignados (Laboratorio.laboratoristas / Laboratorio.monitores).
-  - Docente / Estudiante: sus últimas reservas.
+  - Otros roles: sin panel (el de Docente/Estudiante se quitó en la fase 2).
 """
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
@@ -105,9 +105,7 @@ def dashboard(request):
             'stats': _estadisticas([lab.id for lab in mis_labs]) if mis_labs else None,
         })
 
-    elif rol in ['Docente', 'Estudiante']:
-        context['mis_reservas'] = Reserva.objects.filter(
-            usuario=request.user
-        ).select_related('estado').order_by('-fecha_creacion')[:5]
-
+    # Otros roles (p. ej. Estudiante): sin panel. El panel Docente/Estudiante
+    # de "mis reservas" se quitó en la fase 2 (los profesores ya no tienen
+    # cuenta y las reservas van por las páginas públicas).
     return render(request, 'dashboard/dashboard.html', context)

@@ -1,0 +1,23 @@
+{% extends "emails/base_email.html" %}
+
+{% block titulo %}Registro de profesor aprobado{% endblock %}
+
+{% block contenido %}
+<h2 style="margin-top:0; color:#198754;">Hola, {{ nombre }}</h2>
+<p>Tu solicitud de registro como profesor fue <strong>aprobada</strong>.</p>
+
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; width:160px; border:1px solid #e9ecef;">Cédula</td>
+<td style="border:1px solid #e9ecef;">{{ cedula }}</td>
+</tr>
+{% if laboratorio %}
+<tr>
+<td style="background-color:#f8f9fa; font-weight:bold; border:1px solid #e9ecef;">Laboratorio</td>
+<td style="border:1px solid #e9ecef;">{{ laboratorio }}</td>
+</tr>
+{% endif %}
+</table>
+
+<p>Ya puedes solicitar reservas de laboratorio para tus cursos desde las páginas públicas, identificándote con tu cédula. No necesitas usuario ni contraseña.</p>
+{% endblock %}

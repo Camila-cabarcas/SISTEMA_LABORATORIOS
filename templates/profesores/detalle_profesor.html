@@ -1,82 +1,69 @@
 {% extends 'base_general.html' %}
 
 {% block contenido %}
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="mb-0">{{ profesor.get_full_name|default:profesor.username }}</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">
+        <i class="fa-solid fa-chalkboard-user text-brand me-2"></i>{{ profesor.nombre_completo }}
+        {% if profesor.activo %}<span class="badge bg-success fs-6 align-middle">Activo</span>
+        {% else %}<span class="badge bg-secondary fs-6 align-middle">Inactivo</span>{% endif %}
+    </h2>
     <div class="d-flex gap-2">
-        <a href="/usuarios/profesores/{{ profesor.id }}/editar/" class="btn btn-warning">Editar</a>
-        <form method="POST" action="/usuarios/profesores/{{ profesor.id }}/toggle/" style="display:inline;">
+        <a href="{% url 'editar_profesor' profesor.id %}" class="btn btn-warning">Editar</a>
+        {% if profesor.activo %}
+        <form method="post" action="{% url 'desactivar_profesor' profesor.id %}" id="form-desactivar-profesor">
             {% csrf_token %}
-            {% if profesor.is_active %}
-                <button type="submit" class="btn btn-danger">Desactivar</button>
-            {% else %}
-                <button type="submit" class="btn btn-success">Activar</button>
-            {% endif %}
+            <button type="submit" class="btn btn-danger">Desactivar</button>
         </form>
-        <a href="/usuarios/profesores/" class="btn btn-secondary">Volver</a>
+        {% endif %}
+        <a href="{% url 'lista_profesores' %}" class="btn btn-secondary">Volver</a>
     </div>
 </div>
 
 <div class="card p-4 mb-4">
-    <h5 class="mb-3">Información del Profesor</h5>
     <div class="row">
         <div class="col-md-6">
-            <p><strong>Nombre completo:</strong> {{ profesor.get_full_name|default:profesor.username }}</p>
-            <p><strong>Cédula:</strong> {{ profesor.codigo|default:"No registrada" }}</p>
+            <p><strong>Cédula:</strong> {{ profesor.cedula }}</p>
+            <p><strong>Correo:</strong> {{ profesor.correo|default:"—" }}</p>
         </div>
         <div class="col-md-6">
-            <p><strong>Correo:</strong> {{ profesor.email|default:"No registrado" }}</p>
-            <p><strong>Programa:</strong> {{ profesor.programa|default:"No especificado" }}</p>
-            <p>
-                <strong>Estado:</strong>
-                {% if profesor.is_active %}
-                    <span class="badge bg-success">Activo</span>
-                {% else %}
-                    <span class="badge bg-danger">Inactivo</span>
-                {% endif %}
+            <p><strong>Programa:</strong> {{ profesor.programa|default:"—" }}</p>
+            <p class="mb-0"><strong>Origen:</strong>
+                {% if profesor.solicitud_origen_id %}
+                    <a href="{% url 'detalle_solicitud_profesor' profesor.solicitud_origen_id %}">solicitud de registro</a>
+                {% elif profesor.cuenta_anterior_id %}
+                    cuenta Docente anterior (migración)
+                {% else %}—{% endif %}
             </p>
         </div>
     </div>
+    {% if not profesor.activo %}
+    <p class="text-muted small mt-3 mb-0">
+        Desactivado: no puede reservar cursos ni se ofrece al crear cursos. Se reactiva al aprobar una nueva solicitud de registro con su cédula.
+    </p>
+    {% endif %}
 </div>
 
 <div class="card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Cursos asignados</h5>
-        <a href="/solicitudes/cursos/crear/?profesor_id={{ profesor.id }}" class="btn btn-primary btn-sm">+ Nuevo Curso</a>
+        <h5 class="mb-0">Cursos</h5>
+        {% if profesor.activo %}
+        <a href="{% url 'crear_curso' %}?profesor_id={{ profesor.id }}" class="btn btn-sm btn-primary">+ Curso</a>
+        {% endif %}
     </div>
-
-    {% if cursos %}
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Estudiantes</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for curso in cursos %}
-                <tr>
-                    <td>{{ curso.codigo }}</td>
-                    <td>{{ curso.nombre }}</td>
-                    <td>{{ curso.cantidad_estudiantes }}</td>
-                    <td class="d-flex gap-1">
-                        <a href="/solicitudes/cursos/{{ curso.id }}/editar/"
-                           class="btn btn-warning btn-sm">Editar</a>
-                        <a href="/solicitudes/cursos/{{ curso.id }}/eliminar/"
-                           class="btn btn-danger btn-sm">Eliminar</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="text-muted">Este profesor no tiene cursos asignados aún.</p>
-    {% endif %}
+    <table class="table table-sm mb-0">
+        <thead><tr><th>Código</th><th>Nombre</th><th>Laboratorio</th><th>Estudiantes</th></tr></thead>
+        <tbody>
+        {% for curso in cursos %}
+            <tr>
+                <td>{{ curso.codigo }}</td>
+                <td>{{ curso.nombre }}</td>
+                <td>{{ curso.laboratorio.nombre|default:"—" }}</td>
+                <td>{{ curso.cantidad_estudiantes }}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Sin cursos.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
-
 {% endblock %}

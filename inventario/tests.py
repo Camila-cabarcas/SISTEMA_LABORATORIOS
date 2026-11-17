@@ -25,7 +25,7 @@ class EliminarItemInventarioTests(TestCase):
     def setUp(self):
         rol_admin = Rol.objects.get_or_create(nombre='Administrador')[0]
         rol_lab = Rol.objects.get_or_create(nombre='Laboratorista')[0]
-        rol_docente = Rol.objects.get_or_create(nombre='Docente')[0]
+        rol_estudiante = Rol.objects.get_or_create(nombre='Estudiante')[0]
 
         self.admin = Usuario.objects.create_user(
             username='admin_test', password='pass123', codigo='ADMIN-TEST-001', rol=rol_admin,
@@ -37,8 +37,8 @@ class EliminarItemInventarioTests(TestCase):
         )
         self.laboratorista.set_admin_password('LabPass!123')
 
-        self.docente = Usuario.objects.create_user(
-            username='docente_test', password='pass123', codigo='DOC-TEST-001', rol=rol_docente,
+        self.estudiante = Usuario.objects.create_user(
+            username='estudiante_test', password='pass123', codigo='EST-TEST-001', rol=rol_estudiante,
         )
 
         self.estado_disponible = EstadoItem.objects.get_or_create(nombre='Disponible')[0]
@@ -50,9 +50,9 @@ class EliminarItemInventarioTests(TestCase):
         self.client = Client()
 
     def test_rol_no_autorizado_bloqueado(self):
-        """Un rol fuera de Administrador/Laboratorio (p.ej. Docente) recibe 403
+        """Un rol fuera de Administrador/Laboratorio (p.ej. Estudiante) recibe 403
         de inmediato, sin llegar a ver el formulario de contraseña."""
-        self.client.login(username='docente_test', password='pass123')
+        self.client.login(username='estudiante_test', password='pass123')
         response = self.client.get(f'/inventario/items/{self.item.id}/eliminar/')
         self.assertEqual(response.status_code, 403)
         self.item.refresh_from_db()

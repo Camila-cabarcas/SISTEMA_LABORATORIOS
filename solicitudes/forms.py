@@ -5,7 +5,7 @@ Formularios EstudianteSolicitudForm, ProfesorSolicitudForm y CursoForm.
 from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import SolicitudReserva, Curso, SolicitudInsumo
+from .models import Profesor, SolicitudReserva, Curso, SolicitudInsumo
 from inventario.models import Insumo
 from laboratorio.models import Laboratorio
 from users.fields import CorreoUdeaField
@@ -329,6 +329,8 @@ class ProfesorSolicitudForm(forms.ModelForm):
 
 
 class CursoForm(forms.ModelForm):
+    """Curso con su Profesor (sin cuenta). Solo ofrece Profesores ACTIVOS;
+    Curso.clean() también rechaza uno inactivo."""
 
     class Meta:
         model = Curso
@@ -346,14 +348,46 @@ class CursoForm(forms.ModelForm):
                 attrs={'class': 'form-control', 'min': '1'}
             ),
         }
+        error_messages = {'profesor': {'invalid_choice': 'Selecciona un profesor activo.'}}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from users.models import Usuario
         self.fields['laboratorio'].queryset = Laboratorio.objects.filter(activo=True).order_by('nombre')
         self.fields['laboratorio'].empty_label = 'Sin laboratorio asignado'
-        self.fields['profesor'].queryset = Usuario.objects.filter(
-            rol__nombre='Docente', is_active=True
-        ).order_by('last_name', 'first_name')
-        self.fields['profesor'].label_from_instance = lambda obj: \
-            f"{obj.get_full_name() or obj.username} — {obj.codigo or 'Sin cédula'}"
+        self.fields['profesor'].queryset = Profesor.objects.filter(activo=True).order_by('apellido', 'nombre')
+        self.fields['profesor'].empty_label = '-- Selecciona un profesor --'
+        self.fields['profesor'].label_from_instance = lambda p: f'{p.nombre_completo} — {p.cedula}'
+
+
+class ProfesorHabilitadoForm(forms.ModelForm):
+    """Editar un Profesor habilitado (sin cuenta). La cédula no se edita: es
+    la identidad del profesor en cursos y reservas. El correo es opcional y
+    solo se valida su formato: los registros viejos con otro dominio se
+    conservan (la regla @udea.edu.co es del formulario público de registro)."""
+
+    programa = forms.ChoiceField(
+        required=False, label='Programa académico',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
+    class Meta:
+        model = Profesor
+        fields = ['nombre', 'apellido', 'correo', 'programa']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'apellido': forms.TextInput(attrs={'class': 'form-control'}),
+            'correo': forms.EmailInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from users.models import ProgramaAcademico
+
+        opciones = [('', '-- Sin programa --')] + [
+            (p.nombre, p.nombre) for p in ProgramaAcademico.objects.filter(activo=True)
+        ]
+        # Conserva el programa actual aunque ya no esté activo o no exista.
+        actual = self.instance.programa if self.instance.pk else ''
+        if actual and actual not in dict(opciones):
+            opciones.append((actual, actual))
+        self.fields['programa'].choices = opciones

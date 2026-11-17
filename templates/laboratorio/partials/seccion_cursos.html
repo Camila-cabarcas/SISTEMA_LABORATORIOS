@@ -24,7 +24,7 @@
                 <tr>
                     <td>{{ curso.codigo }}</td>
                     <td>{{ curso.nombre }}</td>
-                    <td>{{ curso.profesor.get_full_name|default:curso.profesor.username }}</td>
+                    <td>{{ curso.profesor.nombre_completo|default:"—" }}</td>
                     <td>{{ curso.cantidad_estudiantes }}</td>
                 </tr>
                 {% endfor %}

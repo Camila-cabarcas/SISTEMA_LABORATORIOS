@@ -53,9 +53,11 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="/usuarios/profesores/{{ curso.profesor.id }}/">
-                            {{ curso.profesor.first_name }} {{ curso.profesor.last_name }}
-                        </a>
+                        {% if curso.profesor %}
+                            {% if user.rol.nombre == 'Administrador' %}
+                            <a href="{% url 'detalle_profesor' curso.profesor.id %}">{{ curso.profesor.nombre_completo }}</a>
+                            {% else %}{{ curso.profesor.nombre_completo }}{% endif %}
+                        {% else %}<span class="text-muted">—</span>{% endif %}
                     </td>
                     <td>{{ curso.cantidad_estudiantes }}</td>
                     <td class="d-flex gap-1">

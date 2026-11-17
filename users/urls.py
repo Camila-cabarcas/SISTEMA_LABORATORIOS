@@ -11,10 +11,9 @@ from .views import (
     sin_permiso,
     cambiar_contrasena_admin,
     lista_profesores,
-    crear_profesor,
     detalle_profesor,
     editar_profesor,
-    toggle_profesor,
+    desactivar_profesor,
     lista_programas,
     crear_programa,
     editar_programa,
@@ -28,12 +27,11 @@ urlpatterns = [
     path('<int:id>/desactivar/', desactivar_usuario, name='desactivar_usuario'),
     path('sin-permiso/', sin_permiso, name='sin_permiso'),
     path('cambiar-contrasena-admin/', cambiar_contrasena_admin, name='cambiar_contrasena_admin'),
-    # Profesores
+    # Profesores habilitados (sin cuenta, solo Administrador)
     path('profesores/', lista_profesores, name='lista_profesores'),
-    path('profesores/crear/', crear_profesor, name='crear_profesor'),
     path('profesores/<int:id>/', detalle_profesor, name='detalle_profesor'),
     path('profesores/<int:id>/editar/', editar_profesor, name='editar_profesor'),
-    path('profesores/<int:id>/toggle/', toggle_profesor, name='toggle_profesor'),
+    path('profesores/<int:id>/desactivar/', desactivar_profesor, name='desactivar_profesor'),
     # Programas académicos
     path('programas/', lista_programas, name='lista_programas'),
     path('programas/crear/', crear_programa, name='crear_programa'),

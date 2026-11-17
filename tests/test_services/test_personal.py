@@ -397,7 +397,8 @@ class TestFormularioGenerico:
         roles = _roles_ofrecidos(UsuarioForm())
         assert 'Laboratorista' not in roles
         assert 'Monitor' not in roles
-        assert {'Administrador', 'Estudiante', 'Docente'} <= roles
+        assert {'Administrador', 'Estudiante'} <= roles
+        assert 'Docente' not in roles  # rol quitado en la fase 2
 
     @pytest.mark.parametrize('rol', ['Laboratorista', 'Monitor'])
     def test_crear_rechaza_esos_roles_por_post(self, client, usuario_admin, rol):

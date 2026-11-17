@@ -9,7 +9,7 @@ import pytest
 from django.db import IntegrityError, transaction
 from django.urls import reverse
 
-from users.forms import EditarUsuarioForm, LoginForm, ProfesorForm, UsuarioForm
+from users.forms import EditarUsuarioForm, LoginForm, UsuarioForm
 from users.models import Rol, Usuario
 
 pytestmark = pytest.mark.django_db
@@ -18,10 +18,10 @@ CLAVE = 'clave12345'
 
 
 @pytest.fixture
-def docente(catalogos):
+def cuenta_con_correo(catalogos):
     return Usuario.objects.create_user(
-        username='doc_100', password=CLAVE, email='ana.perez@udea.edu.co',
-        rol=Rol.objects.get(nombre='Docente'), codigo='100',
+        username='est_100', password=CLAVE, email='ana.perez@udea.edu.co',
+        rol=Rol.objects.get(nombre='Estudiante'), codigo='100',
     )
 
 
@@ -48,15 +48,15 @@ class TestLogin:
         assert _autenticado(client)
         assert int(client.session['_auth_user_id']) == usuario_admin.id
 
-    def test_login_con_correo(self, client, docente):
+    def test_login_con_correo(self, client, cuenta_con_correo):
         respuesta = _login(client, 'ana.perez@udea.edu.co')
         assert respuesta.status_code == 302
-        assert int(client.session['_auth_user_id']) == docente.id
+        assert int(client.session['_auth_user_id']) == cuenta_con_correo.id
 
-    def test_login_con_correo_en_mayusculas(self, client, docente):
+    def test_login_con_correo_en_mayusculas(self, client, cuenta_con_correo):
         respuesta = _login(client, '  ANA.Perez@UdeA.edu.co ')
         assert respuesta.status_code == 302
-        assert int(client.session['_auth_user_id']) == docente.id
+        assert int(client.session['_auth_user_id']) == cuenta_con_correo.id
 
     def test_clave_incorrecta_con_usuario_no_entra(self, client, usuario_admin):
         respuesta = _login(client, 'admin_test', 'otra-clave')
@@ -64,25 +64,25 @@ class TestLogin:
         assert not _autenticado(client)
         assert 'Usuario/correo o contraseña incorrectos.' in respuesta.content.decode()
 
-    def test_clave_incorrecta_con_correo_no_entra(self, client, docente):
+    def test_clave_incorrecta_con_correo_no_entra(self, client, cuenta_con_correo):
         respuesta = _login(client, 'ana.perez@udea.edu.co', 'otra-clave')
         assert respuesta.status_code == 200
         assert not _autenticado(client)
 
-    def test_correo_inexistente_no_entra(self, client, docente):
+    def test_correo_inexistente_no_entra(self, client, cuenta_con_correo):
         assert _login(client, 'nadie@udea.edu.co').status_code == 200
         assert not _autenticado(client)
 
-    def test_usuario_inactivo_no_entra_con_correo(self, client, docente):
-        docente.is_active = False
-        docente.save()
+    def test_usuario_inactivo_no_entra_con_correo(self, client, cuenta_con_correo):
+        cuenta_con_correo.is_active = False
+        cuenta_con_correo.save()
         assert _login(client, 'ana.perez@udea.edu.co').status_code == 200
         assert not _autenticado(client)
 
-    def test_correo_de_una_cuenta_no_entra_con_clave_de_otra(self, client, usuario_admin, docente):
-        # La clave de admin_test no abre la cuenta del docente.
-        docente.set_password('clave-del-docente')
-        docente.save()
+    def test_correo_de_una_cuenta_no_entra_con_clave_de_otra(self, client, usuario_admin, cuenta_con_correo):
+        # La clave de admin_test no abre la cuenta del cuenta_con_correo.
+        cuenta_con_correo.set_password('clave-del-cuenta_con_correo')
+        cuenta_con_correo.save()
         assert _login(client, 'ana.perez@udea.edu.co', CLAVE).status_code == 200
         assert not _autenticado(client)
 
@@ -100,12 +100,12 @@ class TestCorreoUnico:
         datos.update(extra)
         return datos
 
-    def test_usuario_form_rechaza_correo_repetido(self, docente):
+    def test_usuario_form_rechaza_correo_repetido(self, cuenta_con_correo):
         form = UsuarioForm(data=self._datos_usuario())
         assert not form.is_valid()
         assert 'Ya existe una cuenta con ese correo electrónico.' in form.non_field_errors()
 
-    def test_editar_usuario_form_rechaza_correo_de_otro(self, docente, usuario_estudiante):
+    def test_editar_usuario_form_rechaza_correo_de_otro(self, cuenta_con_correo, usuario_estudiante):
         form = EditarUsuarioForm(
             data={'first_name': 'E', 'last_name': 'T', 'email': 'ana.perez@udea.edu.co',
                   'codigo': '', 'programa': '', 'rol': usuario_estudiante.rol_id},
@@ -114,37 +114,20 @@ class TestCorreoUnico:
         assert not form.is_valid()
         assert 'Ya existe una cuenta con ese correo electrónico.' in form.non_field_errors()
 
-    def test_editar_usuario_conserva_su_propio_correo(self, docente):
+    def test_editar_usuario_conserva_su_propio_correo(self, cuenta_con_correo):
         form = EditarUsuarioForm(
             data={'first_name': 'Ana', 'last_name': 'Pérez', 'email': 'ana.perez@udea.edu.co',
-                  'codigo': '100', 'programa': '', 'rol': docente.rol_id},
-            instance=docente,
+                  'codigo': '100', 'programa': '', 'rol': cuenta_con_correo.rol_id},
+            instance=cuenta_con_correo,
         )
         assert form.is_valid(), form.errors
 
-    def test_profesor_form_rechaza_correo_repetido(self, docente):
-        form = ProfesorForm(data={
-            'first_name': 'Otro', 'last_name': 'Docente',
-            'email': 'ana.perez@udea.edu.co', 'codigo': '200',
-        })
-        assert not form.is_valid()
-
-    def test_vista_crear_usuario_muestra_error_sin_500(self, client, usuario_admin, docente):
+    def test_vista_crear_usuario_muestra_error_sin_500(self, client, usuario_admin, cuenta_con_correo):
         client.force_login(usuario_admin)
         respuesta = client.post(reverse('crear_usuario'), self._datos_usuario())
         assert respuesta.status_code == 200
         assert 'Ya existe una cuenta con ese correo electrónico.' in respuesta.content.decode()
         assert not Usuario.objects.filter(username='nuevo').exists()
-
-    def test_vista_crear_profesor_muestra_error_sin_500(self, client, usuario_admin, docente):
-        client.force_login(usuario_admin)
-        respuesta = client.post(reverse('crear_profesor'), {
-            'first_name': 'Otro', 'last_name': 'Docente',
-            'email': 'ana.perez@udea.edu.co', 'codigo': '200', 'programa': '',
-        })
-        assert respuesta.status_code == 200
-        assert 'Ya existe una cuenta con ese correo electrónico.' in respuesta.content.decode()
-        assert Usuario.objects.filter(email='ana.perez@udea.edu.co').count() == 1
 
     def test_varios_usuarios_sin_correo_conviven(self, catalogos):
         Usuario.objects.create_user(username='a', password=CLAVE)
@@ -174,7 +157,7 @@ class TestCorreoUnicoSinMayusculas:
         assert self.MENSAJE in form.non_field_errors()
 
     def test_editar_usuario_form_rechaza_correo_de_otro_en_otras_mayusculas(
-            self, docente, usuario_estudiante):
+            self, cuenta_con_correo, usuario_estudiante):
         form = EditarUsuarioForm(
             data={'first_name': 'E', 'last_name': 'T', 'email': 'ANA.PEREZ@udea.edu.co',
                   'codigo': '', 'programa': '', 'rol': usuario_estudiante.rol_id},
@@ -183,15 +166,15 @@ class TestCorreoUnicoSinMayusculas:
         assert not form.is_valid()
         assert self.MENSAJE in form.non_field_errors()
 
-    def test_editar_usuario_puede_cambiar_mayusculas_de_su_propio_correo(self, docente):
+    def test_editar_usuario_puede_cambiar_mayusculas_de_su_propio_correo(self, cuenta_con_correo):
         form = EditarUsuarioForm(
             data={'first_name': 'Ana', 'last_name': 'Pérez', 'email': 'Ana.Perez@udea.edu.co',
-                  'codigo': '100', 'programa': '', 'rol': docente.rol_id},
-            instance=docente,
+                  'codigo': '100', 'programa': '', 'rol': cuenta_con_correo.rol_id},
+            instance=cuenta_con_correo,
         )
         assert form.is_valid(), form.errors
 
-    def test_vista_crear_usuario_muestra_error_sin_500(self, client, usuario_admin, docente):
+    def test_vista_crear_usuario_muestra_error_sin_500(self, client, usuario_admin, cuenta_con_correo):
         client.force_login(usuario_admin)
         respuesta = client.post(reverse('crear_usuario'), {
             'username': 'ana2', 'first_name': 'Ana', 'last_name': 'Dos',
@@ -201,16 +184,6 @@ class TestCorreoUnicoSinMayusculas:
         assert respuesta.status_code == 200
         assert self.MENSAJE in respuesta.content.decode()
         assert not Usuario.objects.filter(username='ana2').exists()
-
-    def test_vista_crear_profesor_muestra_error_sin_500(self, client, usuario_admin, docente):
-        client.force_login(usuario_admin)
-        respuesta = client.post(reverse('crear_profesor'), {
-            'first_name': 'Otra', 'last_name': 'Ana',
-            'email': 'ANA.PEREZ@UDEA.EDU.CO', 'codigo': '300', 'programa': '',
-        })
-        assert respuesta.status_code == 200
-        assert self.MENSAJE in respuesta.content.decode()
-        assert Usuario.objects.filter(email__iexact='ana.perez@udea.edu.co').count() == 1
 
     def test_login_con_correo_guardado_en_mayusculas(self, client, catalogos):
         ana = Usuario.objects.create_user(username='ana1', password=CLAVE, email='Ana@udea.edu.co')
@@ -254,16 +227,6 @@ class TestCodigoVacio:
         codigos = list(Usuario.objects.filter(username__startswith='sin_codigo_')
                        .values_list('codigo', flat=True))
         assert codigos == [None, None]
-
-    def test_profesor_sin_codigo_conserva_username_doc(self, client, usuario_admin):
-        client.force_login(usuario_admin)
-        respuesta = client.post(reverse('crear_profesor'), {
-            'first_name': 'Sin', 'last_name': 'Cédula', 'email': '', 'codigo': '', 'programa': '',
-        })
-        assert respuesta.status_code == 302
-        profesor = Usuario.objects.get(first_name='Sin')
-        assert profesor.username == 'doc_'
-        assert profesor.codigo is None
 
     def test_lista_usuarios_no_muestra_none(self, client, usuario_admin):
         client.force_login(usuario_admin)

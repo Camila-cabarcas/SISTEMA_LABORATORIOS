@@ -12,13 +12,11 @@ from datetime import date, datetime
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q
 
 from inventario.models import Insumo
 from laboratorio.models import Laboratorio, Modulo
 from reservas.models import EstadoReserva
 from solicitudes.models import SolicitudInsumo, SolicitudReserva
-from users.models import Usuario
 from users.validators import validar_correo_institucional
 
 logger = logging.getLogger(__name__)
@@ -177,11 +175,12 @@ class CrearSolicitudReservaService:
         hora_fin = datetime.strptime(hora_fin_str, '%H:%M').time()
         cantidad = int(cantidad_asistentes_str)
 
-        partes = nombre.split()
-        query = Q()
-        for p in partes:
-            query |= (Q(first_name__icontains=p) | Q(last_name__icontains=p) | Q(username__icontains=p))
-        usuario = Usuario.objects.filter(query, rol__nombre='Docente').first()
+        # Reserva libre = profesor invitado o actividad de grupo: no exige un
+        # Profesor registrado y no se liga a ninguna cuenta (antes se buscaba
+        # una cuenta Docente por nombre, lo que podía ligar la reserva a otra
+        # persona con un nombre parecido). Los límites por profesor se
+        # calculan por cédula (ver SolicitudReserva).
+        usuario = None
 
         solicitud = SolicitudReserva(
             tipo_solicitante='profesor',

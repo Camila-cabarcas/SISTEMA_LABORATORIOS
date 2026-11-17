@@ -8,20 +8,25 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q
 from users.models import Usuario, ProgramaAcademico
 from users.decorators import rol_requerido, requiere_contrasena_admin
+from users.helpers import (
+    filtrar_solicitudes_profesor_visibles,
+    puede_resolver_solicitud_profesor,
+)
+from users.roles import ROLES_SOLICITUDES_PROFESOR
 from inventario.models import Insumo
 from laboratorio.models import Laboratorio
-from .models import SolicitudReserva, Curso, SolicitudRegistroProfesor
+from .models import Profesor, SolicitudReserva, Curso, SolicitudRegistroProfesor
 from .forms import EstudianteSolicitudForm, ProfesorSolicitudForm, CursoForm
 from .services.solicitud_reserva_service import CrearSolicitudReservaService, ValidarSolicitudReservaService
 from .services.registro_profesor_service import (
-    AprobarCursoService,
-    AprobarSolicitudRegistroProfesorService,
     CrearSolicitudRegistroProfesorService,
+    aprobar_registro_profesor,
+    rechazar_registro_profesor,
 )
 from .services.mis_reservas_service import MisReservasService
 
@@ -116,44 +121,26 @@ def solicitud_profesor(request):
 
 
 def cursos_profesor(request):
-    nombre = request.GET.get('nombre', '').strip()
+    """API pública: cursos de un Profesor ACTIVO, buscado por cédula (fase
+    2: el profesor no tiene cuenta; ya no se busca por nombre)."""
     cedula = request.GET.get('cedula', '').strip()
 
-    if not nombre:
-        return JsonResponse({'error': 'Por favor ingresa el nombre del profesor', 'cursos': []})
+    if not cedula:
+        return JsonResponse({'error': 'Por favor ingresa la cédula del profesor', 'cursos': []})
 
-    docentes = Usuario.objects.filter(rol__nombre='Docente')
-    usuarios = []
-    for usuario in docentes:
-        nombre_lower = nombre.lower()
-        if (nombre_lower in usuario.first_name.lower() or
-            nombre_lower in usuario.last_name.lower() or
-            nombre_lower in usuario.username.lower() or
-            nombre_lower in usuario.get_full_name().lower()):
-            usuarios.append(usuario)
-
-    if not usuarios:
+    profesor = Profesor.objects.filter(cedula=cedula).first()
+    if profesor is None:
         return JsonResponse({
-            'error': f'No se encontró ningún docente con nombre "{nombre}".',
+            'error': f'No hay un profesor habilitado con la cédula "{cedula}".',
+            'cursos': []
+        })
+    if not profesor.activo:
+        return JsonResponse({
+            'error': f'El profesor con la cédula "{cedula}" no está activo.',
             'cursos': []
         })
 
-    usuario = None
-    if cedula:
-        usuario = next((u for u in usuarios if u.codigo == cedula), None)
-        if not usuario:
-            nombres_encontrados = ', '.join([u.get_full_name() or u.username for u in usuarios[:3]])
-            return JsonResponse({
-                'error': f'La cédula "{cedula}" no coincide. Docentes encontrados: {nombres_encontrados}',
-                'cursos': []
-            })
-    else:
-        usuario = usuarios[0]
-
-    if not usuario:
-        return JsonResponse({'error': 'No se pudo identificar al profesor', 'cursos': []})
-
-    cursos = Curso.objects.filter(profesor=usuario).order_by('codigo')
+    cursos = Curso.objects.filter(profesor=profesor).order_by('codigo')
     cursos_data = [
         {
             'id': c.id,
@@ -166,7 +153,7 @@ def cursos_profesor(request):
 
     return JsonResponse({
         'cursos': cursos_data,
-        'profesor': usuario.get_full_name() or usuario.username,
+        'profesor': profesor.nombre_completo,
         'total': len(cursos_data)
     })
 
@@ -240,22 +227,26 @@ def solicitud_exitosa(request):
 
 
 def registro_profesor_publico(request):
+    """Formulario público: solicitud SIN cuenta (sin contraseña ni cursos;
+    los cursos llegan por la importación de la fase 4). Correo UdeA
+    obligatorio y laboratorio de interés opcional."""
     errores = []
     post_data = {}
 
     if request.method == 'POST':
         post_data = request.POST
+        laboratorio_id = request.POST.get('laboratorio_interes', '').strip()
+        laboratorio = (Laboratorio.objects.filter(id=laboratorio_id, activo=True).first()
+                       if laboratorio_id.isdigit() else None)
 
         try:
             CrearSolicitudRegistroProfesorService.crear(
-                nombre=request.POST.get('nombre', '').strip(),
-                apellido=request.POST.get('apellido', '').strip(),
-                cedula=request.POST.get('cedula', '').strip(),
-                correo=request.POST.get('correo', '').strip(),
-                programa=request.POST.get('programa', '').strip(),
-                nombres_curso=request.POST.getlist('curso_nombre'),
-                codigos_curso=request.POST.getlist('curso_codigo'),
-                cantidades_curso=request.POST.getlist('curso_cantidad'),
+                nombre=request.POST.get('nombre', ''),
+                apellido=request.POST.get('apellido', ''),
+                cedula=request.POST.get('cedula', ''),
+                correo=request.POST.get('correo', ''),
+                programa=request.POST.get('programa', ''),
+                laboratorio_interes=laboratorio,
             )
             return redirect('/solicitudes/exitosa/?tipo=registro_profesor')
         except ValidationError as e:
@@ -266,43 +257,53 @@ def registro_profesor_publico(request):
         'errores': errores,
         'post_data': post_data,
         'programas': programas,
+        'laboratorios': Laboratorio.objects.filter(activo=True).order_by('nombre'),
     })
 
 
-@rol_requerido('Administrador')
+@rol_requerido(*ROLES_SOLICITUDES_PROFESOR)
 def lista_solicitudes_profesores(request):
-    solicitudes = SolicitudRegistroProfesor.objects.all().order_by('-fecha_creacion')
+    """Administrador: todas. Laboratorista: las de su laboratorio de interés
+    y las que no tienen laboratorio (puede_resolver_solicitud_profesor)."""
+    solicitudes = filtrar_solicitudes_profesor_visibles(
+        request.user, SolicitudRegistroProfesor.objects.all()
+    ).select_related('laboratorio_interes').order_by('-fecha_creacion')
     return render(request, 'solicitudes/lista_solicitudes_profesores.html', {
         'solicitudes': solicitudes,
     })
 
 
-@rol_requerido('Administrador')
+@rol_requerido(*ROLES_SOLICITUDES_PROFESOR)
 def detalle_solicitud_profesor(request, id):
     solicitud = get_object_or_404(SolicitudRegistroProfesor, id=id)
+    if not puede_resolver_solicitud_profesor(request.user, solicitud):
+        return render(request, 'users/sin_permiso.html', {
+            'mensaje': 'Esta solicitud es de otro laboratorio.',
+        }, status=403)
 
     if request.method == 'POST':
         accion = request.POST.get('accion')
-        curso_id = request.POST.get('curso_id')
 
         try:
             if accion == 'aprobar_profesor':
-                AprobarSolicitudRegistroProfesorService.aprobar(id)
+                aprobar_registro_profesor(solicitud, request.user)
+                messages.success(request, 'Solicitud aprobada: el profesor quedó habilitado.')
             elif accion == 'rechazar_profesor':
-                AprobarSolicitudRegistroProfesorService.rechazar(id)
-            elif accion == 'aprobar_curso':
-                AprobarCursoService.aprobar(id, curso_id)
-            elif accion == 'rechazar_curso':
-                AprobarCursoService.rechazar(id, curso_id)
+                rechazar_registro_profesor(solicitud, request.user, request.POST.get('motivo', ''))
+                messages.success(request, 'Solicitud rechazada.')
+            else:
+                # Incluye aprobar_curso / rechazar_curso: los cursos ya no
+                # entran por el registro (fase 2).
+                messages.error(request, 'Acción inválida.')
+        except PermissionDenied as e:
+            return render(request, 'users/sin_permiso.html', {'mensaje': str(e)}, status=403)
         except ValidationError as e:
             messages.error(request, e.message if hasattr(e, 'message') else str(e))
 
         return redirect('detalle_solicitud_profesor', id=id)
 
-    cursos = solicitud.cursos_solicitados.all()
     return render(request, 'solicitudes/detalle_solicitud_profesor.html', {
         'solicitud': solicitud,
-        'cursos': cursos,
     })
 
 
@@ -351,8 +352,9 @@ def lista_cursos(request):
         cursos = cursos.filter(
             Q(nombre__icontains=q)              |
             Q(codigo__icontains=q)              |
-            Q(profesor__first_name__icontains=q) |
-            Q(profesor__last_name__icontains=q)
+            Q(profesor__nombre__icontains=q) |
+            Q(profesor__apellido__icontains=q) |
+            Q(profesor__cedula__icontains=q)
         )
     if laboratorio_id == 'ninguno':
         cursos = cursos.filter(laboratorio__isnull=True)
@@ -378,14 +380,14 @@ def crear_curso(request):
             form.save()
             return redirect('lista_cursos')
     else:
-        initial = {'profesor': profesor_id} if profesor_id else {}
-        form = CursoForm(initial=initial)
+        form = CursoForm(initial={'profesor': profesor_id} if profesor_id else None)
 
-    profesor_preseleccionado = None
-    if profesor_id:
-        profesor_preseleccionado = Usuario.objects.filter(
-            id=profesor_id, rol__nombre='Docente'
-        ).first()
+    # ?profesor_id= llega desde el detalle de un Profesor habilitado (id de
+    # Profesor, no de cuenta). Solo se preselecciona si está activo.
+    profesor_preseleccionado = (
+        Profesor.objects.filter(id=profesor_id, activo=True).first()
+        if profesor_id and str(profesor_id).isdigit() else None
+    )
 
     return render(request, 'solicitudes/crear_curso.html', {
         'form': form,
