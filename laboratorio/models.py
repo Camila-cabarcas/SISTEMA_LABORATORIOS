@@ -16,19 +16,25 @@ class Laboratorio(models.Model):
     nombre = models.CharField(max_length=100)
     ubicacion = models.CharField(max_length=200)
 
-    # Usuarios con cuenta que operan este laboratorio. Los asigna solo el
-    # Administrador. Distinto del modelo Laboratorista de más abajo (persona
-    # sin cuenta).
+    # Cuentas que operan este laboratorio. Las asigna solo el Administrador.
+    # Una cuenta tiene a lo sumo UN laboratorio (UniqueConstraint en
+    # AsignacionLaboratorista); que una cuenta Laboratorista activa tenga
+    # exactamente uno lo validan la migración 0024 y el servicio de Personal.
+    # Distinto del modelo Laboratorista de más abajo (persona sin cuenta).
     laboratoristas = models.ManyToManyField(
         'users.Usuario',
+        through='AsignacionLaboratorista',
         blank=True,
         limit_choices_to={'rol__nombre': 'Laboratorista'},
         related_name='laboratorios_asignados',
         verbose_name='Laboratoristas',
     )
 
+    # Cuenta compartida de rol Monitor: una por laboratorio y un laboratorio
+    # por cuenta (ver AsignacionMonitor).
     monitores = models.ManyToManyField(
         'users.Usuario',
+        through='AsignacionMonitor',
         blank=True,
         limit_choices_to={'rol__nombre': 'Monitor'},
         related_name='laboratorios_monitoreados',
@@ -37,10 +43,99 @@ class Laboratorio(models.Model):
 
     programa = models.CharField(max_length=100, blank=True)
 
+    # Descripción general del laboratorio, sin formato. La editan el
+    # Administrador y el laboratorista de ese laboratorio.
+    descripcion = models.TextField(blank=True, default='', verbose_name='Descripción')
+
     activo = models.BooleanField(default=True)
 
     def __str__(self):
         return self.nombre
+
+
+class AsignacionLaboratorista(models.Model):
+    """Tabla intermedia de Laboratorio.laboratoristas (la misma tabla que
+    Django creó para el ManyToMany, ver migración 0024). Una cuenta, un
+    laboratorio."""
+
+    id = models.AutoField(primary_key=True)
+    laboratorio = models.ForeignKey(Laboratorio, on_delete=models.CASCADE)
+    usuario = models.ForeignKey('users.Usuario', on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'laboratorio_laboratorio_laboratoristas'
+        unique_together = [('laboratorio', 'usuario')]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['usuario'], name='laboratorista_un_solo_laboratorio',
+                violation_error_message='Esta cuenta ya tiene un laboratorio asignado.',
+            ),
+        ]
+        verbose_name = 'Asignación de laboratorista'
+        verbose_name_plural = 'Asignaciones de laboratoristas'
+
+    def __str__(self):
+        return f'{self.usuario} → {self.laboratorio}'
+
+
+class AsignacionMonitor(models.Model):
+    """Tabla intermedia de Laboratorio.monitores (la misma tabla que Django
+    creó para el ManyToMany). Una cuenta Monitor por laboratorio y un
+    laboratorio por cuenta."""
+
+    id = models.AutoField(primary_key=True)
+    laboratorio = models.ForeignKey(Laboratorio, on_delete=models.CASCADE)
+    usuario = models.ForeignKey('users.Usuario', on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'laboratorio_laboratorio_monitores'
+        unique_together = [('laboratorio', 'usuario')]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['usuario'], name='monitor_un_solo_laboratorio',
+                violation_error_message='Esta cuenta de monitor ya tiene un laboratorio asignado.',
+            ),
+            models.UniqueConstraint(
+                fields=['laboratorio'], name='laboratorio_una_cuenta_monitor',
+                violation_error_message='Este laboratorio ya tiene una cuenta de monitor.',
+            ),
+        ]
+        verbose_name = 'Asignación de monitor'
+        verbose_name_plural = 'Asignaciones de monitores'
+
+    def __str__(self):
+        return f'{self.usuario} → {self.laboratorio}'
+
+
+class FichaMonitor(models.Model):
+    """Persona monitor SIN cuenta en el sistema: solo datos de contacto. Una
+    ficha puede estar en varios laboratorios; el cambio que haga el
+    laboratorista de uno se ve en todos. Si se quita de su último laboratorio,
+    se borra (lo hace el servicio de Personal)."""
+
+    nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100)
+    correo = models.EmailField(blank=True, default='')  # sin restricción de dominio
+    telefono = models.CharField(max_length=30, blank=True, default='')
+    descripcion = models.TextField(blank=True, default='')
+    activo = models.BooleanField(default=True)
+    laboratorios = models.ManyToManyField(
+        Laboratorio, related_name='fichas_monitor', blank=True,
+    )
+    creado_por = models.ForeignKey(
+        'users.Usuario', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='fichas_monitor_creadas',
+    )
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['apellido', 'nombre']
+        verbose_name = 'Ficha de monitor'
+        verbose_name_plural = 'Fichas de monitor'
+
+    def __str__(self):
+        return f'{self.nombre} {self.apellido}'
 
 
 def _asignado_con_rol(usuario, laboratorio, rol, relacion):

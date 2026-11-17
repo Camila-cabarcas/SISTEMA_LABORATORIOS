@@ -8,6 +8,7 @@ from datetime import timedelta
 
 import pytest
 from django.core.exceptions import PermissionDenied
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from laboratorio.models import Laboratorio
@@ -67,14 +68,17 @@ class TestLaboratoriosVisibles:
         assert visibles == [laboratorio]
         assert otro_laboratorio not in visibles
 
-    def test_laboratorista_con_dos_labs_ve_ambos(self, usuario_laboratorista, laboratorio, catalogos):
+    def test_laboratorista_no_puede_tener_un_segundo_laboratorio(self, usuario_laboratorista, laboratorio, catalogos):
+        # Regla de la fase Personal: una cuenta Laboratorista, un laboratorio
+        # (UniqueConstraint laboratorista_un_solo_laboratorio).
         segundo_laboratorio = Laboratorio.objects.create(nombre='Laboratorio de Física', ubicacion='Bloque 9')
-        segundo_laboratorio.laboratoristas.add(usuario_laboratorista)
+        with pytest.raises(IntegrityError), transaction.atomic():
+            segundo_laboratorio.laboratoristas.add(usuario_laboratorista)
 
         visibles = laboratorios_visibles(usuario_laboratorista)
 
         assert visibles is not None  # None solo para Administrador
-        assert set(visibles) == {laboratorio, segundo_laboratorio}
+        assert visibles == [laboratorio]
 
     def test_laboratorista_sin_labs_lanza_permission_denied(self, catalogos):
         usuario = Usuario.objects.create_user(

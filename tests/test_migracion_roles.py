@@ -19,6 +19,17 @@ def _migrar(destino):
     return executor.loader.project_state(destino).apps
 
 
+def _limpiar_y_migrar_al_final(usernames):
+    """Deja la BD de pruebas en el último estado para los demás tests.
+    Antes borra los usuarios de este test: laboratorio.0024 rechaza una
+    cuenta Laboratorista activa sin laboratorio o con más de uno."""
+    executor = MigrationExecutor(connection)
+    executor.loader.build_graph()
+    apps = executor.loader.project_state(DESPUES).apps
+    apps.get_model('users', 'Usuario').objects.filter(username__in=usernames).delete()
+    executor.migrate(executor.loader.graph.leaf_nodes())
+
+
 @pytest.mark.django_db(transaction=True)
 def test_usuario_laboratorio_pasa_a_laboratorista_y_conserva_laboratorios():
     apps = _migrar(ANTES)
@@ -48,10 +59,7 @@ def test_usuario_laboratorio_pasa_a_laboratorista_y_conserva_laboratorios():
         ) == {'Lab A', 'Lab B'}
         assert not Laboratorio.objects.filter(monitores=usuario).exists()
     finally:
-        # Deja la BD de pruebas en el último estado para los demás tests.
-        executor = MigrationExecutor(connection)
-        executor.loader.build_graph()
-        executor.migrate(executor.loader.graph.leaf_nodes())
+        _limpiar_y_migrar_al_final(['lab_migracion'])  # está en 2 laboratorios
 
 
 @pytest.mark.django_db(transaction=True)
@@ -72,6 +80,4 @@ def test_si_ya_existe_laboratorista_se_fusionan_los_roles():
         assert Rol.objects.filter(nombre='Laboratorista').count() == 1
         assert not Rol.objects.filter(nombre='Laboratorio').exists()
     finally:
-        executor = MigrationExecutor(connection)
-        executor.loader.build_graph()
-        executor.migrate(executor.loader.graph.leaf_nodes())
+        _limpiar_y_migrar_al_final(['lab_fusion'])  # Laboratorista activo sin laboratorio
