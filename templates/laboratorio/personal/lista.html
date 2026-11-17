@@ -1,0 +1,71 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="fa-solid fa-users text-brand me-2"></i>Personal</h2>
+    {% if es_admin %}
+    <div class="d-flex gap-2">
+        <a href="{% url 'crear_laboratorista' %}" class="btn btn-primary"><i class="fa-solid fa-user-plus me-1"></i>Laboratorista</a>
+        <a href="{% url 'crear_monitor' %}" class="btn btn-outline-primary"><i class="fa-solid fa-user-shield me-1"></i>Cuenta de monitor</a>
+    </div>
+    {% endif %}
+</div>
+
+{% if avisos %}
+<div class="alert alert-warning" role="alert" id="avisos-personal">
+    <strong><i class="fa-solid fa-triangle-exclamation me-1"></i>Cuentas activas sin laboratorio.</strong>
+    Toda cuenta de laboratorista o de monitor activa debe tener exactamente un laboratorio:
+    <ul class="mb-0">
+        {% for cuenta in avisos %}
+        <li>
+            <code>{{ cuenta.username }}</code> ({{ cuenta.rol.nombre }})
+            {% if cuenta.rol.nombre == 'Laboratorista' %}
+            — <a href="{% url 'editar_laboratorista' cuenta.id %}">asignarle un laboratorio</a>
+            o <a href="{% url 'baja_laboratorista' cuenta.id %}">darla de baja</a>
+            {% else %}
+            — <a href="{% url 'baja_monitor' cuenta.id %}">darla de baja</a>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% for p in bloques %}
+    {% include 'laboratorio/personal/partials/bloque_laboratorio.html' with p=p es_admin=es_admin puede_fichas=True todos_los_laboratorios=todos_los_laboratorios volver='' %}
+{% empty %}
+    <p class="text-muted">No hay laboratorios.</p>
+{% endfor %}
+
+{% if es_admin and dadas_de_baja %}
+<div class="card shadow-sm" id="cuentas-dadas-de-baja">
+    <div class="card-header"><h5 class="mb-0">Cuentas dadas de baja</h5></div>
+    <div class="card-body">
+        <p class="text-muted small">Inactivas y sin laboratorio. Conservan sus préstamos, reservas y movimientos.
+            Solo se pueden eliminar las de laboratorista que no tienen datos asociados.</p>
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Usuario</th><th>Rol</th><th>Nombre</th><th class="text-end">Acciones</th></tr></thead>
+            <tbody>
+            {% for cuenta in dadas_de_baja %}
+                <tr>
+                    <td><code>{{ cuenta.username }}</code></td>
+                    <td>{{ cuenta.rol.nombre }}</td>
+                    <td>{{ cuenta.get_full_name|default:"—" }}</td>
+                    <td class="text-end">
+                        {% if cuenta.se_puede_eliminar %}
+                        <form method="post" action="{% url 'eliminar_laboratorista' cuenta.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                        </form>
+                        {% else %}
+                        <span class="text-muted small">Con datos asociados</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

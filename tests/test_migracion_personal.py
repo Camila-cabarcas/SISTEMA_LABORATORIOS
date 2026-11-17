@@ -247,3 +247,36 @@ def test_0024_falla_con_mensaje_claro_y_no_cambia_nada(preparar):
         assert not _aplicada('0024_laboratorista_un_solo_laboratorio')
     finally:
         _limpiar_y_migrar_al_final(apps)
+
+
+# ── 0025: eliminar Laboratorista y LaboratoristaLab ─────────────────────
+
+M0025 = [('laboratorio', '0025_eliminar_laboratorista_y_laboratoristalab')]
+TABLAS_VIEJAS = {'laboratorio_laboratorista', 'laboratorio_laboratoristalab'}
+
+
+def _tablas():
+    return set(connection.introspection.table_names())
+
+
+@pytest.mark.django_db(transaction=True)
+def test_0025_borra_las_tablas_no_toca_cuentas_y_es_reversible():
+    apps = _migrar(M0024)
+    lab = apps.get_model('laboratorio', 'Laboratorio').objects.create(nombre='Lab A', ubicacion='A')
+    lab.laboratoristas.add(_cuenta(apps, 'lab_activa'))
+    _cuenta(apps, 'lab_baja', activa=False)
+    try:
+        apps = _migrar(M0025)
+        assert not TABLAS_VIEJAS & _tablas()
+        Usuario = apps.get_model('users', 'Usuario')
+        assert set(Usuario.objects.values_list('username', flat=True)) == {'lab_activa', 'lab_baja'}
+        assert list(Usuario.objects.get(username='lab_activa')
+                    .laboratorios_asignados.values_list('nombre', flat=True)) == ['Lab A']
+
+        apps = _migrar(M0024)  # reversa: las tablas vuelven, vacías
+        assert TABLAS_VIEJAS <= _tablas()
+        assert apps.get_model('laboratorio', 'Laboratorista').objects.count() == 0
+        assert apps.get_model('laboratorio', 'LaboratoristaLab').objects.count() == 0
+        assert apps.get_model('users', 'Usuario').objects.count() == 2
+    finally:
+        _limpiar_y_migrar_al_final(apps)

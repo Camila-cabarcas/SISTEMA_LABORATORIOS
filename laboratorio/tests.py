@@ -15,8 +15,6 @@ from laboratorio.models import (
     HistorialModulo,
     HorarioLaboratorio,
     Laboratorio,
-    Laboratorista,
-    LaboratoristaLab,
     Modulo,
 )
 from laboratorio.services.modulo_service import ModuloEstadoService
@@ -243,65 +241,6 @@ class ModelosCleanValidationTests(TestCase):
         modulo = Modulo(nombre='Módulo 1', capacidad=0, laboratorio=self.laboratorio)
         with self.assertRaises(ValidationError):
             modulo.full_clean()
-
-    # -- Laboratorista ------------------------------------------------------
-
-    def test_laboratorista_responsabilidades_validas(self):
-        laboratorista = Laboratorista(
-            nombre='Juan', apellido='Pérez', cedula='1000000001',
-            responsabilidades=['prestamos', 'inventario'],
-        )
-        laboratorista.full_clean()
-
-    def test_laboratorista_responsabilidad_invalida(self):
-        laboratorista = Laboratorista(
-            nombre='Juan', apellido='Pérez', cedula='1000000002',
-            responsabilidades=['prestamos', 'no_existe'],
-        )
-        with self.assertRaises(ValidationError):
-            laboratorista.full_clean()
-
-    # -- LaboratoristaLab -----------------------------------------------------
-
-    def test_primer_encargado_es_valido(self):
-        laboratorista = Laboratorista.objects.create(nombre='Juan', apellido='Pérez', cedula='1000000003')
-        asignacion = LaboratoristaLab(
-            laboratorista=laboratorista, laboratorio=self.laboratorio, tipo='encargado',
-        )
-        asignacion.full_clean()
-
-    def test_segundo_encargado_es_invalido(self):
-        laboratorista_1 = Laboratorista.objects.create(nombre='Juan', apellido='Pérez', cedula='1000000004')
-        laboratorista_2 = Laboratorista.objects.create(nombre='Ana', apellido='Gómez', cedula='1000000005')
-        LaboratoristaLab.objects.create(
-            laboratorista=laboratorista_1, laboratorio=self.laboratorio, tipo='encargado',
-        )
-
-        asignacion_2 = LaboratoristaLab(
-            laboratorista=laboratorista_2, laboratorio=self.laboratorio, tipo='encargado',
-        )
-        with self.assertRaises(ValidationError):
-            asignacion_2.full_clean()
-
-    def test_editar_al_mismo_encargado_no_falla(self):
-        """full_clean() sobre un registro YA guardado no debe chocar consigo
-        mismo (exclude(pk=self.pk))."""
-        laboratorista = Laboratorista.objects.create(nombre='Juan', apellido='Pérez', cedula='1000000006')
-        asignacion = LaboratoristaLab.objects.create(
-            laboratorista=laboratorista, laboratorio=self.laboratorio, tipo='encargado',
-        )
-        asignacion.full_clean()
-
-    def test_dos_laboratoristas_no_encargados_es_valido(self):
-        laboratorista_1 = Laboratorista.objects.create(nombre='Juan', apellido='Pérez', cedula='1000000007')
-        laboratorista_2 = Laboratorista.objects.create(nombre='Ana', apellido='Gómez', cedula='1000000008')
-        LaboratoristaLab.objects.create(
-            laboratorista=laboratorista_1, laboratorio=self.laboratorio, tipo='laboratorista',
-        )
-        asignacion_2 = LaboratoristaLab(
-            laboratorista=laboratorista_2, laboratorio=self.laboratorio, tipo='laboratorista',
-        )
-        asignacion_2.full_clean()
 
     # -- HistorialModulo ----------------------------------------------------
 

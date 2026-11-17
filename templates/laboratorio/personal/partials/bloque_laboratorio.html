@@ -1,0 +1,135 @@
+{% comment %}
+Personal de UN laboratorio. Lo usan personal/lista.html y
+laboratorio/partials/seccion_personal.html (detalle del laboratorio).
+Contexto:
+  p                       → personal.personal_del_laboratorio(laboratorio)
+  es_admin                → administra cuentas (crear, editar, dar de baja)
+  puede_fichas            → administra las fichas de este laboratorio
+  todos_los_laboratorios  → (Administrador) para vincular fichas a otro laboratorio
+  volver                  → 'detalle' si las acciones deben volver al detalle
+{% endcomment %}
+<div class="card shadow-sm mb-4" id="personal-lab-{{ p.laboratorio.id }}">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fa-solid fa-flask me-2"></i>{{ p.laboratorio.nombre }}</h5>
+        {% if volver != 'detalle' %}
+        <a href="{% url 'detalle_laboratorio' p.laboratorio.id %}" class="btn btn-sm btn-outline-secondary">Ver laboratorio</a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+
+        <!-- Laboratoristas -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Laboratoristas</h6>
+            {% if es_admin %}
+            <a href="{% url 'crear_laboratorista' %}?laboratorio={{ p.laboratorio.id }}" class="btn btn-sm btn-primary">
+                <i class="fa-solid fa-user-plus me-1"></i>Laboratorista
+            </a>
+            {% endif %}
+        </div>
+        {% if p.laboratoristas %}
+        <div class="table-responsive mb-4">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Usuario</th><th>Nombre</th><th>Correo</th>{% if es_admin %}<th class="text-end">Acciones</th>{% endif %}</tr></thead>
+                <tbody>
+                {% for cuenta in p.laboratoristas %}
+                    <tr>
+                        <td><code>{{ cuenta.username }}</code></td>
+                        <td>{{ cuenta.get_full_name|default:"—" }}</td>
+                        <td>{{ cuenta.email }}</td>
+                        {% if es_admin %}
+                        <td class="text-end text-nowrap">
+                            <a href="{% url 'editar_laboratorista' cuenta.id %}" class="btn btn-sm btn-outline-warning">Editar</a>
+                            <a href="{% url 'baja_laboratorista' cuenta.id %}" class="btn btn-sm btn-outline-danger">Dar de baja</a>
+                        </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-4">Este laboratorio no tiene cuentas de laboratorista activas.</p>
+        {% endif %}
+
+        <!-- Cuenta de monitor -->
+        <h6 class="mb-2">Cuenta de monitor</h6>
+        {% if p.monitor %}
+        <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-4">
+            <div>
+                <code>{{ p.monitor.username }}</code> · {{ p.monitor.get_full_name|default:"—" }} · {{ p.monitor.email }}
+            </div>
+            {% if es_admin %}
+            <div class="text-nowrap">
+                <a href="{% url 'editar_monitor' p.monitor.id %}" class="btn btn-sm btn-outline-warning">Editar</a>
+                <a href="{% url 'baja_monitor' p.monitor.id %}" class="btn btn-sm btn-outline-danger">Dar de baja</a>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="alert alert-light border d-flex justify-content-between align-items-center mb-4" data-sin-monitor>
+            <span>Este laboratorio no tiene cuenta de monitor.</span>
+            {% if es_admin %}
+            <a href="{% url 'crear_monitor' %}?laboratorio={{ p.laboratorio.id }}" class="btn btn-sm btn-primary">Crear cuenta de monitor</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Fichas de monitor -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Fichas de monitor <small class="text-muted">(personas, sin cuenta)</small></h6>
+            {% if puede_fichas %}
+            <a href="{% url 'crear_ficha' %}?laboratorio={{ p.laboratorio.id }}{% if volver == 'detalle' %}&amp;volver=detalle{% endif %}" class="btn btn-sm btn-primary">
+                <i class="fa-solid fa-id-card me-1"></i>Ficha
+            </a>
+            {% endif %}
+        </div>
+        {% if p.fichas %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Nombre</th><th>Contacto</th><th>Descripción</th><th>Laboratorios</th>{% if puede_fichas %}<th class="text-end">Acciones</th>{% endif %}</tr></thead>
+                <tbody>
+                {% for ficha in p.fichas %}
+                    <tr{% if not ficha.activo %} class="text-muted"{% endif %}>
+                        <td>{{ ficha.nombre }} {{ ficha.apellido }}{% if not ficha.activo %} <span class="badge bg-secondary">Inactiva</span>{% endif %}</td>
+                        <td class="small">
+                            {% if ficha.correo %}{{ ficha.correo }}{% endif %}
+                            {% if ficha.correo and ficha.telefono %}<br>{% endif %}
+                            {% if ficha.telefono %}{{ ficha.telefono }}{% endif %}
+                            {% if not ficha.correo and not ficha.telefono %}—{% endif %}
+                        </td>
+                        <td class="small">{{ ficha.descripcion|default:"—"|linebreaksbr }}</td>
+                        <td class="small">{% for lab in ficha.laboratorios.all %}{{ lab.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+                        {% if puede_fichas %}
+                        <td class="text-end text-nowrap">
+                            <a href="{% url 'editar_ficha' ficha.id %}" class="btn btn-sm btn-outline-warning">Editar</a>
+                            <form method="post" action="{% url 'quitar_ficha' ficha.id %}" class="d-inline form-quitar-ficha">
+                                {% csrf_token %}
+                                <input type="hidden" name="laboratorio_id" value="{{ p.laboratorio.id }}">
+                                {% if volver %}<input type="hidden" name="volver" value="{{ volver }}">{% endif %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Quitar</button>
+                            </form>
+                            {% if es_admin and todos_los_laboratorios %}
+                            <form method="post" action="{% url 'vincular_ficha' ficha.id %}" class="d-inline-flex gap-1 mt-1">
+                                {% csrf_token %}
+                                <select name="laboratorio_id" class="form-select form-select-sm" aria-label="Vincular a otro laboratorio" required>
+                                    <option value="">Vincular a…</option>
+                                    {% for lab in todos_los_laboratorios %}{% if lab.id != p.laboratorio.id %}
+                                    <option value="{{ lab.id }}">{{ lab.nombre }}</option>
+                                    {% endif %}{% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">Vincular</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No hay fichas de monitor en este laboratorio.</p>
+        {% endif %}
+
+    </div>
+</div>

@@ -1,7 +1,8 @@
 """
 Tests HTTP para laboratorio/views.py::detalle_laboratorio (/laboratorio/<id>/)
-con sidebar de secciones (Personal / Cursos / Inventario / Reservas /
-Préstamos), y para el endpoint JSON del modal de ítems (modal_items_insumo).
+con sidebar de secciones (Personal / Descripción / Cursos / Inventario /
+Reservas / Préstamos), y para el endpoint JSON del modal de ítems
+(modal_items_insumo).
 """
 from datetime import timedelta
 
@@ -9,7 +10,7 @@ import pytest
 from django.utils import timezone
 
 from inventario.models import EstadoItem, Insumo, ItemInventario, MovimientoInventario, TipoMovimiento
-from laboratorio.models import Laboratorio, Laboratorista, LaboratoristaLab
+from laboratorio.models import Laboratorio
 from prestamos.models import EstadoPrestamo, Prestamo
 from reservas.models import EstadoReserva, Reserva
 from solicitudes.models import Curso, SolicitudReserva
@@ -37,12 +38,15 @@ def _item(codigo, insumo, laboratorio, estado='Disponible'):
     )
 
 
-def _laboratorista(laboratorio, cedula, nombre='Pedro', tipo='laboratorista', activo=True):
-    lab = Laboratorista.objects.create(
-        nombre=nombre, apellido='Gil', cedula=cedula, correo=f'{cedula}@udea.edu.co', activo=activo,
+def _laboratorista(laboratorio, codigo, nombre='Pedro', activo=True):
+    """Cuenta Laboratorista de `laboratorio` (Laboratorio.laboratoristas)."""
+    cuenta = Usuario.objects.create_user(
+        username=f'lab_{codigo}', password='x', email=f'{codigo}@udea.edu.co',
+        first_name=nombre, last_name='Gil', is_active=activo,
+        rol=Rol.objects.get(nombre='Laboratorista'),
     )
-    LaboratoristaLab.objects.create(laboratorista=lab, laboratorio=laboratorio, tipo=tipo)
-    return lab
+    laboratorio.laboratoristas.add(cuenta)
+    return cuenta
 
 
 @pytest.fixture
@@ -72,11 +76,12 @@ def inventario(catalogos, laboratorio, otro_laboratorio):
 
 # ── Sidebar y layout ──────────────────────────────────────────────────────────
 
-def test_sidebar_se_renderiza_con_las_cinco_secciones(cliente_autenticado, laboratorio):
+def test_sidebar_se_renderiza_con_las_seis_secciones(cliente_autenticado, laboratorio):
     contenido = _get(cliente_autenticado, laboratorio).content.decode()
 
     assert 'id="secciones-lab"' in contenido
-    for href, texto in [('?seccion=personal', 'Personal asignado'),
+    for href, texto in [('?seccion=personal', 'Personal'),
+                        ('?seccion=descripcion', 'Descripción'),
                         ('?seccion=cursos', 'Cursos asignados'),
                         ('?seccion=inventario', 'Inventario'),
                         ('?seccion=reservas', 'Reservas'),
@@ -89,10 +94,10 @@ def test_seccion_por_defecto_es_personal(cliente_autenticado, laboratorio):
     response = _get(cliente_autenticado, laboratorio)
 
     assert response.context['seccion_activa'] == 'personal'
-    assert 'No hay laboratoristas asignados' in response.content.decode()
+    assert 'Este laboratorio no tiene cuentas de laboratorista activas.' in response.content.decode()
 
 
-@pytest.mark.parametrize('seccion', ['personal', 'cursos', 'inventario', 'reservas', 'prestamos'])
+@pytest.mark.parametrize('seccion', ['personal', 'descripcion', 'cursos', 'inventario', 'reservas', 'prestamos'])
 def test_boton_marca_la_seccion_activa(cliente_autenticado, laboratorio, seccion):
     response = _get(cliente_autenticado, laboratorio, seccion=seccion)
 
@@ -109,7 +114,7 @@ def test_seccion_invalida_vuelve_a_personal(cliente_autenticado, laboratorio):
     assert response.context['seccion_activa'] == 'personal'
 
 
-@pytest.mark.parametrize('seccion', ['personal', 'cursos', 'inventario', 'reservas', 'prestamos'])
+@pytest.mark.parametrize('seccion', ['personal', 'descripcion', 'cursos', 'inventario', 'reservas', 'prestamos'])
 def test_informacion_general_siempre_visible(cliente_autenticado, laboratorio, seccion):
     laboratorio.programa = 'Ingeniería Química'
     laboratorio.save()
@@ -200,16 +205,32 @@ def test_lista_prestamos_filtrada_por_lab(cliente_autenticado, usuario_admin, ca
 
 # ── Sección Personal ─────────────────────────────────────────────────────────
 
-def test_seccion_personal_lista_laboratoristas_activos(cliente_autenticado, laboratorio):
-    _laboratorista(laboratorio, '100', nombre='Pedro', tipo='encargado')
+def test_seccion_personal_lista_cuentas_activas_monitor_y_fichas(cliente_autenticado, laboratorio):
+    from laboratorio.models import FichaMonitor
+
+    _laboratorista(laboratorio, '100', nombre='Pedro')
     _laboratorista(laboratorio, '200', nombre='Inactivo', activo=False)
+    ficha = FichaMonitor.objects.create(nombre='Ana', apellido='Ruiz', telefono='300 1')
+    ficha.laboratorios.add(laboratorio)
 
     contenido = _get(cliente_autenticado, laboratorio, seccion='personal').content.decode()
 
     assert 'Pedro Gil' in contenido
     assert '100@udea.edu.co' in contenido
     assert 'Inactivo Gil' not in contenido
-    assert '+ Asignar laboratorista' in contenido  # admin
+    assert 'Este laboratorio no tiene cuenta de monitor.' in contenido
+    assert 'Ana Ruiz' in contenido
+    assert '/laboratorio/personal/laboratoristas/crear/' in contenido  # admin
+
+
+def test_seccion_descripcion(cliente_autenticado, laboratorio):
+    laboratorio.descripcion = 'Química <b>general</b>.'
+    laboratorio.save()
+
+    contenido = _get(cliente_autenticado, laboratorio, seccion='descripcion').content.decode()
+
+    assert 'Química &lt;b&gt;general&lt;/b&gt;.' in contenido  # texto plano, escapado
+    assert f'/laboratorio/{laboratorio.id}/descripcion/editar/' in contenido
 
 
 def test_seccion_personal_no_muestra_cursos_ni_inventario(cliente_autenticado, laboratorio, inventario):

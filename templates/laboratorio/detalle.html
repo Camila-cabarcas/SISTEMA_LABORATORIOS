@@ -22,10 +22,7 @@
 <div class="d-flex justify-content-between align-items-start mb-3">
     <div>
         <h1 class="mb-1">{{ laboratorio.nombre }}</h1>
-        <p class="text-muted mb-0">
-            📍 {{ laboratorio.ubicacion }}
-            {% if cuenta_lab %} · Usuario: <code>{{ cuenta_lab.username }}</code>{% endif %}
-        </p>
+        <p class="text-muted mb-0">📍 {{ laboratorio.ubicacion }}</p>
     </div>
     <div class="d-flex gap-2">
         <a href="/laboratorio/{{ laboratorio.id }}/mapa/" class="btn btn-outline-primary btn-sm">🗺️ Mapa</a>
@@ -38,13 +35,6 @@
 </div>
 <hr>
 
-{% if not encargado_principal %}
-<div class="alert alert-warning">
-    ⚠️ Este laboratorio no tiene encargado asignado.
-    <a href="{% url 'asignar_laboratorista' laboratorio.id %}">Asignar encargado</a>
-</div>
-{% endif %}
-
 <div class="row g-4">
 
     <!-- Sidebar -->
@@ -55,7 +45,12 @@
                 <a href="?seccion=personal"
                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if seccion_activa == 'personal' %}active{% endif %}"
                    {% if seccion_activa == 'personal' %}aria-current="page"{% endif %}>
-                    👥 Personal asignado <span class="badge bg-secondary rounded-pill">{{ total_personal }}</span>
+                    👥 Personal <span class="badge bg-secondary rounded-pill">{{ total_personal }}</span>
+                </a>
+                <a href="?seccion=descripcion"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if seccion_activa == 'descripcion' %}active{% endif %}"
+                   {% if seccion_activa == 'descripcion' %}aria-current="page"{% endif %}>
+                    📝 Descripción
                 </a>
                 <a href="?seccion=cursos"
                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if seccion_activa == 'cursos' %}active{% endif %}"
@@ -91,19 +86,20 @@
                 <div class="col-md-4"><strong>Ubicación:</strong> {{ laboratorio.ubicacion }}</div>
                 <div class="col-md-4"><strong>Programa:</strong> {{ laboratorio.programa|default:"—" }}</div>
                 <div class="col-md-4">
-                    <strong>Encargado:</strong>
-                    {% if encargado_principal %}
-                        {{ encargado_principal.laboratorista.nombre }}
-                        {{ encargado_principal.laboratorista.apellido }}
-                    {% else %}
-                        <span class="text-muted">Sin encargado asignado</span>
-                    {% endif %}
+                    <strong>Laboratorista:</strong>
+                    {% for cuenta in personal.laboratoristas %}
+                        {{ cuenta.get_full_name|default:cuenta.username }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        <span class="text-muted">Sin laboratorista</span>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
         <!-- Sección activa -->
-        {% if seccion_activa == 'cursos' %}
+        {% if seccion_activa == 'descripcion' %}
+            {% include 'laboratorio/personal/partials/seccion_descripcion.html' %}
+        {% elif seccion_activa == 'cursos' %}
             {% include 'laboratorio/partials/seccion_cursos.html' %}
         {% elif seccion_activa == 'inventario' %}
             {% include 'laboratorio/partials/seccion_inventario.html' %}

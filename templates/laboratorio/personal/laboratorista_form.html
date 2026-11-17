@@ -1,0 +1,24 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">
+        <i class="fa-solid fa-user-gear text-brand me-2"></i>{% if cuenta %}Editar laboratorista — {{ cuenta.username }}{% else %}Nueva cuenta de laboratorista{% endif %}
+    </h2>
+    <a href="{% url 'personal' %}" class="btn btn-outline-secondary">&larr; Volver</a>
+</div>
+
+<div class="card shadow-sm" style="max-width: 640px;">
+    <div class="card-body">
+        <p class="text-muted small">
+            La cuenta entra con su correo institucional o su nombre de usuario y opera un solo laboratorio.
+            {% if not cuenta %}La contraseña inicial la defines tú; no se envía ningún correo.{% endif %}
+        </p>
+        <form method="post" novalidate id="form-laboratorista">
+            {% csrf_token %}
+            {% include 'laboratorio/personal/partials/campos_form.html' %}
+            <button type="submit" class="btn btn-success">Guardar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

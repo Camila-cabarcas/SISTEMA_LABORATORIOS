@@ -1,9 +1,10 @@
 """
 urls.py — laboratorio
-Rutas de la app laboratorio: CRUD de laboratorios, mapa de módulos, eventos y APIs de disponibilidad.
+Rutas de la app laboratorio: CRUD de laboratorios, mapa de módulos, eventos,
+APIs de disponibilidad y la sección Personal (views_personal.py).
 """
 from django.urls import path
-from . import views_categorias
+from . import views_categorias, views_personal
 from .views import (
     lista_laboratorios,
     crear_laboratorio,
@@ -25,33 +26,32 @@ from .views import (
     estado_modulos_api,
     modulos_disponibles_api,
     modulos_disponibles_publica_api,
-    gestionar_encargados,
-    asignar_laboratorista,
-    lista_laboratoristas,
-    crear_laboratorista,
-    detalle_laboratorista,
-    editar_laboratorista,
-    eliminar_laboratorista,
-    toggle_laboratorista,
-    toggle_tipo_laboratorista,
-    tiene_encargado_api,
 )
 
 urlpatterns = [
     path('', lista_laboratorios, name='lista_laboratorios'),
     path('crear/', crear_laboratorio, name='crear_laboratorio'),
-    path('laboratoristas/', lista_laboratoristas, name='lista_laboratoristas'),
     path('categorias/', views_categorias.lista_categorias, name='lista_categorias_modulo'),
     path('categorias/crear/', views_categorias.crear_categoria, name='crear_categoria_modulo'),
     path('categorias/<int:id>/editar/', views_categorias.editar_categoria, name='editar_categoria_modulo'),
     path('categorias/<int:id>/toggle/', views_categorias.toggle_categoria, name='toggle_categoria_modulo'),
     path('categorias/<int:id>/eliminar/', views_categorias.eliminar_categoria, name='eliminar_categoria_modulo'),
-    path('laboratoristas/crear/', crear_laboratorista, name='crear_laboratorista'),
-    path('laboratoristas/<int:id>/', detalle_laboratorista, name='detalle_laboratorista'),
-    path('laboratoristas/<int:id>/editar/', editar_laboratorista, name='editar_laboratorista'),
-    path('laboratoristas/<int:id>/eliminar/', eliminar_laboratorista, name='eliminar_laboratorista'),
-    path('laboratoristas/<int:id>/toggle/', toggle_laboratorista, name='toggle_laboratorista'),
-    path('laboratoristas/<int:id>/toggle-tipo/', toggle_tipo_laboratorista, name='toggle_tipo_laboratorista'),
+
+    # Personal
+    path('personal/', views_personal.lista_personal, name='personal'),
+    path('personal/laboratoristas/crear/', views_personal.crear_laboratorista, name='crear_laboratorista'),
+    path('personal/laboratoristas/<int:id>/editar/', views_personal.editar_laboratorista, name='editar_laboratorista'),
+    path('personal/laboratoristas/<int:id>/baja/', views_personal.baja_laboratorista, name='baja_laboratorista'),
+    path('personal/laboratoristas/<int:id>/eliminar/', views_personal.eliminar_laboratorista, name='eliminar_laboratorista'),
+    path('personal/monitores/crear/', views_personal.crear_monitor, name='crear_monitor'),
+    path('personal/monitores/<int:id>/editar/', views_personal.editar_monitor, name='editar_monitor'),
+    path('personal/monitores/<int:id>/baja/', views_personal.baja_monitor, name='baja_monitor'),
+    path('personal/fichas/crear/', views_personal.crear_ficha, name='crear_ficha'),
+    path('personal/fichas/<int:id>/editar/', views_personal.editar_ficha, name='editar_ficha'),
+    path('personal/fichas/<int:id>/quitar/', views_personal.quitar_ficha, name='quitar_ficha'),
+    path('personal/fichas/<int:id>/vincular/', views_personal.vincular_ficha, name='vincular_ficha'),
+    path('<int:lab_id>/descripcion/editar/', views_personal.editar_descripcion, name='editar_descripcion'),
+
     path('<int:id>/', detalle_laboratorio, name='detalle_laboratorio'),
     path('<int:lab_id>/insumos/<int:insumo_id>/items/', modal_items_insumo, name='modal_items_insumo'),
     path('<int:id>/editar/', editar_laboratorio, name='editar_laboratorio'),
@@ -70,7 +70,4 @@ urlpatterns = [
     path('<int:id>/modulos/estado/', estado_modulos_api, name='estado_modulos_api'),
     path('<int:id>/modulos/disponibles/', modulos_disponibles_api, name='modulos_disponibles_api'),
     path('<int:id>/modulos/disponibles-publica/', modulos_disponibles_publica_api, name='modulos_disponibles_publica_api'),
-    path('<int:lab_id>/encargados/', gestionar_encargados, name='gestionar_encargados'),
-    path('<int:lab_id>/laboratoristas/', asignar_laboratorista, name='asignar_laboratorista'),
-    path('<int:lab_id>/tiene-encargado/', tiene_encargado_api, name='tiene_encargado_api'),
 ]

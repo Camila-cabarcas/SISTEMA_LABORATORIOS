@@ -45,7 +45,7 @@
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Ubicación</th>
-                <th>Encargado</th>
+                <th>Laboratorista</th>
                 <th>Programa</th>
                 <th>Acciones</th>
             </tr>
@@ -60,14 +60,13 @@
                 <td>{{ lab.nombre }}</td>
                 <td>{{ lab.ubicacion }}</td>
                 <td>
-                    {% if lab.encargado_principal %}
-                        <span class="badge bg-success">
-                            {{ lab.encargado_principal.laboratorista.nombre }}
-                            {{ lab.encargado_principal.laboratorista.apellido }}
+                    {% for cuenta in lab.cuentas_laboratorista %}
+                        <span class="badge bg-success" title="{{ cuenta.email }}">
+                            {{ cuenta.get_full_name|default:cuenta.username }}
                         </span>
-                    {% else %}
-                        <span class="text-muted small">Sin encargado</span>
-                    {% endif %}
+                    {% empty %}
+                        <span class="text-muted small">Sin laboratorista</span>
+                    {% endfor %}
                 </td>
                 <td>{{ lab.programa }}</td>
                 <td>

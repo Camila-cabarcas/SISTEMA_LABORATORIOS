@@ -1,0 +1,14 @@
+{% comment %}Sección «Descripción» del detalle del laboratorio. Texto plano: se escapa al mostrarlo.{% endcomment %}
+<div class="card p-4" id="seccion-descripcion">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">📝 Descripción</h5>
+        {% if puede_editar_descripcion %}
+        <a href="{% url 'editar_descripcion' laboratorio.id %}" class="btn btn-sm btn-outline-primary">Editar descripción</a>
+        {% endif %}
+    </div>
+    {% if laboratorio.descripcion %}
+    <div class="mb-0">{{ laboratorio.descripcion|linebreaks }}</div>
+    {% else %}
+    <p class="text-muted mb-0">Este laboratorio todavía no tiene descripción.</p>
+    {% endif %}
+</div>

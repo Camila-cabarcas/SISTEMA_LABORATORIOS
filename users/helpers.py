@@ -33,6 +33,7 @@ from users.roles import (
     ROLES_ADMIN_PERSONAL,
     ROLES_DESCRIPCION_LAB,
     ROLES_FICHAS_MONITOR,
+    ROLES_SOLO_DESDE_PERSONAL,
 )
 
 TIPO_ESTUDIANTE = 'estudiante'
@@ -91,6 +92,16 @@ def _en_su_laboratorio(usuario, laboratorio, roles):
     if rol == ADMINISTRADOR:
         return True
     return es_laboratorista_del_laboratorio(usuario, laboratorio)
+
+
+def es_cuenta_de_personal(usuario):
+    """Cuenta Laboratorista o Monitor (el usuario SOBRE el que se actúa, no
+    quien actúa). Esas cuentas se dan de baja y se eliminan solo desde
+    Personal (laboratorio/services/personal.py), que quita el laboratorio y
+    protege los datos asociados: ni la pantalla genérica de usuarios ni el
+    admin de Django las desactivan o borran directamente."""
+    return bool(usuario is not None and getattr(usuario, 'rol_id', None)
+                and usuario.rol.nombre in ROLES_SOLO_DESDE_PERSONAL)
 
 
 def puede_administrar_personal(usuario):

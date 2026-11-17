@@ -93,6 +93,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'config.context_processors.notificaciones_admin',
+                'config.context_processors.menu_personal',
             ],
         },
     },

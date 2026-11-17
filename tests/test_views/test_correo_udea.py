@@ -11,14 +11,13 @@ from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.utils import timezone
 
-from laboratorio.models import Laboratorista
 from reservas.models import EstadoReserva, Reserva
 from solicitudes.forms import EstudianteSolicitudForm, ProfesorSolicitudForm
 from solicitudes.models import SolicitudRegistroProfesor, SolicitudReserva
 from solicitudes.services.solicitud_reserva_service import ValidarSolicitudReservaService
 from users.fields import CorreoUdeaField
 from users.forms import ProfesorForm
-from users.models import Usuario
+from users.models import Rol, Usuario
 from users.validators import MENSAJE_CORREO_UDEA, validar_correo_institucional, validar_correo_udea
 
 pytestmark = pytest.mark.django_db
@@ -194,39 +193,56 @@ class TestCrearReserva:
 
 
 class TestLaboratoristas:
+    """Cuentas de laboratorista desde Personal (/laboratorio/personal/...):
+    el correo UdeA es OBLIGATORIO (antes, con el modelo de personas sin
+    cuenta, era opcional)."""
 
-    def _datos(self, correo, cedula='998877'):
-        return {'nombre': 'Lina', 'apellido': 'Mora', 'cedula': cedula, 'correo': correo, 'programa': ''}
+    URL_CREAR = '/laboratorio/personal/laboratoristas/crear/'
 
-    def test_crear_rechaza_gmail(self, cliente_autenticado):
-        resp = cliente_autenticado.post('/laboratorio/laboratoristas/crear/', self._datos(GMAIL))
+    def _datos(self, correo, laboratorio, username='lina_mora'):
+        return {'username': username, 'email': correo, 'first_name': 'Lina', 'last_name': 'Mora',
+                'laboratorio': laboratorio.id, 'password': 'ClaveInicial123'}
+
+    def test_crear_rechaza_gmail(self, cliente_autenticado, laboratorio):
+        resp = cliente_autenticado.post(self.URL_CREAR, self._datos(GMAIL, laboratorio))
         assert resp.status_code == 200
-        assert MENSAJE_CORREO_UDEA in resp.context['errores']
-        assert not Laboratorista.objects.filter(cedula='998877').exists()
+        assert MENSAJE_CORREO_UDEA in resp.context['form'].errors['email']
+        assert not Usuario.objects.filter(username='lina_mora').exists()
 
-    def test_crear_acepta_udea(self, cliente_autenticado):
-        resp = cliente_autenticado.post('/laboratorio/laboratoristas/crear/', self._datos(UDEA))
+    def test_crear_acepta_udea(self, cliente_autenticado, laboratorio):
+        resp = cliente_autenticado.post(self.URL_CREAR, self._datos(UDEA, laboratorio))
         assert resp.status_code == 302
-        assert Laboratorista.objects.get(cedula='998877').correo == UDEA
+        assert Usuario.objects.get(username='lina_mora').email == UDEA
 
-    def test_crear_sin_correo_sigue_permitido(self, cliente_autenticado):
-        resp = cliente_autenticado.post('/laboratorio/laboratoristas/crear/', self._datos(''))
-        assert resp.status_code == 302
-
-    def test_editar_rechaza_gmail_y_no_guarda(self, cliente_autenticado):
-        lab = Laboratorista.objects.create(nombre='Lina', apellido='Mora', cedula='998877', correo=UDEA)
-        resp = cliente_autenticado.post(f'/laboratorio/laboratoristas/{lab.id}/editar/', self._datos(GMAIL))
+    def test_crear_sin_correo_se_rechaza(self, cliente_autenticado, laboratorio):
+        resp = cliente_autenticado.post(self.URL_CREAR, self._datos('', laboratorio))
         assert resp.status_code == 200
-        assert MENSAJE_CORREO_UDEA in resp.context['errores']
-        lab.refresh_from_db()
-        assert lab.correo == UDEA
+        assert 'email' in resp.context['form'].errors
+        assert not Usuario.objects.filter(username='lina_mora').exists()
 
-    def test_editar_acepta_udea(self, cliente_autenticado):
-        lab = Laboratorista.objects.create(nombre='Lina', apellido='Mora', cedula='998877', correo='')
-        resp = cliente_autenticado.post(f'/laboratorio/laboratoristas/{lab.id}/editar/', self._datos(UDEA))
+    def _cuenta(self, laboratorio, correo):
+        cuenta = Usuario.objects.create_user(
+            username='lina_mora', password='x', email=correo, first_name='Lina', last_name='Mora',
+            rol=Rol.objects.get(nombre='Laboratorista'))
+        laboratorio.laboratoristas.add(cuenta)
+        return cuenta
+
+    def test_editar_rechaza_gmail_y_no_guarda(self, cliente_autenticado, catalogos, laboratorio):
+        cuenta = self._cuenta(laboratorio, UDEA)
+        resp = cliente_autenticado.post(f'/laboratorio/personal/laboratoristas/{cuenta.id}/editar/',
+                                        self._datos(GMAIL, laboratorio))
+        assert resp.status_code == 200
+        assert MENSAJE_CORREO_UDEA in resp.context['form'].errors['email']
+        cuenta.refresh_from_db()
+        assert cuenta.email == UDEA
+
+    def test_editar_acepta_udea(self, cliente_autenticado, catalogos, laboratorio):
+        cuenta = self._cuenta(laboratorio, 'lina.vieja@udea.edu.co')
+        resp = cliente_autenticado.post(f'/laboratorio/personal/laboratoristas/{cuenta.id}/editar/',
+                                        self._datos(UDEA, laboratorio))
         assert resp.status_code == 302
-        lab.refresh_from_db()
-        assert lab.correo == UDEA
+        cuenta.refresh_from_db()
+        assert cuenta.email == UDEA
 
 
 class TestUsuario:

@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
 from users.decorators import rol_requerido, requiere_contrasena_admin
+from users.helpers import es_cuenta_de_personal
 from .models import Usuario, Rol, ProgramaAcademico
 from .forms import UsuarioForm, EditarUsuarioForm, ProfesorForm, EditarProfesorForm, ProgramaAcademicoForm
 
@@ -18,7 +19,7 @@ logger_acceso_admin = logging.getLogger('acceso_admin')
 @rol_requerido('Administrador')
 def lista_usuarios(request):
 
-    usuarios = Usuario.objects.exclude(username__startswith='lab_').order_by('username')
+    usuarios = Usuario.objects.exclude(username__startswith='lab_').select_related('rol').order_by('username')
 
     return render(
         request,
@@ -86,14 +87,35 @@ def editar_usuario(request, id):
     )
 
 
+def _rechazar_cuenta_de_personal(request, usuario):
+    """Las cuentas Laboratorista y Monitor se dan de baja desde Personal
+    (con contraseña admin, usando dar_de_baja_laboratorista o
+    dar_de_baja_monitor, que además les quitan el laboratorio)."""
+    return render(request, 'users/sin_permiso.html', {
+        'mensaje': f'La cuenta "{usuario.username}" es de rol {usuario.rol.nombre}: '
+                   f'se da de baja desde Personal, no desde aquí.',
+    }, status=403)
+
+
 @rol_requerido('Administrador')
+def desactivar_usuario(request, id):
+    """Las cuentas de Personal se rechazan ANTES de pedir la contraseña
+    admin; las demás siguen el flujo de siempre."""
+    usuario = get_object_or_404(Usuario.objects.select_related('rol'), id=id)
+    if es_cuenta_de_personal(usuario):
+        return _rechazar_cuenta_de_personal(request, usuario)
+    return _desactivar_usuario_confirmado(request, id=id)
+
+
 @requiere_contrasena_admin(
     titulo_accion='Desactivar',
     get_contexto=lambda r, *a, **kw: f"Usuario - {Usuario.objects.get(id=kw['id']).username}",
 )
-def desactivar_usuario(request, id):
+def _desactivar_usuario_confirmado(request, id):
 
-    usuario = get_object_or_404(Usuario, id=id)
+    usuario = get_object_or_404(Usuario.objects.select_related('rol'), id=id)
+    if es_cuenta_de_personal(usuario):  # por si cambió el rol entre los dos pasos
+        return _rechazar_cuenta_de_personal(request, usuario)
 
     if request.method == 'POST':
 

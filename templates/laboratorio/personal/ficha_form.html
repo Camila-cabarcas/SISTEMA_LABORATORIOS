@@ -1,0 +1,31 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">
+        <i class="fa-solid fa-id-card text-brand me-2"></i>{% if ficha %}Editar ficha — {{ ficha }}{% else %}Nueva ficha de monitor{% endif %}
+    </h2>
+    <a href="{% url 'personal' %}" class="btn btn-outline-secondary">&larr; Volver</a>
+</div>
+
+<div class="card shadow-sm" style="max-width: 640px;">
+    <div class="card-body">
+        {% if ficha %}
+        <p class="text-muted small">
+            Esta ficha está en:
+            {% for lab in otros_laboratorios %}<strong>{{ lab.nombre }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}.
+            Los cambios se ven en todos esos laboratorios.
+        </p>
+        {% else %}
+        <p class="text-muted small">Persona monitor sin cuenta en el sistema. Se agrega a <strong>{{ laboratorio.nombre }}</strong>.</p>
+        {% endif %}
+        <form method="post" novalidate id="form-ficha">
+            {% csrf_token %}
+            {% if not ficha %}<input type="hidden" name="laboratorio_id" value="{{ laboratorio.id }}">{% endif %}
+            {% if request.GET.volver == 'detalle' %}<input type="hidden" name="volver" value="detalle">{% endif %}
+            {% include 'laboratorio/personal/partials/campos_form.html' %}
+            <button type="submit" class="btn btn-success">Guardar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

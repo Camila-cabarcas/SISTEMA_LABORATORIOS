@@ -20,7 +20,6 @@ class Laboratorio(models.Model):
     # Una cuenta tiene a lo sumo UN laboratorio (UniqueConstraint en
     # AsignacionLaboratorista); que una cuenta Laboratorista activa tenga
     # exactamente uno lo validan la migración 0024 y el servicio de Personal.
-    # Distinto del modelo Laboratorista de más abajo (persona sin cuenta).
     laboratoristas = models.ManyToManyField(
         'users.Usuario',
         through='AsignacionLaboratorista',
@@ -450,80 +449,6 @@ class Modulo(models.Model):
     def __str__(self):
         base = f"{self.nombre} ({self.laboratorio.nombre})"
         return f"{base} — {self.categoria.nombre}" if self.categoria_id else base
-
-
-class Laboratorista(models.Model):
-
-    RESPONSABILIDADES_CHOICES = [
-        ('prestamos',     'Gestión de préstamos'),
-        ('atencion',      'Atención a estudiantes y profesores'),
-        ('inventario',    'Control de inventario'),
-        ('mantenimiento', 'Mantenimiento de equipos'),
-        ('apertura',      'Apertura y cierre del laboratorio'),
-        ('movimientos',   'Registro de movimientos'),
-        ('supervision',   'Supervisión de prácticas'),
-    ]
-
-    nombre    = models.CharField(max_length=100)
-    apellido  = models.CharField(max_length=100)
-    cedula    = models.CharField(max_length=20, unique=True)
-    correo    = models.EmailField(blank=True, default='')
-    programa  = models.CharField(max_length=200, blank=True, default='')
-    responsabilidades = models.JSONField(default=list, blank=True)
-    activo    = models.BooleanField(default=True)
-
-    class Meta:
-        ordering = ['apellido', 'nombre']
-
-    def clean(self):
-        validas = {clave for clave, _ in self.RESPONSABILIDADES_CHOICES}
-        invalidas = set(self.responsabilidades or []) - validas
-        if invalidas:
-            raise ValidationError({
-                'responsabilidades': f'Responsabilidad(es) no válida(s): {", ".join(sorted(invalidas))}.'
-            })
-
-    def __str__(self):
-        return f"{self.nombre} {self.apellido}"
-
-
-class LaboratoristaLab(models.Model):
-
-    TIPO_CHOICES = [
-        ('laboratorista', 'Laboratorista'),
-        ('encargado',     'Encargado'),
-    ]
-
-    laboratorista = models.ForeignKey(
-        Laboratorista,
-        on_delete=models.CASCADE,
-        related_name='asignaciones'
-    )
-    laboratorio = models.ForeignKey(
-        Laboratorio,
-        on_delete=models.CASCADE,
-        related_name='asignaciones'
-    )
-    tipo = models.CharField(
-        max_length=20,
-        choices=TIPO_CHOICES,
-        default='laboratorista'
-    )
-
-    class Meta:
-        unique_together = ('laboratorista', 'laboratorio')
-        ordering = ['laboratorio', 'tipo']
-
-    def clean(self):
-        if self.tipo == 'encargado':
-            ya_tiene_encargado = LaboratoristaLab.objects.filter(
-                laboratorio=self.laboratorio, tipo='encargado',
-            ).exclude(pk=self.pk).exists()
-            if ya_tiene_encargado:
-                raise ValidationError('Este laboratorio ya tiene un encargado.')
-
-    def __str__(self):
-        return f"{self.laboratorista} — {self.laboratorio} ({self.tipo})"
 
 
 class HistorialModulo(models.Model):

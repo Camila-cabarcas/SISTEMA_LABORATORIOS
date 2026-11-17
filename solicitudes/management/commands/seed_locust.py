@@ -141,6 +141,6 @@ class Command(BaseCommand):
             f'  LOCUST_RESERVA_ID={reserva_aprobar.id}\n'
             f'  LOCUST_PRESTAMO_ID={prestamo.id}\n'
             '  LOCUST_ADMIN_USER=e2e_admin  LOCUST_ADMIN_PASS=E2eAdmin!2026\n'
-            '  LOCUST_LAB_USER=e2e_laboratorista  LOCUST_LAB_PASS=E2eLab!2026\n'
+            '  LOCUST_LAB_USER=e2e_laboratorista_v2  LOCUST_LAB_PASS=E2eLab!2026\n'
             '  LOCUST_PROF_USER=e2e_profesor  LOCUST_PROF_PASS=E2eProfesor!2026  LOCUST_PROF_NOMBRE="Profesor E2E"'
         ))

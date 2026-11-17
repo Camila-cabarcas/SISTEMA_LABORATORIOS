@@ -48,12 +48,25 @@
                     >
                         Editar
                     </a>
-                        <a
+                    {% if usuario.rol.nombre == 'Laboratorista' or usuario.rol.nombre == 'Monitor' %}
+                    {# Se dan de baja desde Personal (quita el laboratorio y pide contraseña admin). #}
+                    {% if usuario.is_active %}
+                    <a
+                        href="{% if usuario.rol.nombre == 'Laboratorista' %}{% url 'baja_laboratorista' usuario.id %}{% else %}{% url 'baja_monitor' usuario.id %}{% endif %}"
+                        class="btn btn-outline-danger btn-sm"
+                        title="Las cuentas de laboratorista y de monitor se dan de baja desde Personal"
+                    >
+                        Dar de baja en Personal
+                    </a>
+                    {% endif %}
+                    {% else %}
+                    <a
                         href="/usuarios/{{ usuario.id }}/desactivar/"
                         class="btn btn-danger btn-sm"
                     >
                         Desactivar
                     </a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

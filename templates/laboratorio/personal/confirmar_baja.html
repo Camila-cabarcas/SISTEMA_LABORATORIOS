@@ -1,0 +1,53 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card shadow-sm border-warning">
+            <div class="card-header bg-warning">
+                <i class="fa-solid fa-user-slash me-2"></i>Dar de baja la cuenta {% if tipo == 'monitor' %}de monitor{% else %}de laboratorista{% endif %}
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>Cuenta:</strong> <code>{{ cuenta.username }}</code> — {{ cuenta.get_full_name|default:"—" }} ({{ cuenta.email|default:"sin correo" }})</p>
+                <p><strong>Laboratorio:</strong> {{ laboratorio.nombre|default:"sin laboratorio" }}</p>
+
+                {% if not cuenta.is_active %}
+                <div class="alert alert-secondary">Esta cuenta ya está dada de baja.</div>
+                {% endif %}
+
+                <p>
+                    Dar de baja <strong>desactiva la cuenta</strong> (ya no puede entrar) y <strong>le quita el laboratorio</strong>.
+                    No borra la cuenta: sus préstamos, reservas y movimientos se conservan.
+                    {% if tipo == 'monitor' %}El laboratorio queda libre para una cuenta de monitor nueva.{% endif %}
+                </p>
+
+                <form method="post" action="{{ url_baja }}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning">Dar de baja</button>
+                </form>
+                <a href="{% url 'personal' %}" class="btn btn-secondary ms-2">Cancelar</a>
+
+                {% if tipo == 'laboratorista' %}
+                <hr>
+                <h6>Eliminar definitivamente</h6>
+                {% if datos_asociados %}
+                <p class="text-muted small mb-0">
+                    No se puede eliminar: tiene datos asociados
+                    ({% for descripcion, cantidad in datos_asociados %}{{ cantidad }} {{ descripcion }}{% if not forloop.last %}, {% endif %}{% endfor %}).
+                    Dala de baja en su lugar.
+                </p>
+                {% else %}
+                <p class="small">La cuenta no tiene datos asociados: se puede borrar del todo.</p>
+                <form method="post" action="{{ url_eliminar }}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">Eliminar definitivamente</button>
+                </form>
+                {% endif %}
+                {% endif %}
+
+                <p class="text-muted small mt-3 mb-0"><i class="fa-solid fa-lock me-1"></i>Se te pedirá la contraseña admin.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

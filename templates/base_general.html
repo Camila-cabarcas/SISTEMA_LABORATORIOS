@@ -58,7 +58,7 @@
                 <a class="nav-link dropdown-toggle {% if '/laboratorio/' in request.path %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-flask me-1"></i>Laboratorios</a>
                 <ul class="dropdown-menu dropdown-menu-dark">
                     <li><a class="dropdown-item" href="/laboratorio/"><i class="fa-solid fa-building me-2"></i>Laboratorio</a></li>
-                    <li><a class="dropdown-item {% if '/laboratorio/laboratoristas' in request.path %}active{% endif %}" href="/laboratorio/laboratoristas/"><i class="fa-solid fa-user-gear me-2"></i>Laboratoristas</a></li>
+                    {% if ver_personal %}<li><a class="dropdown-item {% if '/laboratorio/personal' in request.path %}active{% endif %}" href="{% url 'personal' %}" data-menu="personal"><i class="fa-solid fa-users me-2"></i>Personal</a></li>{% endif %}
                     <li><a class="dropdown-item {% if '/laboratorio/categorias' in request.path %}active{% endif %}" href="/laboratorio/categorias/"><i class="fa-solid fa-shapes me-2"></i>Categorías de módulo</a></li>
                 </ul>
             </li>
@@ -129,6 +129,12 @@
             <li class="nav-item">
                 <a class="nav-link" href="/laboratorio/"><i class="fa-solid fa-flask me-1"></i>Laboratorio</a>
             </li>
+
+            {% if ver_personal %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/laboratorio/personal' in request.path %}active{% endif %}" href="{% url 'personal' %}" data-menu="personal"><i class="fa-solid fa-users me-1"></i>Personal</a>
+            </li>
+            {% endif %}
 
         {% elif user.rol.nombre == 'Monitor' %}
 

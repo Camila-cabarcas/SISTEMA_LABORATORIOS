@@ -3,7 +3,7 @@ locustfile.py — pruebas de carga v3 del Sistema de Laboratorios (14 flujos de 
 
 REQUISITO PREVIO: python manage.py seed_locust
 Crea/asegura: Laboratorio E2E (horario lun-vie 06:00-18:00) con 6 Módulos,
-Insumo E2E con ítems Disponibles, e2e_admin / e2e_laboratorista, y (desde
+Insumo E2E con ítems Disponibles, e2e_admin / e2e_laboratorista_v2, y (desde
 v3) un profesor YA REGISTRADO con contraseña conocida — e2e_profesor — más
 un Curso a su nombre (ver seed_e2e.py y seed_locust.py).
 
@@ -11,7 +11,7 @@ Variables de entorno relevantes (con sus defaults):
 
     LOCUST_LAB_ID               id del laboratorio a usar (default 1)
     LOCUST_ADMIN_USER/PASS      credenciales del admin        (default e2e_admin / E2eAdmin!2026)
-    LOCUST_LAB_USER/PASS        credenciales del laboratorista (default e2e_laboratorista / E2eLab!2026)
+    LOCUST_LAB_USER/PASS        credenciales del laboratorista (default e2e_laboratorista_v2 / E2eLab!2026)
     LOCUST_PROF_USER/PASS       credenciales del profesor YA REGISTRADO (default e2e_profesor / E2eProfesor!2026)
     LOCUST_PROF_NOMBRE          nombre completo del profesor, debe calzar con SolicitudReserva.clean() (default "Profesor E2E")
     LOCUST_PROGRAMA             programa académico activo a usar (default "Ingeniería de Sistemas")
@@ -184,7 +184,7 @@ LAB_ID = int(os.environ.get('LOCUST_LAB_ID', '1'))
 
 ADMIN_USER = os.environ.get('LOCUST_ADMIN_USER', 'e2e_admin')
 ADMIN_PASS = os.environ.get('LOCUST_ADMIN_PASS', 'E2eAdmin!2026')
-LAB_USER = os.environ.get('LOCUST_LAB_USER', 'e2e_laboratorista')
+LAB_USER = os.environ.get('LOCUST_LAB_USER', 'e2e_laboratorista_v2')
 LAB_PASS = os.environ.get('LOCUST_LAB_PASS', 'E2eLab!2026')
 PROF_USER = os.environ.get('LOCUST_PROF_USER', 'e2e_profesor')
 PROF_PASS = os.environ.get('LOCUST_PROF_PASS', 'E2eProfesor!2026')

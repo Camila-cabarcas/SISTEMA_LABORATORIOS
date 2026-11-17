@@ -20,7 +20,7 @@
  * REQUISITOS DE ENTORNO (no se pueden crear vía UI dentro del propio flujo):
  *   - Servidor Django corriendo en http://localhost:8000.
  *   - Datos base ya sembrados con: `python manage.py seed_e2e`
- *     (usuarios e2e_admin / e2e_laboratorista, un laboratorio, un programa
+ *     (usuarios e2e_admin / e2e_laboratorista_v2, un laboratorio, un programa
  *     académico activo y un insumo con ítems "Disponible"). Sin esto, los
  *     selects del formulario de estudiante y el de creación de préstamo
  *     estarían vacíos y el flujo no se podría completar por UI.

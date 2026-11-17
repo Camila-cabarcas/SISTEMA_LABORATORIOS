@@ -16,9 +16,41 @@ Uso: python manage.py seed_e2e
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+# Laboratorista de prueba (reemplaza a e2e_laboratorista, dada de baja en
+# laboratorio.0023). Lo usan cypress/fixtures/usuarios.json y locustfile.py.
+LABORATORISTA_E2E = 'e2e_laboratorista_v2'
+CORREO_LABORATORISTA_E2E = 'e2e.laboratorista@udea.edu.co'
+CLAVE_LABORATORISTA_E2E = 'E2eLab!2026'
+
 
 class Command(BaseCommand):
     help = 'Crea/asegura los datos base que necesita la suite E2E de Cypress.'
+
+    def _laboratorista_e2e(self, laboratorio, admin):
+        """Crea la cuenta con personal.crear_laboratorista; si ya existe,
+        la deja con la clave conocida y en `laboratorio`. Si alguien la dio
+        de baja, no la reactiva (eso no lo hace ningún flujo de Personal):
+        avisa y sigue."""
+        from laboratorio.services import personal
+        from users.models import Usuario
+
+        cuenta = Usuario.objects.filter(username=LABORATORISTA_E2E).first()
+        if cuenta is None:
+            personal.crear_laboratorista({
+                'username': LABORATORISTA_E2E, 'email': CORREO_LABORATORISTA_E2E,
+                'first_name': 'Laboratorista', 'last_name': 'E2E',
+                'password': CLAVE_LABORATORISTA_E2E,
+            }, laboratorio, admin)
+            return
+        if not cuenta.is_active:
+            self.stdout.write(self.style.WARNING(
+                f'{LABORATORISTA_E2E} está dada de baja: no se reactiva. '
+                f'Créala de nuevo con otro usuario o reactívala a mano.'))
+            return
+        cuenta.set_password(CLAVE_LABORATORISTA_E2E)
+        cuenta.save(update_fields=['password'])
+        if cuenta.laboratorios_asignados.first() != laboratorio:
+            personal.cambiar_laboratorio(cuenta, laboratorio, admin)
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -44,7 +76,6 @@ class Command(BaseCommand):
         estado_activo_insumo, _ = EstadoInsumo.objects.get_or_create(nombre='Activo')
 
         rol_admin = Rol.objects.get(nombre='Administrador')
-        rol_lab = Rol.objects.get(nombre='Laboratorista')
 
         # codigo es unique en Usuario: no se puede dejar en blanco, o choca
         # con cualquier otro usuario que también lo tenga vacío.
@@ -57,15 +88,6 @@ class Command(BaseCommand):
         admin.set_password('E2eAdmin!2026')
         admin.save()
 
-        laboratorista, _ = Usuario.objects.get_or_create(
-            username='e2e_laboratorista',
-            defaults={'rol': rol_lab, 'codigo': 'E2E-LAB'}
-        )
-        laboratorista.rol = rol_lab
-        laboratorista.codigo = laboratorista.codigo or 'E2E-LAB'
-        laboratorista.set_password('E2eLab!2026')
-        laboratorista.save()
-
         ProgramaAcademico.objects.get_or_create(
             nombre='Ingeniería de Sistemas', defaults={'activo': True}
         )
@@ -74,6 +96,12 @@ class Command(BaseCommand):
             nombre='Laboratorio E2E',
             defaults={'ubicacion': 'Bloque E2E - Piso 1'}
         )
+
+        # Laboratorista de prueba: cuenta activa con un solo laboratorio,
+        # creada con el servicio de Personal (mismas reglas que la pantalla).
+        # La cuenta vieja e2e_laboratorista quedó dada de baja en la
+        # migración laboratorio.0023 y este comando ya no la toca.
+        self._laboratorista_e2e(laboratorio, admin)
 
         # SolicitudReserva.clean() valida el horario contra HorarioLaboratorio
         # (por día de semana); sin esto, cualquier solicitud para este
@@ -110,7 +138,8 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             'Datos E2E listos:\n'
-            '  usuarios: e2e_admin / E2eAdmin!2026, e2e_laboratorista / E2eLab!2026\n'
+            f'  usuarios: e2e_admin / E2eAdmin!2026, {LABORATORISTA_E2E} / {CLAVE_LABORATORISTA_E2E} '
+            f'(o {CORREO_LABORATORISTA_E2E})\n'
             '  laboratorio: "Laboratorio E2E" (horario lunes-viernes 06:00-18:00)\n'
             '  insumo: "Insumo E2E" con 3 ítems en estado Disponible'
         ))

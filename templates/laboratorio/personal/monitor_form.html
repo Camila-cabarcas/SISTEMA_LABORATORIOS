@@ -1,0 +1,29 @@
+{% extends 'base_general.html' %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">
+        <i class="fa-solid fa-user-shield text-brand me-2"></i>{% if cuenta %}Editar cuenta de monitor — {{ cuenta.username }}{% else %}Nueva cuenta de monitor{% endif %}
+    </h2>
+    <a href="{% url 'personal' %}" class="btn btn-outline-secondary">&larr; Volver</a>
+</div>
+
+<div class="card shadow-sm" style="max-width: 640px;">
+    <div class="card-body">
+        <p class="text-muted small">
+            Cuenta compartida de rol Monitor: una por laboratorio y válida para un solo laboratorio.
+            {% if cuenta %}
+            Laboratorio: <strong>{{ laboratorio.nombre|default:"sin laboratorio" }}</strong>.
+            Para pasarla a otro laboratorio, dala de baja y crea una nueva.
+            {% else %}
+            La contraseña inicial la defines tú; no se envía ningún correo.
+            {% endif %}
+        </p>
+        <form method="post" novalidate id="form-monitor">
+            {% csrf_token %}
+            {% include 'laboratorio/personal/partials/campos_form.html' %}
+            <button type="submit" class="btn btn-success">Guardar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

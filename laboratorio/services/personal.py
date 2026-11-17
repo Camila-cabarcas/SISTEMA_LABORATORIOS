@@ -23,6 +23,8 @@ Cada función verifica permisos al inicio. Errores:
   en el formulario; str() da un resumen para un mensaje flash.
 Las vistas (etapa 3) las capturan y muestran el mensaje.
 """
+from types import SimpleNamespace
+
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
@@ -305,7 +307,25 @@ def dar_de_baja_monitor(usuario, admin):
     return _dar_de_baja(usuario, AsignacionMonitor)
 
 
-# Chequeo de solo lectura
+# Consultas de solo lectura
+
+def personal_del_laboratorio(laboratorio):
+    """Lo que muestra la sección Personal de un laboratorio:
+    - laboratoristas: cuentas Laboratorista activas (puede haber varias),
+    - monitor: la cuenta Monitor del laboratorio, o None si no tiene,
+    - fichas: fichas de monitor del laboratorio,
+    - total: cuántas personas/cuentas hay en total (contador del sidebar)."""
+    laboratoristas = list(laboratorio.laboratoristas.filter(is_active=True).order_by('username'))
+    monitor = laboratorio.monitores.order_by('username').first()
+    fichas = list(laboratorio.fichas_monitor.prefetch_related('laboratorios').order_by('apellido', 'nombre'))
+    return SimpleNamespace(
+        laboratorio=laboratorio,
+        laboratoristas=laboratoristas,
+        monitor=monitor,
+        fichas=fichas,
+        total=len(laboratoristas) + len(fichas) + (1 if monitor else 0),
+    )
+
 
 def cuentas_activas_sin_laboratorio():
     """Cuentas Laboratorista o Monitor activas que no tienen laboratorio
