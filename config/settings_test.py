@@ -6,6 +6,16 @@ pytest lo carga desde pytest.ini (DJANGO_SETTINGS_MODULE).
 """
 from .settings import *  # noqa: F401,F403
 
+# Las pruebas siempre usan SQLite en memoria, aunque .env tenga
+# DB_ENGINE=postgres: así corren sin contraseña ni permiso CREATEDB y nunca
+# tocan la base real.
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    }
+}
+
 # Solo para pruebas, nunca en producción: MD5 es inseguro pero muy rápido.
 # Los hashers por defecto (PBKDF2) son lentos a propósito y cada
 # create_user / login / check_password de los tests paga ese costo.

@@ -11,6 +11,7 @@ locust>=2.15
 openpyxl>=3.1
 pandas>=2.2
 pdfplumber>=0.11
+psycopg[binary]==3.3.9
 pathspec==1.1.1
 python-dotenv==1.2.3
 pytest>=7.0
@@ -20,3 +21,5 @@ sqlparse==0.5.5
 types-PyYAML==6.0.12.20260518
 typing_extensions==4.15.0
 tzdata==2026.2
+waitress==3.0.2
+whitenoise==6.12.0

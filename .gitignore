@@ -17,3 +17,6 @@ logs/*
 tmp*
 pip-*
 htmlcov/
+
+# Salida de collectstatic (se regenera en el servidor)
+staticfiles/
