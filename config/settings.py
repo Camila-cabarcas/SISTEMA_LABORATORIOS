@@ -51,6 +51,11 @@ if not SECRET_KEY:
 
 # Separado por comas en .env, p. ej. ALLOWED_HOSTS=172.21.35.40,localhost
 ALLOWED_HOSTS = _env_lista('ALLOWED_HOSTS', ['localhost', '127.0.0.1'])
+CSRF_TRUSTED_ORIGINS = _env_lista('CSRF_TRUSTED_ORIGINS', [])
+
+# Reconoce el protocolo HTTPS y el host reenviados por proxies como ngrok
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 # ---------------------------------------------------------
 
 # Aplicaciones instaladas
@@ -205,4 +210,3 @@ if SENDGRID_API_KEY:
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@sistemalaboratorios.com')
-
